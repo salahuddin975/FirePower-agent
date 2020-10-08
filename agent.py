@@ -72,20 +72,20 @@ def get_action(tf_action):
     bus_status = np.array(tf_action[0])
     bus_status[: 1] = bus_status[:] > 0
     bus_status = np.squeeze(bus_status.astype(int))
-    print ("bus status: ", bus_status)
+    # print ("bus status: ", bus_status)
 
     branch_status = np.array(tf_action[1])
     branch_status[: 1] = branch_status[:] > 0
     branch_status = np.squeeze(branch_status.astype(int))
-    print ("branch status: ", branch_status)
+    # print ("branch status: ", branch_status)
 
     gen_selector = np.array(tf.squeeze(tf_action[2]))
-    gen_selector = np.abs(gen_selector * 22)
+    gen_selector = np.abs(gen_selector * 24)
     gen_selector = gen_selector.astype(int)
-    print("gen selector: ", gen_selector)
+    # print("gen selector: ", gen_selector)
 
-    gen_injection = np.array(tf.squeeze(tf_action[3]))
-    print("gen injection: ", gen_injection)
+    gen_injection = np.array(tf.squeeze(tf_action[3]))      # need to take into range
+    # print("gen injection: ", gen_injection)
 
     action = {"generator_injection": gen_injection,
         "branch_status": branch_status,
@@ -93,6 +93,60 @@ def get_action(tf_action):
         "generator_selector": gen_selector}
 
     return action
+
+
+def get_critic(num_bus, num_branch, num_fire_status, num_gen_inj, num_load_demand, num_theta, num_gen_selector, num_gen_output):
+    # bus -> MultiBinary(24)
+    st_bus = layers.Input(shape=(num_bus,))
+    st_bus1 = layers.Dense(30, activation="relu") (st_bus)
+
+    # num_branch -> MultiBinary(34)
+    st_branch = layers.Input(shape=(num_branch,))
+    st_branch1 = layers.Dense(30, activation="relu") (st_branch)
+
+    # fire_status -> Box(350, 350)
+    st_fire = layers.Input(shape=(num_fire_status, num_fire_status))
+    st_fire1 = layers.Flatten()(st_fire)
+    st_fire1 = layers.Dense(500, activation="relu") (st_fire1)
+
+    # generator_injection -> Box(24, )
+    st_gen_inj = layers.Input(shape=(num_gen_inj,))
+    st_gen_inj1 = layers.Dense(30, activation="relu") (st_gen_inj)
+
+    # load_demand -> Box(24, )
+    st_load_demand = layers.Input(shape=(num_load_demand, ))
+    st_load_demand1 = layers.Dense(30, activation="relu") (st_load_demand)
+
+    # theta -> Box(24, )
+    st_theta = layers.Input(shape=(num_theta, ))
+    st_theta1 = layers.Dense(30, activation="relu") (st_theta)
+
+    # bus -> MultiBinary(24)
+    act_bus = layers.Input(shape=(num_bus,))
+    act_bus1 = layers.Dense(30, activation="relu") (act_bus)
+
+    # num_branch -> MultiBinary(34)
+    act_branch = layers.Input(shape=(num_branch,))
+    act_branch1 = layers.Dense(30, activation="relu") (act_branch)
+
+    # generator_selector -> MultiDiscrete([12 12 12 12 12])
+    act_gen_selector = layers.Input(shape=(num_gen_selector,))
+    act_gen_selector1 = layers.Dense(30, activation="relu") (act_gen_selector)
+
+    # generator_injection (generator output) -> Box(5, )
+    act_gen_output = layers.Input(shape=(num_gen_output,))
+    act_gen_output1 = layers.Dense(30, activation="relu") (act_gen_output)
+
+    state = layers.Concatenate() ([st_bus1, st_branch1, st_fire1, st_gen_inj1, st_load_demand1, st_theta1])
+    action = layers.Concatenate() ([act_bus1, act_branch1, act_gen_selector1, act_gen_output1])
+    hidden = layers.Concatenate() ([state, action])
+
+    hidden = layers.Dense(512, activation="relu") (hidden)
+    hidden = layers.Dense(512, activation="relu") (hidden)
+    reward = layers.BatchNormalization(1) (hidden)
+
+    model = tf.keras.Model([st_bus, st_branch, st_fire, st_gen_inj, st_load_demand, st_theta, act_bus, act_branch, act_gen_selector, act_gen_output], reward)
+    return model
 
 
 def main(args):
@@ -116,21 +170,26 @@ def main(args):
     print(f"fire status: {num_fire_status}, num_gen_injection: {num_gen_injection}, num_load_demand: {num_load_demand}, num_theta: {num_theta}")
 
     actor = get_actor(num_bus, num_branch, num_fire_status, num_gen_injection, num_load_demand, num_theta,num_generator_selector, num_generator_output)
+    critic = get_critic(num_bus, num_branch, num_fire_status, num_gen_injection, num_load_demand, num_theta,num_generator_selector, num_generator_output)
 
     state = env.reset()
-    state = get_tf_state(state)
+    tf_state = get_tf_state(state)
 
-    tf_action = actor(state)
-    action = get_action(tf_action)
+    actor_action = actor(tf_state)
+    action = get_action(actor_action)
     print ("action: ", action)
+
+    # get_tf_state_action(tf_state, action)
+    # critic_reward = critic(tf_state, tf_action)
+
 
     # action = env.action_space.sample()
     ob, reward, done, _ = env.step(action)
     print("reward: ", reward)
+
+
     # print("sample action: ", action)
     # print("obs: ", ob)
-
-
 
 
 

@@ -149,7 +149,7 @@ def get_critic(num_bus, num_branch, num_fire_status, num_gen_inj, num_load_deman
     return model
 
 
-def  get_tf_state_action(state, action):
+def  get_tf_critic_input(state, action):
     st_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
     st_branch_status = tf.expand_dims(tf.convert_to_tensor(state["branch_status"]), 0)
     st_fire_state = tf.expand_dims(tf.convert_to_tensor(state["fire_state"]), 0)
@@ -195,8 +195,8 @@ def main(args):
     action = get_action(actor_action)
     print ("action: ", action)
 
-    tf_critic = get_tf_state_action(state, action)
-    critic_reward = critic(tf_critic)
+    tf_critic_input = get_tf_critic_input(state, action)
+    critic_reward = critic(tf_critic_input)
     print("critic_reward: ", critic_reward)
 
 

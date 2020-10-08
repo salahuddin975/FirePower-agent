@@ -68,8 +68,31 @@ def get_tf_state(obj):
     return [tf_bus_status, tf_branch_status, tf_fire_state, tf_generator_injection, tf_load_demand, tf_theta]
 
 
+def get_action(tf_action):
+    bus_status = np.array(tf_action[0])
+    bus_status[: 1] = bus_status[:] > 0
+    bus_status = np.squeeze(bus_status.astype(int))
+    print ("bus status: ", bus_status)
 
+    branch_status = np.array(tf_action[1])
+    branch_status[: 1] = branch_status[:] > 0
+    branch_status = np.squeeze(branch_status.astype(int))
+    print ("branch status: ", branch_status)
 
+    gen_selector = np.array(tf.squeeze(tf_action[2]))
+    gen_selector = np.abs(gen_selector * 22)
+    gen_selector = gen_selector.astype(int)
+    print("gen selector: ", gen_selector)
+
+    gen_injection = np.array(tf.squeeze(tf_action[3]))
+    print("gen injection: ", gen_injection)
+
+    action = {"generator_injection": gen_injection,
+        "branch_status": branch_status,
+        "bus_status": bus_status,
+        "generator_selector": gen_selector}
+
+    return action
 
 
 def main(args):
@@ -92,18 +115,19 @@ def main(args):
     num_theta = observation_space["theta"].shape[0]
     print(f"fire status: {num_fire_status}, num_gen_injection: {num_gen_injection}, num_load_demand: {num_load_demand}, num_theta: {num_theta}")
 
-
     actor = get_actor(num_bus, num_branch, num_fire_status, num_gen_injection, num_load_demand, num_theta,num_generator_selector, num_generator_output)
 
-    ob = env.reset()
-    action = actor(get_tf_state(ob))
+    state = env.reset()
+    state = get_tf_state(state)
 
-    print("action: ", action[0])
+    tf_action = actor(state)
+    action = get_action(tf_action)
+    print ("action: ", action)
 
-    action = env.action_space.sample()
-    # ob, reward, done, _ = env.step(action)
-    # print("reward: ", reward)
-    print("sample action: ", action)
+    # action = env.action_space.sample()
+    ob, reward, done, _ = env.step(action)
+    print("reward: ", reward)
+    # print("sample action: ", action)
     # print("obs: ", ob)
 
 

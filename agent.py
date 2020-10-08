@@ -57,13 +57,13 @@ def get_actor(num_bus, num_branch, num_fire_status, num_gen_inj, num_load_demand
     return model
 
 
-def get_tf_state(obj):
-    tf_bus_status = tf.expand_dims(tf.convert_to_tensor(obj["bus_status"]), 0)
-    tf_branch_status = tf.expand_dims(tf.convert_to_tensor(obj["branch_status"]), 0)
-    tf_fire_state = tf.expand_dims(tf.convert_to_tensor(obj["fire_state"]), 0)
-    tf_generator_injection = tf.expand_dims(tf.convert_to_tensor(obj["generator_injection"]), 0)
-    tf_load_demand = tf.expand_dims(tf.convert_to_tensor(obj["load_demand"]), 0)
-    tf_theta = tf.expand_dims(tf.convert_to_tensor(obj["theta"]), 0)
+def get_tf_state(state):
+    tf_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
+    tf_branch_status = tf.expand_dims(tf.convert_to_tensor(state["branch_status"]), 0)
+    tf_fire_state = tf.expand_dims(tf.convert_to_tensor(state["fire_state"]), 0)
+    tf_generator_injection = tf.expand_dims(tf.convert_to_tensor(state["generator_injection"]), 0)
+    tf_load_demand = tf.expand_dims(tf.convert_to_tensor(state["load_demand"]), 0)
+    tf_theta = tf.expand_dims(tf.convert_to_tensor(state["theta"]), 0)
 
     return [tf_bus_status, tf_branch_status, tf_fire_state, tf_generator_injection, tf_load_demand, tf_theta]
 
@@ -143,10 +143,26 @@ def get_critic(num_bus, num_branch, num_fire_status, num_gen_inj, num_load_deman
 
     hidden = layers.Dense(512, activation="relu") (hidden)
     hidden = layers.Dense(512, activation="relu") (hidden)
-    reward = layers.BatchNormalization(1) (hidden)
+    reward = layers.Dense(1) (hidden)
 
     model = tf.keras.Model([st_bus, st_branch, st_fire, st_gen_inj, st_load_demand, st_theta, act_bus, act_branch, act_gen_selector, act_gen_output], reward)
     return model
+
+
+def  get_tf_state_action(state, action):
+    st_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
+    st_branch_status = tf.expand_dims(tf.convert_to_tensor(state["branch_status"]), 0)
+    st_fire_state = tf.expand_dims(tf.convert_to_tensor(state["fire_state"]), 0)
+    st_generator_output = tf.expand_dims(tf.convert_to_tensor(state["generator_injection"]), 0)
+    st_load_demand = tf.expand_dims(tf.convert_to_tensor(state["load_demand"]), 0)
+    st_theta = tf.expand_dims(tf.convert_to_tensor(state["theta"]), 0)
+
+    act_bus_status = tf.expand_dims(tf.convert_to_tensor(action["bus_status"]), 0)
+    act_branch_status = tf.expand_dims(tf.convert_to_tensor(action["branch_status"]), 0)
+    act_generator_selector = tf.expand_dims(tf.convert_to_tensor(action["generator_selector"]), 0)
+    act_generator_injection = tf.expand_dims(tf.convert_to_tensor(action["generator_injection"]), 0)
+
+    return [st_bus_status, st_branch_status, st_fire_state, st_generator_output, st_load_demand, st_theta, act_bus_status, act_branch_status, act_generator_selector, act_generator_injection]
 
 
 def main(args):
@@ -179,13 +195,14 @@ def main(args):
     action = get_action(actor_action)
     print ("action: ", action)
 
-    # get_tf_state_action(tf_state, action)
-    # critic_reward = critic(tf_state, tf_action)
+    tf_critic = get_tf_state_action(state, action)
+    critic_reward = critic(tf_critic)
+    print("critic_reward: ", critic_reward)
 
 
     # action = env.action_space.sample()
-    ob, reward, done, _ = env.step(action)
-    print("reward: ", reward)
+    # ob, reward, done, _ = env.step(action)
+    # print("reward: ", reward)
 
 
     # print("sample action: ", action)

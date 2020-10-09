@@ -10,81 +10,138 @@ gym.logger.set_level(40)
 
 
 
-class Memory:
-    def __init__(self, state_spaces, action_spaces, buffer_capacity=100000, batch_size=64):
+class NoiseGenerator:
+    def __init__(self, mean, std_deviation, theta=0.15, dt=1e-2, x_initial=None):
+        self.mean = mean
+        self.std_deviation = std_deviation
+        self.theta = theta
+        self.dt = dt
+        self.x_initial = x_initial
+        self.reset()
+
+    def reset(self):
+        if self.x_initial is None:
+            self.x_prev = np.zeros_like(self.mean)
+        else:
+            self.x_prev = self.x_initial
+
+    def __call__(self):
+        x = self.x_prev \
+            + self.theta * (self.mean - self.x_prev) * self.dt \
+            + self.std_deviation * np.sqrt(self.dt) * np.random.normal(size=self.mean.shape)
+
+        self.x_prev = x
+        return x
+
+
+class ReplayBuffer:
+    def __init__(self, actor, target_actor, critic, target_critic, state_spaces, action_spaces, buffer_capacity=100000, batch_size=64):
         self.counter = 0
+        self.gamma = 0.99      # discount factor
+        actor_lr = 0.001
+        critic_lr = 0.002
+        self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
+        self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
+
+        self.actor = actor
+        self.target_actor = target_actor
+        self.critic = critic
+        self.target_critic = target_critic
         self.capacity = buffer_capacity
         self.batch_size = batch_size
 
-        # current state buffer
-        self.st_bus =np.zeros((state_spaces[0]))
-        self.st_branch =np.zeros((state_spaces[1]))
-        self.st_fire =np.zeros((state_spaces[2], state_spaces[2]))
-        self.st_generator_output =np.zeros((state_spaces[3]))
-        self.st_load_demand =np.zeros((state_spaces[4]))
-        self.st_theta =np.zeros((state_spaces[5]))
-        self.state = np.array((self.st_bus, self.st_branch, self.st_fire, self.st_generator_output, self.st_load_demand, self.st_theta))
-        self.states = np.array([self.state]*self.capacity)
+        self.st_bus = np.zeros((self.capacity, state_spaces[0]))
+        self.st_branch = np.zeros((self.capacity, state_spaces[1]))
+        self.st_fire = np.zeros((self.capacity, state_spaces[2], state_spaces[2]))
+        self.st_gen_output = np.zeros((self.capacity, state_spaces[3]))
+        self.st_load_demand = np.zeros((self.capacity, state_spaces[4]))
+        self.st_theta = np.zeros((self.capacity, state_spaces[5]))
 
-        # action buffer
-        self.act_bus = np.zeros((action_spaces[0]))
-        self.act_branch = np.zeros((action_spaces[1]))
-        self.act_generator_selector = np.zeros((action_spaces[2]))
-        self.act_generator_injection = np.zeros((action_spaces[3]))
-        self.action = np.array((self.act_bus, self.act_branch, self.act_generator_selector, self.act_generator_injection))
-        self.actions = np.array([self.action]*self.capacity)
+        self.act_bus = np.zeros((self.capacity, action_spaces[0]))
+        self.act_branch = np.zeros((self.capacity, action_spaces[1]))
+        self.act_gen_selector = np.zeros((self.capacity, action_spaces[2]))
+        self.act_gen_injection = np.zeros((self.capacity, action_spaces[3]))
 
-        # reward buffer
         self.rewards = np.zeros((self.capacity, 1))
 
-        # next state buffer
-        self.next_states = np.array([self.state]*self.capacity)
+        self.next_st_bus = np.zeros((self.capacity, state_spaces[0]))
+        self.next_st_branch = np.zeros((self.capacity, state_spaces[1]))
+        self.next_st_fire = np.zeros((self.capacity, state_spaces[2], state_spaces[2]))
+        self.next_st_gen_output = np.zeros((self.capacity, state_spaces[3]))
+        self.next_st_load_demand = np.zeros((self.capacity, state_spaces[4]))
+        self.next_st_theta = np.zeros((self.capacity, state_spaces[5]))
 
 
     def add_record(self, record):
         index = self.counter % self.capacity
 
-        self.states[index][0] = np.copy(record[0]["bus_status"])
-        self.states[index][1] = np.copy(record[0]["branch_status"])
-        self.states[index][2] = np.copy(record[0]["fire_state"])
-        self.states[index][3] = np.copy(record[0]["generator_injection"])
-        self.states[index][4] = np.copy(record[0]["load_demand"])
-        self.states[index][5] = np.copy(record[0]["theta"])
+        self.st_bus[index] = np.copy(record[0]["bus_status"])
+        self.st_branch[index] = np.copy(record[0]["branch_status"])
+        self.st_fire[index] = np.copy(record[0]["fire_state"])
+        self.st_gen_output[index] = np.copy(record[0]["generator_injection"])
+        self.st_load_demand[index] = np.copy(record[0]["load_demand"])
+        self.st_theta[index] = np.copy(record[0]["theta"])
 
-        self.actions[index][0] = np.copy(record[1]["bus_status"])
-        self.actions[index][1] = np.copy(record[1]["branch_status"])
-        self.actions[index][2] = np.copy(record[1]["branch_status"])
-        self.actions[index][3] = np.copy(record[1]["branch_status"])
+        self.act_bus[index] = np.copy(record[1]["bus_status"])
+        self.act_branch[index] = np.copy(record[1]["branch_status"])
+        self.act_gen_selector[index] = np.copy(record[1]["generator_selector"])
+        self.act_gen_injection[index] = np.copy(record[1]["generator_injection"])
 
         self.rewards[index] = record[2]
 
-        self.next_states[index][0] = np.copy(record[3]["bus_status"])
-        self.next_states[index][1] = np.copy(record[3]["branch_status"])
-        self.next_states[index][2] = np.copy(record[3]["fire_state"])
-        self.next_states[index][3] = np.copy(record[3]["generator_injection"])
-        self.next_states[index][4] = np.copy(record[3]["load_demand"])
-        self.next_states[index][5] = np.copy(record[3]["theta"])
+        self.next_st_bus[index] = np.copy(record[3]["bus_status"])
+        self.next_st_branch[index] = np.copy(record[3]["branch_status"])
+        self.next_st_fire[index] = np.copy(record[3]["fire_state"])
+        self.next_st_gen_output[index] = np.copy(record[3]["generator_injection"])
+        self.next_st_load_demand[index] = np.copy(record[3]["load_demand"])
+        self.next_st_theta[index] = np.copy(record[3]["theta"])
 
         self.counter = self.counter + 1
+
 
     def learn(self):
         record_size = min(self.capacity, self.counter)
         batch_indices = np.random.choice(record_size, self.batch_size)
 
-        bus_status_batch = tf.TensorArray(dtype=tf.int8, size=0, dynamic_size=True)
-        for i, index in enumerate(batch_indices):
-            bus_tensor = tf.convert_to_tensor(self.states[index][0], dtype=tf.int8)
-            print ("i: ", i, ", index: ", bus_tensor)
-            # bus_status_batch = bus_status_batch.write(i, bus_tensor)
+        st_tf_bus = tf.convert_to_tensor(self.st_bus[batch_indices])
+        st_tf_branch = tf.convert_to_tensor(self.st_branch[batch_indices])
+        st_tf_fire = tf.convert_to_tensor(self.st_fire[batch_indices])
+        st_tf_gen_output = tf.convert_to_tensor(self.st_gen_output[batch_indices])
+        st_tf_load_demand = tf.convert_to_tensor(self.st_load_demand[batch_indices])
+        st_tf_theta = tf.convert_to_tensor(self.st_theta[batch_indices])
 
-        # state_batch = tf.convert_to_tensor(self.states[batch_indices][0])
-        # action_batch = tf.convert_to_tensor(self.actions[batch_indices])
-        # reward_batch = tf.convert_to_tensor(self.rewards[batch_indices], dtype=tf.float32)
-        # next_state_batch = tf.convert_to_tensor(self.next_states[batch_indices])
+        act_tf_bus = tf.convert_to_tensor(self.act_bus[batch_indices])
+        act_tf_branch = tf.convert_to_tensor(self.act_branch[batch_indices])
+        act_tf_gen_selector = tf.convert_to_tensor(self.act_gen_selector[batch_indices])
+        act_tf_gen_injection = tf.convert_to_tensor(self.act_gen_injection[batch_indices])
 
+        reward_batch = tf.convert_to_tensor(self.rewards[batch_indices], dtype=tf.float32)
 
+        next_st_tf_bus = tf.convert_to_tensor(self.next_st_bus[batch_indices])
+        next_st_tf_branch = tf.convert_to_tensor(self.next_st_branch[batch_indices])
+        next_st_tf_fire = tf.convert_to_tensor(self.next_st_fire[batch_indices])
+        next_st_tf_gen_output = tf.convert_to_tensor(self.next_st_gen_output[batch_indices])
+        next_st_tf_load_demand = tf.convert_to_tensor(self.next_st_load_demand[batch_indices])
+        next_st_tf_theta = tf.convert_to_tensor(self.next_st_theta[batch_indices])
 
+        # update critic network
+        with tf.GradientTape() as tape:
+            target_actions = self.target_actor([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire, next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta])
+            # need to check if target action needs to be converted
+            y = reward_batch + self.gamma * self.target_critic([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire, next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta, target_actions])
+            critic_value = self.critic([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta, act_tf_bus, act_tf_branch, act_tf_gen_selector, act_tf_gen_injection])
+            critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
+        critic_grad = tape.gradient(critic_loss, self.critic.trainable_variables)
+        self.critic_optimizer.apply_gradients(zip(critic_grad, self.critic.trainable_variables))
 
+        # update actor network
+        with tf.GradientTape() as tape:
+            actions = self.actor([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta])
+            # need to check if target action needs to be converted
+            critic_value = self.critic([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta, actions])
+            actor_loss = -tf.math.reduce_mean(critic_value)
+        actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
+        self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
 
 def get_actor(state_space, action_space):
@@ -242,114 +299,8 @@ def  get_tf_critic_input(state, action):
     return [st_bus_status, st_branch_status, st_fire_state, st_generator_output, st_load_demand, st_theta, act_bus_status, act_branch_status, act_generator_selector, act_generator_injection]
 
 
-class ReplayBuffer:
-    def __init__(self, actor, target_actor, critic, target_critic, state_spaces, action_spaces, buffer_capacity=100000, batch_size=64):
-        self.counter = 0
-        self.gamma = 0.99      # discount factor
-        actor_lr = 0.001
-        critic_lr = 0.002
-        self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
-        self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
-
-        self.actor = actor
-        self.target_actor = target_actor
-        self.critic = critic
-        self.target_critic = target_critic
-        self.capacity = buffer_capacity
-        self.batch_size = batch_size
-
-        self.st_bus = np.zeros((self.capacity, state_spaces[0]))
-        self.st_branch = np.zeros((self.capacity, state_spaces[1]))
-        self.st_fire = np.zeros((self.capacity, state_spaces[2], state_spaces[2]))
-        self.st_gen_output = np.zeros((self.capacity, state_spaces[3]))
-        self.st_load_demand = np.zeros((self.capacity, state_spaces[4]))
-        self.st_theta = np.zeros((self.capacity, state_spaces[5]))
-
-        self.act_bus = np.zeros((self.capacity, action_spaces[0]))
-        self.act_branch = np.zeros((self.capacity, action_spaces[1]))
-        self.act_gen_selector = np.zeros((self.capacity, action_spaces[2]))
-        self.act_gen_injection = np.zeros((self.capacity, action_spaces[3]))
-
-        self.rewards = np.zeros((self.capacity, 1))
-
-        self.next_st_bus = np.zeros((self.capacity, state_spaces[0]))
-        self.next_st_branch = np.zeros((self.capacity, state_spaces[1]))
-        self.next_st_fire = np.zeros((self.capacity, state_spaces[2], state_spaces[2]))
-        self.next_st_gen_output = np.zeros((self.capacity, state_spaces[3]))
-        self.next_st_load_demand = np.zeros((self.capacity, state_spaces[4]))
-        self.next_st_theta = np.zeros((self.capacity, state_spaces[5]))
 
 
-    def add_record(self, record):
-        index = self.counter % self.capacity
-
-        self.st_bus[index] = np.copy(record[0]["bus_status"])
-        self.st_branch[index] = np.copy(record[0]["branch_status"])
-        self.st_fire[index] = np.copy(record[0]["fire_state"])
-        self.st_gen_output[index] = np.copy(record[0]["generator_injection"])
-        self.st_load_demand[index] = np.copy(record[0]["load_demand"])
-        self.st_theta[index] = np.copy(record[0]["theta"])
-
-        self.act_bus[index] = np.copy(record[1]["bus_status"])
-        self.act_branch[index] = np.copy(record[1]["branch_status"])
-        self.act_gen_selector[index] = np.copy(record[1]["generator_selector"])
-        self.act_gen_injection[index] = np.copy(record[1]["generator_injection"])
-
-        self.rewards[index] = record[2]
-
-        self.next_st_bus[index] = np.copy(record[3]["bus_status"])
-        self.next_st_branch[index] = np.copy(record[3]["branch_status"])
-        self.next_st_fire[index] = np.copy(record[3]["fire_state"])
-        self.next_st_gen_output[index] = np.copy(record[3]["generator_injection"])
-        self.next_st_load_demand[index] = np.copy(record[3]["load_demand"])
-        self.next_st_theta[index] = np.copy(record[3]["theta"])
-
-        self.counter = self.counter + 1
-
-
-    def learn(self):
-        record_size = min(self.capacity, self.counter)
-        batch_indices = np.random.choice(record_size, self.batch_size)
-
-        st_tf_bus = tf.convert_to_tensor(self.st_bus[batch_indices])
-        st_tf_branch = tf.convert_to_tensor(self.st_branch[batch_indices])
-        st_tf_fire = tf.convert_to_tensor(self.st_fire[batch_indices])
-        st_tf_gen_output = tf.convert_to_tensor(self.st_gen_output[batch_indices])
-        st_tf_load_demand = tf.convert_to_tensor(self.st_load_demand[batch_indices])
-        st_tf_theta = tf.convert_to_tensor(self.st_theta[batch_indices])
-
-        act_tf_bus = tf.convert_to_tensor(self.act_bus[batch_indices])
-        act_tf_branch = tf.convert_to_tensor(self.act_branch[batch_indices])
-        act_tf_gen_selector = tf.convert_to_tensor(self.act_gen_selector[batch_indices])
-        act_tf_gen_injection = tf.convert_to_tensor(self.act_gen_injection[batch_indices])
-
-        reward_batch = tf.convert_to_tensor(self.rewards[batch_indices], dtype=tf.float32)
-
-        next_st_tf_bus = tf.convert_to_tensor(self.next_st_bus[batch_indices])
-        next_st_tf_branch = tf.convert_to_tensor(self.next_st_branch[batch_indices])
-        next_st_tf_fire = tf.convert_to_tensor(self.next_st_fire[batch_indices])
-        next_st_tf_gen_output = tf.convert_to_tensor(self.next_st_gen_output[batch_indices])
-        next_st_tf_load_demand = tf.convert_to_tensor(self.next_st_load_demand[batch_indices])
-        next_st_tf_theta = tf.convert_to_tensor(self.next_st_theta[batch_indices])
-
-        # update critic network
-        with tf.GradientTape() as tape:
-            target_actions = self.target_actor([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire, next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta])
-            # need to check if target action needs to be converted
-            y = reward_batch + self.gamma * self.target_critic([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire, next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta, target_actions])
-            critic_value = self.critic([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta, act_tf_bus, act_tf_branch, act_tf_gen_selector, act_tf_gen_injection])
-            critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
-        critic_grad = tape.gradient(critic_loss, self.critic.trainable_variables)
-        self.critic_optimizer.apply_gradients(zip(critic_grad, self.critic.trainable_variables))
-
-        # update actor network
-        with tf.GradientTape() as tape:
-            actions = self.actor([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta])
-            # need to check if target action needs to be converted
-            critic_value = self.critic([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta, actions])
-            actor_loss = -tf.math.reduce_mean(critic_value)
-        actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
-        self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
 
 def get_state_spaces(env):

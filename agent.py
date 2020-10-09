@@ -9,44 +9,15 @@ import os
 gym.logger.set_level(40)
 
 
-
-class NoiseGenerator:
-    def __init__(self, mean, std_deviation, theta=0.15, dt=1e-2, x_initial=None):
-        self.mean = mean
-        self.std_deviation = std_deviation
-        self.theta = theta
-        self.dt = dt
-        self.x_initial = x_initial
-        self.reset()
-
-    def reset(self):
-        if self.x_initial is None:
-            self.x_prev = np.zeros_like(self.mean)
-        else:
-            self.x_prev = self.x_initial
-
-    def __call__(self):
-        x = self.x_prev \
-            + self.theta * (self.mean - self.x_prev) * self.dt \
-            + self.std_deviation * np.sqrt(self.dt) * np.random.normal(size=self.mean.shape)
-
-        self.x_prev = x
-        return x
-
-
 class ReplayBuffer:
-    def __init__(self, actor, target_actor, critic, target_critic, state_spaces, action_spaces, buffer_capacity=100000, batch_size=64):
+    def __init__(self, state_spaces, action_spaces, buffer_capacity=100000, batch_size=64):
         self.counter = 0
         self.gamma = 0.99      # discount factor
+        self.tau = 0.005       # used to update target network
         actor_lr = 0.001
         critic_lr = 0.002
         self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
         self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
-
-        self.actor = actor
-        self.target_actor = target_actor
-        self.critic = critic
-        self.target_critic = target_critic
         self.capacity = buffer_capacity
         self.batch_size = batch_size
 
@@ -126,22 +97,38 @@ class ReplayBuffer:
 
         # update critic network
         with tf.GradientTape() as tape:
-            target_actions = self.target_actor([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire, next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta])
+            target_actions = target_actor([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire, next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta])
             # need to check if target action needs to be converted
-            y = reward_batch + self.gamma * self.target_critic([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire, next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta, target_actions])
-            critic_value = self.critic([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta, act_tf_bus, act_tf_branch, act_tf_gen_selector, act_tf_gen_injection])
+            y = reward_batch + self.gamma * target_critic([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire, next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta, target_actions])
+            critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta, act_tf_bus, act_tf_branch, act_tf_gen_selector, act_tf_gen_injection])
             critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
-        critic_grad = tape.gradient(critic_loss, self.critic.trainable_variables)
-        self.critic_optimizer.apply_gradients(zip(critic_grad, self.critic.trainable_variables))
+        critic_grad = tape.gradient(critic_loss, critic.trainable_variables)
+        self.critic_optimizer.apply_gradients(zip(critic_grad, critic.trainable_variables))
 
         # update actor network
         with tf.GradientTape() as tape:
-            actions = self.actor([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta])
+            actions = actor([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta])
             # need to check if target action needs to be converted
-            critic_value = self.critic([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta, actions])
+            critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta, actions])
             actor_loss = -tf.math.reduce_mean(critic_value)
-        actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
-        self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
+        actor_grad = tape.gradient(actor_loss, actor.trainable_variables)
+        self.actor_optimizer.apply_gradients(zip(actor_grad, actor.trainable_variables))
+
+
+    def update_target(self):
+        # update target critic network
+        new_weights = []
+        target_critic_weights = target_critic.weights
+        for i, critic_weight in enumerate(critic.weights):
+            new_weights.append(self.tau * critic_weight + (1 - self.tau) * target_critic_weights[i])
+        target_critic.set_weights(new_weights)
+
+        # update target actor network
+        new_weights = []
+        target_actor_weights = target_actor.weights
+        for i, actor_weight in enumerate(actor.weights):
+            new_weights.append(self.tau * actor_weight + (1 - self.tau) * target_actor_weights[i])
+        target_actor.set_weights(new_weights)
 
 
 def get_actor(state_space, action_space):
@@ -299,8 +286,28 @@ def  get_tf_critic_input(state, action):
     return [st_bus_status, st_branch_status, st_fire_state, st_generator_output, st_load_demand, st_theta, act_bus_status, act_branch_status, act_generator_selector, act_generator_injection]
 
 
+class NoiseGenerator:
+    def __init__(self, mean, std_deviation, theta=0.15, dt=1e-2, x_initial=None):
+        self.mean = mean
+        self.std_deviation = std_deviation
+        self.theta = theta
+        self.dt = dt
+        self.x_initial = x_initial
+        self.reset()
 
+    def reset(self):
+        if self.x_initial is None:
+            self.x_prev = np.zeros_like(self.mean)
+        else:
+            self.x_prev = self.x_initial
 
+    def __call__(self):
+        x = self.x_prev \
+            + self.theta * (self.mean - self.x_prev) * self.dt \
+            + self.std_deviation * np.sqrt(self.dt) * np.random.normal(size=self.mean.shape)
+
+        self.x_prev = x
+        return x
 
 
 def get_state_spaces(env):
@@ -329,50 +336,6 @@ def get_action_spaces(env):
     return action_spaces
 
 
-
-
-
-def main(args):
-    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power)
-    # print("action_space: ", env.action_space)
-    # print("observation space: ", env.observation_space)
-
-    state_spaces = get_state_spaces(env)
-    action_spaces = get_action_spaces(env)
-
-    actor = get_actor(state_spaces, action_spaces)
-    critic = get_critic(state_spaces, action_spaces)
-
-    state = env.reset()
-    tf_state = get_tf_state(state)
-    actor_action = actor(tf_state)
-    action = get_np_action(actor_action)
-    # print ("action: ", action)
-
-    tf_critic_input = get_tf_critic_input(state, action)
-    critic_reward = critic(tf_critic_input)
-    # print("critic_reward: ", critic_reward)
-
-    buffer = ReplayBuffer(actor, actor, critic, critic, state_spaces, action_spaces, 5, 5)
-    buffer.add_record((state, action, 1, state))
-    buffer.learn()
-
-
-    # memory = Memory(state_spaces, action_spaces, 5, 5)
-    # memory.add_record((state, action, 1, state))
-    # memory.learn()
-
-
-    # action = env.action_space.sample()
-    # ob, reward, done, _ = env.step(action)
-    # print("reward: ", reward)
-
-
-    # print("sample action: ", action)
-    # print("obs: ", ob)
-
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dummy Agent for gym_firepower")
     parser.add_argument('-g', '--path-geo', help="Full path to geo file", required=True)
@@ -384,5 +347,49 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--path-output', help="Output directory for dumping environment data")
     args = parser.parse_args()
     print(args)
-    main(args)
+
+    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power)
+    state_spaces = get_state_spaces(env)
+    action_spaces = get_action_spaces(env)
+
+    std_dev = 0.2
+    noise_generator = NoiseGenerator(mean=np.zeros(1), std_deviation=float(std_dev) * np.ones(1))
+
+    actor = get_actor(state_spaces, action_spaces)
+    target_actor = get_actor(state_spaces, action_spaces)
+    target_actor.set_weights(actor.get_weights())
+
+    critic = get_critic(state_spaces, action_spaces)
+    target_critic = get_critic(state_spaces, action_spaces)
+    target_critic.set_weights((critic.get_weights()))
+
+    total_episode = 10
+    max_steps = 300
+    buffer = ReplayBuffer(state_spaces, action_spaces, 3000, 64)
+
+    episodic_rewards = []
+    for episode in range(total_episode):
+        state = env.reset()
+        episodic_reward = 0
+
+        for step in range(max_steps):
+            tf_state = get_tf_state(state)
+            # action = policy(tf_state, noise)
+            actor_action = actor(tf_state)
+            action = get_np_action(actor_action)
+            next_state, reward, done, _ = env.step(action)
+
+            print("reward: ", reward)
+            buffer.add_record((state, action, reward, next_state))
+            episodic_reward += reward
+
+            buffer.learn()
+            buffer.update_target()
+
+            if done:
+                print(f"Episode: {episode}, done at step: {step}, total reward: {episodic_reward}")
+                break
+
+        episodic_rewards.append(episodic_reward)
+        avg_reward = np.mean(episodic_rewards)
 

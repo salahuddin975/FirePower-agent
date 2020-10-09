@@ -191,14 +191,6 @@ def get_tf_state(state):
     return [tf_bus_status, tf_branch_status, tf_fire_state, tf_generator_injection, tf_load_demand, tf_theta]
 
 
-def policy(state, noise):
-    sampled_actions = tf.squeeze(actor(state))
-    sampled_noise = noise()
-    actions = sampled_actions.numpy() + sampled_noise
-    # actions = np.clip(actions, lower_bound, upper_bound)
-    return [np.squeeze(actions)]
-
-
 def get_np_action(tf_action):
     noise = noise_generator()              # need to add individual noise / exploration or exploitation tradeoff
     # print("noise: ", noise)
@@ -218,7 +210,7 @@ def get_np_action(tf_action):
     gen_selector = gen_selector.astype(int)
     # print("gen selector: ", gen_selector)
 
-    gen_injection = np.array(tf.squeeze(tf_action[3])) + noise     # need to take into range 
+    gen_injection = np.array(tf.squeeze(tf_action[3])) + noise     # need to take into range
     # print("gen injection: ", gen_injection)
 
     action = {"generator_injection": gen_injection,
@@ -397,7 +389,6 @@ if __name__ == "__main__":
 
             buffer.add_record((state, action, reward, next_state))
             episodic_reward += reward
-
 
             if done:
                 print(f"Episode: {episode}, done at step: {step}, total reward: {episodic_reward}")

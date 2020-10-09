@@ -3,8 +3,6 @@ import argparse
 import tensorflow as tf
 from tensorflow.keras import layers
 import numpy as np
-from gym import wrappers, logger
-import os
 
 gym.logger.set_level(40)
 
@@ -384,7 +382,6 @@ if __name__ == "__main__":
 
         for step in range(max_steps):
             tf_state = get_tf_state(state)
-            # action = policy(tf_state, noise)
             actor_action = actor(tf_state)
             action = get_np_action(actor_action)
             next_state, reward, done, _ = env.step(action)

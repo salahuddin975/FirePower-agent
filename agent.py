@@ -95,10 +95,13 @@ class ReplayBuffer:
 
         # update critic network
         with tf.GradientTape() as tape:
-            target_actions = target_actor([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire, next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta])
+            target_actions = target_actor([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire, next_st_tf_gen_output,
+                                    next_st_tf_load_demand, next_st_tf_theta])
             # need to check if target action needs to be converted
-            y = reward_batch + self.gamma * target_critic([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire, next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta, target_actions])
-            critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta, act_tf_bus, act_tf_branch, act_tf_gen_selector, act_tf_gen_injection])
+            y = reward_batch + self.gamma * target_critic([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire,
+                                    next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta, target_actions])
+            critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand,
+                                   st_tf_theta, act_tf_bus, act_tf_branch, act_tf_gen_selector, act_tf_gen_injection])
             critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
         critic_grad = tape.gradient(critic_loss, critic.trainable_variables)
         self.critic_optimizer.apply_gradients(zip(critic_grad, critic.trainable_variables))
@@ -172,7 +175,8 @@ def get_actor(state_space, action_space):
     # generator_injection (generator output) -> Box(5, )
     gen_inj_output = layers.Dense(action_space[3]) (hidden)
 
-    model = tf.keras.Model([bus_input, branch_input, fire_input, gen_inj_input, load_demand_input, theta_input], [bus_output, branch_output, gen_selector_output, gen_inj_output])
+    model = tf.keras.Model([bus_input, branch_input, fire_input, gen_inj_input, load_demand_input, theta_input],
+                           [bus_output, branch_output, gen_selector_output, gen_inj_output])
     return model
 
 
@@ -274,7 +278,8 @@ def get_critic(state_spaces, action_spaces):
     hidden = layers.Dense(512, activation="relu") (hidden)
     reward = layers.Dense(1) (hidden)
 
-    model = tf.keras.Model([st_bus, st_branch, st_fire, st_gen_output, st_load_demand, st_theta, act_bus, act_branch, act_gen_selector, act_gen_injection], reward)
+    model = tf.keras.Model([st_bus, st_branch, st_fire, st_gen_output, st_load_demand, st_theta,
+                            act_bus, act_branch, act_gen_selector, act_gen_injection], reward)
     return model
 
 
@@ -291,7 +296,8 @@ def  get_tf_critic_input(state, action):
     act_generator_selector = tf.expand_dims(tf.convert_to_tensor(action["generator_selector"]), 0)
     act_generator_injection = tf.expand_dims(tf.convert_to_tensor(action["generator_injection"]), 0)
 
-    return [st_bus_status, st_branch_status, st_fire_state, st_generator_output, st_load_demand, st_theta, act_bus_status, act_branch_status, act_generator_selector, act_generator_injection]
+    return [st_bus_status, st_branch_status, st_fire_state, st_generator_output, st_load_demand, st_theta,
+            act_bus_status, act_branch_status, act_generator_selector, act_generator_injection]
 
 
 class NoiseGenerator:
@@ -327,7 +333,8 @@ def get_state_spaces(env):
     num_load_demand = observation_space["load_demand"].shape[0]
     num_theta = observation_space["theta"].shape[0]
     state_spaces = [num_st_bus, num_st_branch, num_fire_status, num_gen_output, num_load_demand, num_theta]
-    # print(f"State Spaces: num bus: {num_st_bus}, num branch: {num_st_branch}, fire status: {num_fire_status}, num_gen_injection: {num_gen_output}, num_load_demand: {num_load_demand}, num_theta: {num_theta}")
+    # print(f"State Spaces: num bus: {num_st_bus}, num branch: {num_st_branch}, fire status: {num_fire_status}, "
+    #       f"num_gen_injection: {num_gen_output}, num_load_demand: {num_load_demand}, num_theta: {num_theta}")
 
     return state_spaces
 
@@ -339,7 +346,8 @@ def get_action_spaces(env):
     num_generator_selector = action_space["generator_selector"].shape[0]
     num_generator_injection = action_space["generator_injection"].shape[0]
     action_spaces = [num_bus, num_branch, num_generator_selector, num_generator_injection]
-    # print (f"Action Spaces: num bus: {num_bus}, num branch: {num_branch}, num_generator_selector: {num_generator_selector}, num generator injection: {num_generator_injection}")
+    # print (f"Action Spaces: num bus: {num_bus}, num branch: {num_branch}, num_generator_selector: {num_generator_selector}, "
+    #         f"num generator injection: {num_generator_injection}")
 
     return action_spaces
 

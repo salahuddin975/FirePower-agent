@@ -242,9 +242,19 @@ def  get_tf_critic_input(state, action):
     return [st_bus_status, st_branch_status, st_fire_state, st_generator_output, st_load_demand, st_theta, act_bus_status, act_branch_status, act_generator_selector, act_generator_injection]
 
 
-class Buffer:
-    def __init__(self, state_spaces, action_spaces, buffer_capacity=100000, batch_size=64):
+class ReplayBuffer:
+    def __init__(self, actor, target_actor, critic, target_critic, state_spaces, action_spaces, buffer_capacity=100000, batch_size=64):
         self.counter = 0
+        self.gamma = 0.99      # discount factor
+        actor_lr = 0.001
+        critic_lr = 0.002
+        self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
+        self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
+
+        self.actor = actor
+        self.target_actor = target_actor
+        self.critic = critic
+        self.target_critic = target_critic
         self.capacity = buffer_capacity
         self.batch_size = batch_size
 
@@ -297,6 +307,49 @@ class Buffer:
         self.counter = self.counter + 1
 
 
+    def learn(self):
+        record_size = min(self.capacity, self.counter)
+        batch_indices = np.random.choice(record_size, self.batch_size)
+
+        st_tf_bus = tf.convert_to_tensor(self.st_bus[batch_indices])
+        st_tf_branch = tf.convert_to_tensor(self.st_branch[batch_indices])
+        st_tf_fire = tf.convert_to_tensor(self.st_fire[batch_indices])
+        st_tf_gen_output = tf.convert_to_tensor(self.st_gen_output[batch_indices])
+        st_tf_load_demand = tf.convert_to_tensor(self.st_load_demand[batch_indices])
+        st_tf_theta = tf.convert_to_tensor(self.st_theta[batch_indices])
+
+        act_tf_bus = tf.convert_to_tensor(self.act_bus[batch_indices])
+        act_tf_branch = tf.convert_to_tensor(self.act_branch[batch_indices])
+        act_tf_gen_selector = tf.convert_to_tensor(self.act_gen_selector[batch_indices])
+        act_tf_gen_injection = tf.convert_to_tensor(self.act_gen_injection[batch_indices])
+
+        reward_batch = tf.convert_to_tensor(self.rewards[batch_indices], dtype=tf.float32)
+
+        next_st_tf_bus = tf.convert_to_tensor(self.next_st_bus[batch_indices])
+        next_st_tf_branch = tf.convert_to_tensor(self.next_st_branch[batch_indices])
+        next_st_tf_fire = tf.convert_to_tensor(self.next_st_fire[batch_indices])
+        next_st_tf_gen_output = tf.convert_to_tensor(self.next_st_gen_output[batch_indices])
+        next_st_tf_load_demand = tf.convert_to_tensor(self.next_st_load_demand[batch_indices])
+        next_st_tf_theta = tf.convert_to_tensor(self.next_st_theta[batch_indices])
+
+        # update critic network
+        with tf.GradientTape() as tape:
+            target_actions = self.target_actor([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire, next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta])
+            # need to check if target action needs to be converted
+            y = reward_batch + self.gamma * self.target_critic([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire, next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta, target_actions])
+            critic_value = self.critic([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta, act_tf_bus, act_tf_branch, act_tf_gen_selector, act_tf_gen_injection])
+            critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
+        critic_grad = tape.gradient(critic_loss, self.critic.trainable_variables)
+        self.critic_optimizer.apply_gradients(zip(critic_grad, self.critic.trainable_variables))
+
+        # update actor network
+        with tf.GradientTape() as tape:
+            actions = self.actor([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta])
+            # need to check if target action needs to be converted
+            critic_value = self.critic([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta, actions])
+            actor_loss = -tf.math.reduce_mean(critic_value)
+        actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
+        self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
 
 def get_state_spaces(env):
@@ -349,8 +402,9 @@ def main(args):
     critic_reward = critic(tf_critic_input)
     # print("critic_reward: ", critic_reward)
 
-    buffer = Buffer(state_spaces, action_spaces, 5, 5)
+    buffer = ReplayBuffer(actor, actor, critic, critic, state_spaces, action_spaces, 5, 5)
     buffer.add_record((state, action, 1, state))
+    buffer.learn()
 
 
     # memory = Memory(state_spaces, action_spaces, 5, 5)
@@ -372,7 +426,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dummy Agent for gym_firepower")
     parser.add_argument('-g', '--path-geo', help="Full path to geo file", required=True)
     parser.add_argument('-p', '--path-power', help="Full path to power systems file", required=False)
-    parser.add_argument('-f', '--scale-factor', help="Scaling factor", type=int, default=6)
+    parser.add_argument('-f', '--scale-factor', help="Scali    actor_lr = 0.001ng factor", type=int, default=6)
     parser.add_argument('-n', '--nonconvergence-penalty', help="Non-convergence penalty", type=float)
     parser.add_argument('-a', '--protectionaction-penalty', help="Protection action penalty", type=float)
     parser.add_argument('-s', '--seed', help="Seed for random number generator", type=int)

@@ -200,7 +200,8 @@ def policy(state, noise):
 
 
 def get_np_action(tf_action):
-    noise = noise_generator()
+    noise = noise_generator()              # need to add individual noise / exploration or exploitation tradeoff
+    # print("noise: ", noise)
 
     bus_status = np.array(tf_action[0]) + noise
     bus_status[: 1] = bus_status[:] > 0
@@ -217,7 +218,7 @@ def get_np_action(tf_action):
     gen_selector = gen_selector.astype(int)
     # print("gen selector: ", gen_selector)
 
-    gen_injection = np.array(tf.squeeze(tf_action[3])) + noise     # need to take into range (need to talk Subir/Ajay)
+    gen_injection = np.array(tf.squeeze(tf_action[3])) + noise     # need to take into range 
     # print("gen injection: ", gen_injection)
 
     action = {"generator_injection": gen_injection,
@@ -276,7 +277,7 @@ def get_critic(state_spaces, action_spaces):
 
     hidden = layers.Dense(512, activation="relu") (hidden)
     hidden = layers.Dense(512, activation="relu") (hidden)
-    reward = layers.Dense(1) (hidden)
+    reward = layers.Dense(1, activation="linear") (hidden)
 
     model = tf.keras.Model([st_bus, st_branch, st_fire, st_gen_output, st_load_demand, st_theta,
                             act_bus, act_branch, act_gen_selector, act_gen_injection], reward)
@@ -397,12 +398,13 @@ if __name__ == "__main__":
             buffer.add_record((state, action, reward, next_state))
             episodic_reward += reward
 
-            buffer.learn()
-            buffer.update_target()
 
             if done:
                 print(f"Episode: {episode}, done at step: {step}, total reward: {episodic_reward}")
                 break
+
+        buffer.learn()
+        buffer.update_target()
 
         episodic_rewards.append(episodic_reward)
         avg_reward = np.mean(episodic_rewards)

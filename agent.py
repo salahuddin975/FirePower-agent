@@ -67,6 +67,21 @@ class Memory:
 
         self.counter = self.counter + 1
 
+    def learn(self):
+        record_size = min(self.capacity, self.counter)
+        batch_indices = np.random.choice(record_size, self.batch_size)
+
+        bus_status_batch = tf.TensorArray(dtype=tf.int8, size=0, dynamic_size=True)
+        for i, index in enumerate(batch_indices):
+            bus_tensor = tf.convert_to_tensor(self.states[index][0], dtype=tf.int8)
+            print ("i: ", i, ", index: ", bus_tensor)
+            # bus_status_batch = bus_status_batch.write(i, bus_tensor)
+
+        # state_batch = tf.convert_to_tensor(self.states[batch_indices][0])
+        # action_batch = tf.convert_to_tensor(self.actions[batch_indices])
+        # reward_batch = tf.convert_to_tensor(self.rewards[batch_indices], dtype=tf.float32)
+        # next_state_batch = tf.convert_to_tensor(self.next_states[batch_indices])
+
 
 
 
@@ -227,6 +242,63 @@ def  get_tf_critic_input(state, action):
     return [st_bus_status, st_branch_status, st_fire_state, st_generator_output, st_load_demand, st_theta, act_bus_status, act_branch_status, act_generator_selector, act_generator_injection]
 
 
+class Buffer:
+    def __init__(self, state_spaces, action_spaces, buffer_capacity=100000, batch_size=64):
+        self.counter = 0
+        self.capacity = buffer_capacity
+        self.batch_size = batch_size
+
+        self.st_bus = np.zeros((self.capacity, state_spaces[0]))
+        self.st_branch = np.zeros((self.capacity, state_spaces[1]))
+        self.st_fire = np.zeros((self.capacity, state_spaces[2], state_spaces[2]))
+        self.st_gen_output = np.zeros((self.capacity, state_spaces[3]))
+        self.st_load_demand = np.zeros((self.capacity, state_spaces[4]))
+        self.st_theta = np.zeros((self.capacity, state_spaces[5]))
+
+        self.act_bus = np.zeros((self.capacity, action_spaces[0]))
+        self.act_branch = np.zeros((self.capacity, action_spaces[1]))
+        self.act_gen_selector = np.zeros((self.capacity, action_spaces[2]))
+        self.act_gen_injection = np.zeros((self.capacity, action_spaces[3]))
+
+        self.rewards = np.zeros((self.capacity, 1))
+
+        self.next_st_bus = np.zeros((self.capacity, state_spaces[0]))
+        self.next_st_branch = np.zeros((self.capacity, state_spaces[1]))
+        self.next_st_fire = np.zeros((self.capacity, state_spaces[2], state_spaces[2]))
+        self.next_st_gen_output = np.zeros((self.capacity, state_spaces[3]))
+        self.next_st_load_demand = np.zeros((self.capacity, state_spaces[4]))
+        self.next_st_theta = np.zeros((self.capacity, state_spaces[5]))
+
+
+    def add_record(self, record):
+        index = self.counter % self.capacity
+
+        self.st_bus[index] = np.copy(record[0]["bus_status"])
+        self.st_branch[index] = np.copy(record[0]["branch_status"])
+        self.st_fire[index] = np.copy(record[0]["fire_state"])
+        self.st_gen_output[index] = np.copy(record[0]["generator_injection"])
+        self.st_load_demand[index] = np.copy(record[0]["load_demand"])
+        self.st_theta[index] = np.copy(record[0]["theta"])
+
+        self.act_bus[index] = np.copy(record[1]["bus_status"])
+        self.act_branch[index] = np.copy(record[1]["branch_status"])
+        self.act_gen_selector[index] = np.copy(record[1]["generator_selector"])
+        self.act_gen_injection[index] = np.copy(record[1]["generator_injection"])
+
+        self.rewards[index] = record[2]
+
+        self.next_st_bus[index] = np.copy(record[3]["bus_status"])
+        self.next_st_branch[index] = np.copy(record[3]["branch_status"])
+        self.next_st_fire[index] = np.copy(record[3]["fire_state"])
+        self.next_st_gen_output[index] = np.copy(record[3]["generator_injection"])
+        self.next_st_load_demand[index] = np.copy(record[3]["load_demand"])
+        self.next_st_theta[index] = np.copy(record[3]["theta"])
+
+        self.counter = self.counter + 1
+
+
+
+
 def get_state_spaces(env):
     observation_space = env.observation_space
     num_st_bus = observation_space["bus_status"].shape[0]
@@ -253,6 +325,9 @@ def get_action_spaces(env):
     return action_spaces
 
 
+
+
+
 def main(args):
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power)
     # print("action_space: ", env.action_space)
@@ -274,9 +349,13 @@ def main(args):
     critic_reward = critic(tf_critic_input)
     # print("critic_reward: ", critic_reward)
 
-    memory = Memory(state_spaces, action_spaces, 5, 64)
-    print("action: ", action)
-    memory.add_record((state, action, 1, state))
+    buffer = Buffer(state_spaces, action_spaces, 5, 5)
+    buffer.add_record((state, action, 1, state))
+
+
+    # memory = Memory(state_spaces, action_spaces, 5, 5)
+    # memory.add_record((state, action, 1, state))
+    # memory.learn()
 
 
     # action = env.action_space.sample()

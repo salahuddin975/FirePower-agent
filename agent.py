@@ -266,7 +266,7 @@ def get_tf_state(state):
 
 
 def get_np_action(tf_action, explore_network = False):
-    print(f"explore network: {explore_network}")
+    # print(f"explore network: {explore_network}")
 
     # bus
     bus_status = np.array(tf_action[0])
@@ -393,12 +393,12 @@ if __name__ == "__main__":
     target_critic = get_critic(state_spaces, action_spaces)
     target_critic.set_weights((critic.get_weights()))
 
-    total_episode = 1
-    max_steps = 1
+    total_episode = 10
+    max_steps = 10
     buffer = ReplayBuffer(state_spaces, action_spaces, 3000, 64)
 
-    epsilon = 0.8               # initial exploration rate
-    max_epsilon = 1.0
+    epsilon = 0.7               # initial exploration rate
+    max_epsilon = .7
     min_epsilon = 0.01
     decay_rate = 0.005          # exponential decay rate for exploration probability
 

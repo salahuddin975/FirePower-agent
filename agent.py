@@ -56,7 +56,7 @@ class ReplayBuffer:
         self.act_gen_selector[index] = np.copy(record[1]["generator_selector"])
         self.act_gen_injection[index] = np.copy(record[1]["generator_injection"])
 
-        self.rewards[index] = record[2]
+        self.rewards[index] = record[2][0]
 
         self.next_st_bus[index] = np.copy(record[3]["bus_status"])
         self.next_st_branch[index] = np.copy(record[3]["branch_status"])
@@ -180,47 +180,6 @@ def get_actor(state_space, action_space):
     return model
 
 
-def get_tf_state(state):
-    tf_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
-    tf_branch_status = tf.expand_dims(tf.convert_to_tensor(state["branch_status"]), 0)
-    tf_fire_state = tf.expand_dims(tf.convert_to_tensor(state["fire_state"]), 0)
-    tf_generator_injection = tf.expand_dims(tf.convert_to_tensor(state["generator_injection"]), 0)
-    tf_load_demand = tf.expand_dims(tf.convert_to_tensor(state["load_demand"]), 0)
-    tf_theta = tf.expand_dims(tf.convert_to_tensor(state["theta"]), 0)
-
-    return [tf_bus_status, tf_branch_status, tf_fire_state, tf_generator_injection, tf_load_demand, tf_theta]
-
-
-def get_np_action(tf_action):
-    noise = noise_generator()              # need to add individual noise / exploration or exploitation tradeoff
-    # print("noise: ", noise)
-
-    bus_status = np.array(tf_action[0]) + noise
-    bus_status[: 1] = bus_status[:] > 0
-    bus_status = np.squeeze(bus_status.astype(int))
-    # print ("bus status: ", bus_status)
-
-    branch_status = np.array(tf_action[1]) + noise
-    branch_status[: 1] = branch_status[:] > 0
-    branch_status = np.squeeze(branch_status.astype(int))
-    # print ("branch status: ", branch_status)
-
-    gen_selector = np.array(tf.squeeze(tf_action[2])) + noise
-    gen_selector = np.abs(gen_selector * 24)
-    gen_selector = gen_selector.astype(int)
-    # print("gen selector: ", gen_selector)
-
-    gen_injection = np.array(tf.squeeze(tf_action[3])) + noise     # need to take into range
-    # print("gen injection: ", gen_injection)
-
-    action = {"generator_injection": gen_injection,
-        "branch_status": branch_status,
-        "bus_status": bus_status,
-        "generator_selector": gen_selector}
-
-    return action
-
-
 def get_critic(state_spaces, action_spaces):
     # bus -> MultiBinary(24)
     st_bus = layers.Input(shape=(state_spaces[0],))
@@ -293,6 +252,51 @@ def  get_tf_critic_input(state, action):
             act_bus_status, act_branch_status, act_generator_selector, act_generator_injection]
 
 
+def get_tf_state(state):
+    tf_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
+    tf_branch_status = tf.expand_dims(tf.convert_to_tensor(state["branch_status"]), 0)
+    tf_fire_state = tf.expand_dims(tf.convert_to_tensor(state["fire_state"]), 0)
+    tf_generator_injection = tf.expand_dims(tf.convert_to_tensor(state["generator_injection"]), 0)
+    tf_load_demand = tf.expand_dims(tf.convert_to_tensor(state["load_demand"]), 0)
+    tf_theta = tf.expand_dims(tf.convert_to_tensor(state["theta"]), 0)
+
+    return [tf_bus_status, tf_branch_status, tf_fire_state, tf_generator_injection, tf_load_demand, tf_theta]
+
+
+def get_np_action(tf_action):
+    noise = noise_generator()              # need to add individual noise / exploration or exploitation tradeoff
+    # print("noise: ", noise)
+
+    bus_status = np.array(tf_action[0]) + noise
+    bus_status[: 1] = bus_status[:] > 0
+    bus_status = np.squeeze(bus_status.astype(int))
+    # bus_status = np.ones(24, int)          # rewrite by dummy bus status (need to remove)
+    # print ("bus status: ", bus_status)
+
+    branch_status = np.array(tf_action[1])
+    branch_status[: 1] = branch_status[:] > -0.9
+    branch_status = np.squeeze(branch_status.astype(int))
+    # branch_status = np.ones(34, int)       # rewrite by dummy branch status (need to remove)
+    # print ("branch status: ", branch_status)
+
+    gen_selector = np.array(tf.squeeze(tf_action[2])) + noise
+    gen_selector = np.abs(gen_selector * 24)
+    gen_selector = gen_selector.astype(int)
+    # gen_selector = np.array([24]*10)       # rewrite by dummy value (need to remove)
+    print("gen selector: ", gen_selector)
+
+    gen_injection = np.array(tf.squeeze(tf_action[3])) + noise  # need to work here
+    # gen_injection = np.zeros(10, int)       # rewrite by dummy value (need to remove)
+    # print("gen injection: ", gen_injection)
+
+    action = {"generator_injection": gen_injection,
+        "branch_status": branch_status,
+        "bus_status": bus_status,
+        "generator_selector": gen_selector}
+
+    return action
+
+
 class NoiseGenerator:
     def __init__(self, mean, std_deviation, theta=0.15, dt=1e-2, x_initial=None):
         self.mean = mean
@@ -326,8 +330,8 @@ def get_state_spaces(env):
     num_load_demand = observation_space["load_demand"].shape[0]
     num_theta = observation_space["theta"].shape[0]
     state_spaces = [num_st_bus, num_st_branch, num_fire_status, num_gen_output, num_load_demand, num_theta]
-    # print(f"State Spaces: num bus: {num_st_bus}, num branch: {num_st_branch}, fire status: {num_fire_status}, "
-    #       f"num_gen_injection: {num_gen_output}, num_load_demand: {num_load_demand}, num_theta: {num_theta}")
+    print(f"State Spaces: num bus: {num_st_bus}, num branch: {num_st_branch}, fire status: {num_fire_status}, "
+          f"num_gen_injection: {num_gen_output}, num_load_demand: {num_load_demand}, num_theta: {num_theta}")
 
     return state_spaces
 
@@ -339,8 +343,8 @@ def get_action_spaces(env):
     num_generator_selector = action_space["generator_selector"].shape[0]
     num_generator_injection = action_space["generator_injection"].shape[0]
     action_spaces = [num_bus, num_branch, num_generator_selector, num_generator_injection]
-    # print (f"Action Spaces: num bus: {num_bus}, num branch: {num_branch}, num_generator_selector: {num_generator_selector}, "
-    #         f"num generator injection: {num_generator_injection}")
+    print (f"Action Spaces: num bus: {num_bus}, num branch: {num_branch}, num_generator_selector: {num_generator_selector}, "
+            f"num generator injection: {num_generator_injection}")
 
     return action_spaces
 
@@ -386,9 +390,10 @@ if __name__ == "__main__":
             actor_action = actor(tf_state)
             action = get_np_action(actor_action)
             next_state, reward, done, _ = env.step(action)
+            print(f"Episode: {episode}, at step: {step}, reward: {reward}")
 
             buffer.add_record((state, action, reward, next_state))
-            episodic_reward += reward
+            episodic_reward += reward[0]
 
             if done:
                 print(f"Episode: {episode}, done at step: {step}, total reward: {episodic_reward}")

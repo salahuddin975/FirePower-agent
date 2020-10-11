@@ -263,29 +263,40 @@ def get_tf_state(state):
     return [tf_bus_status, tf_branch_status, tf_fire_state, tf_generator_injection, tf_load_demand, tf_theta]
 
 
-def get_np_action(tf_action):
-    noise = noise_generator()              # need to add individual noise / exploration or exploitation tradeoff
-    # print("noise: ", noise)
+def get_np_action(tf_action, add_noise = False):
+    # add_noise = True
 
-    bus_status = np.array(tf_action[0]) + noise
+    bus_status = np.array(tf_action[0])
+    if add_noise == True:
+        for i, x in enumerate(bus_status):
+            bus_status[i] = bus_status[i] + noise_generator()
     bus_status[: 1] = bus_status[:] > 0
     bus_status = np.squeeze(bus_status.astype(int))
     # bus_status = np.ones(24, int)          # rewrite by dummy bus status (need to remove)
-    # print ("bus status: ", bus_status)
+    print ("bus status: ", bus_status)
 
     branch_status = np.array(tf_action[1])
+    if add_noise == True:
+        for i, x in enumerate(branch_status):
+            branch_status[i] = branch_status[i] + noise_generator()
     branch_status[: 1] = branch_status[:] > -0.9
     branch_status = np.squeeze(branch_status.astype(int))
     # branch_status = np.ones(34, int)       # rewrite by dummy branch status (need to remove)
-    # print ("branch status: ", branch_status)
+    print ("branch status: ", branch_status)
 
-    gen_selector = np.array(tf.squeeze(tf_action[2])) + noise
+    gen_selector = np.array(tf.squeeze(tf_action[2]))
+    if add_noise == True:
+        for i, x in enumerate(gen_selector):
+            gen_selector[i] = gen_selector[i] + noise_generator()
     gen_selector = np.abs(gen_selector * 24)
     gen_selector = gen_selector.astype(int)
     # gen_selector = np.array([24]*10)       # rewrite by dummy value (need to remove)
     print("gen selector: ", gen_selector)
 
-    gen_injection = np.array(tf.squeeze(tf_action[3])) + noise  # need to work here
+    gen_injection = np.array(tf.squeeze(tf_action[3])) # need to work here
+    if add_noise == True:
+        for i, x in enumerate(gen_injection):
+            gen_injection[i] = gen_injection[i] + noise_generator()
     # gen_injection = np.zeros(10, int)       # rewrite by dummy value (need to remove)
     # print("gen injection: ", gen_injection)
 
@@ -376,8 +387,8 @@ if __name__ == "__main__":
     target_critic = get_critic(state_spaces, action_spaces)
     target_critic.set_weights((critic.get_weights()))
 
-    total_episode = 10
-    max_steps = 300
+    total_episode = 1
+    max_steps = 1
     buffer = ReplayBuffer(state_spaces, action_spaces, 3000, 64)
 
     episodic_rewards = []

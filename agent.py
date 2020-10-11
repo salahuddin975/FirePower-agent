@@ -1,8 +1,10 @@
 import gym
+import random
 import argparse
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers
-import numpy as np
+
 
 gym.logger.set_level(40)
 
@@ -263,11 +265,12 @@ def get_tf_state(state):
     return [tf_bus_status, tf_branch_status, tf_fire_state, tf_generator_injection, tf_load_demand, tf_theta]
 
 
-def get_np_action(tf_action, add_noise = False):
-    # add_noise = True
+def get_np_action(tf_action, explore_network = False):
+    print(f"explore network: {explore_network}")
 
+    # bus
     bus_status = np.array(tf_action[0])
-    if add_noise == True:
+    if explore_network == True:
         for i, x in enumerate(bus_status):
             bus_status[i] = bus_status[i] + noise_generator()
     bus_status[: 1] = bus_status[:] > 0
@@ -275,8 +278,9 @@ def get_np_action(tf_action, add_noise = False):
     # bus_status = np.ones(24, int)          # rewrite by dummy bus status (need to remove)
     print ("bus status: ", bus_status)
 
+    # branch
     branch_status = np.array(tf_action[1])
-    if add_noise == True:
+    if explore_network == True:
         for i, x in enumerate(branch_status):
             branch_status[i] = branch_status[i] + noise_generator()
     branch_status[: 1] = branch_status[:] > -0.9
@@ -284,8 +288,9 @@ def get_np_action(tf_action, add_noise = False):
     # branch_status = np.ones(34, int)       # rewrite by dummy branch status (need to remove)
     print ("branch status: ", branch_status)
 
+    # generator selector
     gen_selector = np.array(tf.squeeze(tf_action[2]))
-    if add_noise == True:
+    if explore_network == True:
         for i, x in enumerate(gen_selector):
             gen_selector[i] = gen_selector[i] + noise_generator()
     gen_selector = np.abs(gen_selector * 24)
@@ -293,8 +298,9 @@ def get_np_action(tf_action, add_noise = False):
     # gen_selector = np.array([24]*10)       # rewrite by dummy value (need to remove)
     print("gen selector: ", gen_selector)
 
+    # generator ramping up/down
     gen_injection = np.array(tf.squeeze(tf_action[3])) # need to work here
-    if add_noise == True:
+    if explore_network == True:
         for i, x in enumerate(gen_injection):
             gen_injection[i] = gen_injection[i] + noise_generator()
     # gen_injection = np.zeros(10, int)       # rewrite by dummy value (need to remove)
@@ -391,6 +397,11 @@ if __name__ == "__main__":
     max_steps = 1
     buffer = ReplayBuffer(state_spaces, action_spaces, 3000, 64)
 
+    epsilon = 0.8               # initial exploration rate
+    max_epsilon = 1.0
+    min_epsilon = 0.01
+    decay_rate = 0.005          # exponential decay rate for exploration probability
+
     episodic_rewards = []
     for episode in range(total_episode):
         state = env.reset()
@@ -399,7 +410,13 @@ if __name__ == "__main__":
         for step in range(max_steps):
             tf_state = get_tf_state(state)
             actor_action = actor(tf_state)
-            action = get_np_action(actor_action)
+
+            tradeoff = random.uniform(0, 1)
+            if tradeoff < epsilon:
+                action = get_np_action(actor_action, True)        # explore
+            else:
+                action = get_np_action(actor_action, False)
+
             next_state, reward, done, _ = env.step(action)
             print(f"Episode: {episode}, at step: {step}, reward: {reward}")
 
@@ -412,6 +429,9 @@ if __name__ == "__main__":
 
         buffer.learn()
         buffer.update_target()
+
+        # reduce epsilon as we need less and less exploration
+        epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
 
         episodic_rewards.append(episodic_reward)
         avg_reward = np.mean(episodic_rewards)

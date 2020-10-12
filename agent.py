@@ -169,16 +169,16 @@ def get_actor(state_space, action_space):
     hidden = layers.Dense(512, activation="relu") (hidden)
 
     # bus -> MultiBinary(24)
-    bus_output = layers.Dense(action_space[0]) (hidden)
+    bus_output = layers.Dense(action_space[0], activation="tanh") (hidden)
 
     # num_branch -> MultiBinary(34)
-    branch_output = layers.Dense(action_space[1]) (hidden)
+    branch_output = layers.Dense(action_space[1], activation="tanh") (hidden)
 
     # generator_selector -> MultiDiscrete([12 12 12 12 12])
-    gen_selector_output = layers.Dense(action_space[2]) (hidden)
+    gen_selector_output = layers.Dense(action_space[2], activation="tanh") (hidden)
 
     # generator_injection (generator output) -> Box(5, )
-    gen_inj_output = layers.Dense(action_space[3]) (hidden)
+    gen_inj_output = layers.Dense(action_space[3], activation="tanh") (hidden)
 
     model = tf.keras.Model([bus_input, branch_input, fire_input, gen_inj_input, load_demand_input, theta_input],
                            [bus_output, branch_output, gen_selector_output, gen_inj_output])
@@ -309,6 +309,7 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
 
     selected_indices = np.abs(indices_prob * generators.size)
     selected_indices = selected_indices.astype(int)
+    print("selected indices: ", selected_indices, "; generators_size: ", generators.size)
     selected_generators = generators[selected_indices]
 
     selected_generators_current_output = np.zeros(selected_generators.size)
@@ -335,8 +336,8 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
 
 def check_branch_violation(bus_status, branch_status):
     branches = ppc["branch"][:, F_BUS]
-    print("branches size: ", branches.size)
-    print("branch status size: ", branch_status.size)
+    # print("branches size: ", branches.size)
+    # print("branch status size: ", branch_status.size)
     for i in range(bus_status.size):
         if bus_status[i] == False:
             for j in range(branch_status.size):    # should be branches; size differ, need to talk
@@ -356,7 +357,7 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
             bus_status[i] = bus_status[i] + noise_generator()
     bus_status[: 1] = bus_status[:] > 0
     bus_status = np.squeeze(bus_status.astype(int))
-    print ("bus status: ", bus_status)
+    # print ("bus status: ", bus_status)
 
     # branch status
     branch_status = np.array(tf_action[1])
@@ -365,7 +366,7 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
             branch_status[i] = branch_status[i] + noise_generator()
     branch_status[: 1] = branch_status[:] > -0.9
     branch_status = np.squeeze(branch_status.astype(int))
-    print ("branch status: ", branch_status)
+    # print ("branch status: ", branch_status)
     branch_status = check_branch_violation(bus_status, branch_status)
     print ("branch status: ", branch_status)
 
@@ -373,7 +374,9 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     indices_prob = np.array(tf.squeeze(tf_action[2]))
     if explore_network:
         for i, x in enumerate(indices_prob):
-            indices_prob[i] = indices_prob[i] + noise_generator()
+            total_prob = indices_prob[i] + noise_generator()
+            indices_prob[i] = total_prob if (total_prob <= 1 and total_prob >= -1) else 1
+    print ("indices prob: ", indices_prob)
 
     # amount of power for ramping up/down
     ramp_ratio = np.array(tf.squeeze(tf_action[3]))
@@ -386,10 +389,10 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     # print("selected generators: ", selected_generators)
     # print("generators ramp: ", generators_ramp)
 
-    # bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
+    bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
     # branch_status = np.ones(34, int)       # overwrite by dummy branch status (need to remove)
-    # gen_selector = np.array([24]*10)       # overwrite by dummy value (need to remove)
-    # gen_injection = np.zeros(10, int)      # overwrite by dummy value (need to remove)
+    selected_generators = np.array([24]*10)       # overwrite by dummy value (need to remove)
+    generators_ramp = np.zeros(10, int)      # overwrite by dummy value (need to remove)
 
     action = {
         "bus_status": bus_status,
@@ -482,8 +485,8 @@ if __name__ == "__main__":
     target_critic = get_critic(state_spaces, action_spaces)
     target_critic.set_weights((critic.get_weights()))
 
-    total_episode = 1
-    max_steps = 1
+    total_episode = 10
+    max_steps = 300
     buffer = ReplayBuffer(state_spaces, action_spaces, 3000, 64)
 
     epsilon = 0.7               # initial exploration rate

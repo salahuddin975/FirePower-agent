@@ -169,13 +169,13 @@ def get_actor(state_space, action_space):
     hidden = layers.Dense(512, activation="relu") (hidden)
 
     # bus -> MultiBinary(24)
-    bus_output = layers.Dense(action_space[0], activation="tanh") (hidden)
+    bus_output = layers.Dense(action_space[0], activation="sigmoid") (hidden)
 
     # num_branch -> MultiBinary(34)
-    branch_output = layers.Dense(action_space[1], activation="tanh") (hidden)
+    branch_output = layers.Dense(action_space[1], activation="sigmoid") (hidden)
 
     # generator_selector -> MultiDiscrete([12 12 12 12 12])
-    gen_selector_output = layers.Dense(action_space[2], activation="tanh") (hidden)
+    gen_selector_output = layers.Dense(action_space[2], activation="sigmoid") (hidden)
 
     # generator_injection (generator output) -> Box(5, )
     gen_inj_output = layers.Dense(action_space[3], activation="tanh") (hidden)
@@ -268,7 +268,7 @@ def get_tf_state(state):
     return [tf_bus_status, tf_branch_status, tf_fire_state, tf_generator_injection, tf_load_demand, tf_theta]
 
 
-def get_generators_info():
+def get_generators_info(ramp_frequency_in_hour = 6):
     # generators information from config file
     generators = np.unique(ppc["gen"][:, GEN_BUS]).astype("int")
     generators = np.append(generators, 24)
@@ -293,7 +293,9 @@ def get_generators_info():
             generators_max_output[i] = generators_max_output[i] + ppc["gen"][:, PMAX][j]
             generators_max_ramp[i] = generators_max_ramp[i] + ppc["gen"][:, RAMP_10][j]
 
-    generators_min_output = np.zeros(number_of_generators)        # need to be confirm about mininum output
+    generators_min_output = np.zeros(number_of_generators)        # minimum output is 0
+    generators_max_output = generators_max_output/ppc["baseMVA"]
+    generators_max_ramp = (generators_max_ramp/ppc["baseMVA"]) * (1/ramp_frequency_in_hour)
 
     return generators, generators_min_output, generators_max_output, generators_max_ramp
 
@@ -301,15 +303,9 @@ def get_generators_info():
 def get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio):
     # print("generators current output: ", generators_current_output)
 
-    generators, generators_min_output, generators_max_output, generators_max_ramp = get_generators_info()
-    # print("generators: ", generators)
-    # print("generators min output: ", generators_min_output)
-    # print("generators max output: ", generators_max_output)
-    # print("generators max ramp: ", generators_max_ramp)
-
-    selected_indices = np.abs(indices_prob * generators.size)
+    selected_indices = indices_prob * (generators.size)
     selected_indices = selected_indices.astype(int)
-    print("selected indices: ", selected_indices, "; generators_size: ", generators.size)
+    # print("selected indices: ", selected_indices, "; generators_size: ", generators.size)
     selected_generators = generators[selected_indices]
 
     selected_generators_current_output = np.zeros(selected_generators.size)
@@ -355,7 +351,7 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     if explore_network:
         for i, x in enumerate(bus_status):
             bus_status[i] = bus_status[i] + noise_generator()
-    bus_status[: 1] = bus_status[:] > 0
+    bus_status[: 1] = bus_status[:] > 0.1
     bus_status = np.squeeze(bus_status.astype(int))
     # print ("bus status: ", bus_status)
 
@@ -364,19 +360,18 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     if explore_network:
         for i, x in enumerate(branch_status):
             branch_status[i] = branch_status[i] + noise_generator()
-    branch_status[: 1] = branch_status[:] > -0.9
+    branch_status[: 1] = branch_status[:] > 0.1
     branch_status = np.squeeze(branch_status.astype(int))
-    # print ("branch status: ", branch_status)
     branch_status = check_branch_violation(bus_status, branch_status)
-    print ("branch status: ", branch_status)
+    # print ("branch status: ", branch_status)
 
     # select generators for power ramping up/down
     indices_prob = np.array(tf.squeeze(tf_action[2]))
     if explore_network:
         for i, x in enumerate(indices_prob):
             total_prob = indices_prob[i] + noise_generator()
-            indices_prob[i] = total_prob if (total_prob <= 1 and total_prob >= -1) else 1
-    print ("indices prob: ", indices_prob)
+            indices_prob[i] = total_prob if total_prob < 1  else 0.999
+    # print ("indices prob: ", indices_prob)
 
     # amount of power for ramping up/down
     ramp_ratio = np.array(tf.squeeze(tf_action[3]))
@@ -469,6 +464,13 @@ if __name__ == "__main__":
     print(args)
 
     ppc = loadcase(args.path_power)
+    generators, generators_min_output, generators_max_output, generators_max_ramp = get_generators_info(ramp_frequency_in_hour=6)
+    print("generators: ", generators)
+    print("generators min output: ", generators_min_output)
+    print("generators max output: ", generators_max_output)
+    print("generators max ramp: ", generators_max_ramp)
+
+
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power)
 
     state_spaces = get_state_spaces(env)
@@ -485,7 +487,7 @@ if __name__ == "__main__":
     target_critic = get_critic(state_spaces, action_spaces)
     target_critic.set_weights((critic.get_weights()))
 
-    total_episode = 10
+    total_episode = 1
     max_steps = 300
     buffer = ReplayBuffer(state_spaces, action_spaces, 3000, 64)
 

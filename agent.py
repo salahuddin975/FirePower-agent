@@ -267,6 +267,29 @@ def get_tf_state(state):
     return [tf_bus_status, tf_branch_status, tf_fire_state, tf_generator_injection, tf_load_demand, tf_theta]
 
 
+def get_generators_info(number_of_generators):
+    gen_rows = ppc["gen"][:, GEN_BUS]
+    generators_min_output = np.zeros(number_of_generators)
+    generators_max_output = np.zeros(number_of_generators)
+    generators_max_ramp = np.zeros(number_of_generators)
+
+    i = 0
+    val = gen_rows[0]
+    for j in range(gen_rows.size):
+        if val == gen_rows[j]:
+            generators_min_output[i] = generators_min_output[i] + ppc["gen"][:, PMIN][j]
+            generators_max_output[i] = generators_max_output[i] + ppc["gen"][:, PMAX][j]
+            generators_max_ramp[i] = generators_max_ramp[i] + ppc["gen"][:, RAMP_10][j]
+        else:
+            i = i+1
+            val = gen_rows[j]
+            generators_min_output[i] = generators_min_output[i] + ppc["gen"][:, PMIN][j]
+            generators_max_output[i] = generators_max_output[i] + ppc["gen"][:, PMAX][j]
+            generators_max_ramp[i] = generators_max_ramp[i] + ppc["gen"][:, RAMP_10][j]
+
+    return generators_min_output, generators_max_output, generators_max_ramp
+
+
 def get_np_action(tf_action, explore_network = False):
     # print(f"explore network: {explore_network}")
 
@@ -290,9 +313,15 @@ def get_np_action(tf_action, explore_network = False):
     # branch_status = np.ones(34, int)       # rewrite by dummy branch status (need to remove)
     print ("branch status: ", branch_status)
 
-    # generators from config file
+    # generators information from config file
     generators = np.unique(ppc["gen"][:, GEN_BUS]).astype("int")
     generators = np.append(generators, 24)
+    # print("generators: ", generators)
+
+    generators_min_output, generators_max_output, generators_max_ramp = get_generators_info(generators.size)
+    # print("generators min output: ", generators_min_output)
+    # print("generators max output: ", generators_max_output)
+    # print("generators max ramp: ", generators_max_ramp)
 
     # generator selector
     gen_selected_indices = np.array(tf.squeeze(tf_action[2]))

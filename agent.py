@@ -267,7 +267,12 @@ def get_tf_state(state):
     return [tf_bus_status, tf_branch_status, tf_fire_state, tf_generator_injection, tf_load_demand, tf_theta]
 
 
-def get_generators_info(number_of_generators):
+def get_generators_info():
+    # generators information from config file
+    generators = np.unique(ppc["gen"][:, GEN_BUS]).astype("int")
+    generators = np.append(generators, 24)
+    number_of_generators = generators.size
+
     gen_rows = ppc["gen"][:, GEN_BUS]
     generators_min_output = np.zeros(number_of_generators)
     generators_max_output = np.zeros(number_of_generators)
@@ -287,66 +292,94 @@ def get_generators_info(number_of_generators):
             generators_max_output[i] = generators_max_output[i] + ppc["gen"][:, PMAX][j]
             generators_max_ramp[i] = generators_max_ramp[i] + ppc["gen"][:, RAMP_10][j]
 
-    return generators_min_output, generators_max_output, generators_max_ramp
+    generators_min_output = np.zeros(number_of_generators)        # need to be confirm about mininum output
+
+    return generators, generators_min_output, generators_max_output, generators_max_ramp
 
 
-def get_np_action(tf_action, explore_network = False):
+def get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio):
+    print("generators current output: ", generators_current_output)
+
+    generators, generators_min_output, generators_max_output, generators_max_ramp = get_generators_info()
+    print("generators: ", generators)
+    print("generators min output: ", generators_min_output)
+    print("generators max output: ", generators_max_output)
+    print("generators max ramp: ", generators_max_ramp)
+
+    selected_indices = np.abs(indices_prob * generators.size)
+    selected_indices = selected_indices.astype(int)
+    selected_generators = generators[selected_indices]
+
+    selected_generators_current_output = np.zeros(selected_generators.size)
+    for i in range(selected_generators.size):
+        selected_generators_current_output[i] = generators_current_output[selected_generators[i] - 1]
+    print("selected generators current output: ", selected_generators_current_output)
+
+    index = -1
+    generators_ramp = np.zeros(selected_generators.size)
+    for i in range(selected_generators.size):
+        generator = selected_generators[i]
+        for j in range(generators.size):
+            if generators[j] == generator:
+                index = j
+                break
+        generators_ramp[i] = generators_ramp[i] + ramp_ratio[i] * generators_max_ramp[index]
+        if selected_generators_current_output[i] + generators_ramp[i] > generators_max_output[index]:
+            generators_ramp[i] = generators_max_output[index] - selected_generators_current_output[i]
+        if selected_generators_current_output[i] + generators_ramp[i] < generators_min_output[index]:
+            generators_ramp[i] = generators_min_output[index] - selected_generators_current_output[i]
+
+    return selected_generators, generators_ramp
+
+
+def get_np_action(tf_action, generators_current_output, explore_network = False):
     # print(f"explore network: {explore_network}")
 
-    # bus
+    # bus status
     bus_status = np.array(tf_action[0])
-    if explore_network == True:
+    if explore_network:
         for i, x in enumerate(bus_status):
             bus_status[i] = bus_status[i] + noise_generator()
     bus_status[: 1] = bus_status[:] > 0
     bus_status = np.squeeze(bus_status.astype(int))
-    # bus_status = np.ones(24, int)          # rewrite by dummy bus status (need to remove)
-    print ("bus status: ", bus_status)
+    # print ("bus status: ", bus_status)
 
-    # branch
+    # branch status
     branch_status = np.array(tf_action[1])
-    if explore_network == True:
+    if explore_network:
         for i, x in enumerate(branch_status):
             branch_status[i] = branch_status[i] + noise_generator()
     branch_status[: 1] = branch_status[:] > -0.9
     branch_status = np.squeeze(branch_status.astype(int))
-    # branch_status = np.ones(34, int)       # rewrite by dummy branch status (need to remove)
-    print ("branch status: ", branch_status)
+    # print ("branch status: ", branch_status)
 
-    # generators information from config file
-    generators = np.unique(ppc["gen"][:, GEN_BUS]).astype("int")
-    generators = np.append(generators, 24)
-    # print("generators: ", generators)
+    # select generators for power ramping up/down
+    indices_prob = np.array(tf.squeeze(tf_action[2]))
+    if explore_network:
+        for i, x in enumerate(indices_prob):
+            indices_prob[i] = indices_prob[i] + noise_generator()
 
-    generators_min_output, generators_max_output, generators_max_ramp = get_generators_info(generators.size)
-    # print("generators min output: ", generators_min_output)
-    # print("generators max output: ", generators_max_output)
-    # print("generators max ramp: ", generators_max_ramp)
+    # amount of power for ramping up/down
+    ramp_ratio = np.array(tf.squeeze(tf_action[3]))
+    if explore_network:
+        for i, x in enumerate(ramp_ratio):
+            ramp_ratio[i] = ramp_ratio[i] + noise_generator()
+    print("ramp ratio: ", ramp_ratio)
 
-    # generator selector
-    gen_selected_indices = np.array(tf.squeeze(tf_action[2]))
-    if explore_network == True:
-        for i, x in enumerate(gen_selected_indices):
-            gen_selected_indices[i] = gen_selected_indices[i] + noise_generator()
-    gen_selected_indices = np.abs(gen_selected_indices * generators.size)
-    gen_selected_indices = gen_selected_indices.astype(int)
-    gen_selector = generators[gen_selected_indices]
-    # gen_selector = np.array([24]*10)       # rewrite by dummy value (need to remove)
-    print("gen selector: ", gen_selector)
+    selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio)
+    print("selected generators: ", selected_generators)
+    print("generators ramp: ", generators_ramp)
 
-    # generator ramping up/down
-    gen_injection = np.array(tf.squeeze(tf_action[3])) # need to work here
-    if explore_network == True:
-        for i, x in enumerate(gen_injection):
-            gen_injection[i] = gen_injection[i] + noise_generator()
-    # gen_injection = np.zeros(10, int)       # rewrite by dummy value (need to remove)
-    # print("gen injection: ", gen_injection)
+    # bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
+    # branch_status = np.ones(34, int)       # overwrite by dummy branch status (need to remove)
+    # gen_selector = np.array([24]*10)       # overwrite by dummy value (need to remove)
+    # gen_injection = np.zeros(10, int)      # overwrite by dummy value (need to remove)
 
     action = {
         "bus_status": bus_status,
         "branch_status": branch_status,
-        "generator_selector": gen_selector,
-        "generator_injection": gen_injection,
+        "generator_selector": selected_generators,
+        "generator_injection": generators_ramp,
     }
 
     return action
@@ -453,9 +486,9 @@ if __name__ == "__main__":
 
             tradeoff = random.uniform(0, 1)
             if tradeoff < epsilon:
-                action = get_np_action(actor_action, True)        # explore
+                action = get_np_action(actor_action, state["generator_injection"], True)        # explore
             else:
-                action = get_np_action(actor_action, False)
+                action = get_np_action(actor_action, state["generator_injection"], False)
 
             next_state, reward, done, _ = env.step(action)
             print(f"Episode: {episode}, at step: {step}, reward: {reward}")

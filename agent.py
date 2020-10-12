@@ -4,6 +4,8 @@ import argparse
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers
+from pypower.idx_gen import *
+from pypower.loadcase import loadcase
 
 
 gym.logger.set_level(40)
@@ -288,13 +290,18 @@ def get_np_action(tf_action, explore_network = False):
     # branch_status = np.ones(34, int)       # rewrite by dummy branch status (need to remove)
     print ("branch status: ", branch_status)
 
+    # generators from config file
+    generators = np.unique(ppc["gen"][:, GEN_BUS]).astype("int")
+    generators = np.append(generators, 24)
+
     # generator selector
-    gen_selector = np.array(tf.squeeze(tf_action[2]))
+    gen_selected_indices = np.array(tf.squeeze(tf_action[2]))
     if explore_network == True:
-        for i, x in enumerate(gen_selector):
-            gen_selector[i] = gen_selector[i] + noise_generator()
-    gen_selector = np.abs(gen_selector * 24)
-    gen_selector = gen_selector.astype(int)
+        for i, x in enumerate(gen_selected_indices):
+            gen_selected_indices[i] = gen_selected_indices[i] + noise_generator()
+    gen_selected_indices = np.abs(gen_selected_indices * generators.size)
+    gen_selected_indices = gen_selected_indices.astype(int)
+    gen_selector = generators[gen_selected_indices]
     # gen_selector = np.array([24]*10)       # rewrite by dummy value (need to remove)
     print("gen selector: ", gen_selector)
 
@@ -306,10 +313,12 @@ def get_np_action(tf_action, explore_network = False):
     # gen_injection = np.zeros(10, int)       # rewrite by dummy value (need to remove)
     # print("gen injection: ", gen_injection)
 
-    action = {"generator_injection": gen_injection,
-        "branch_status": branch_status,
+    action = {
         "bus_status": bus_status,
-        "generator_selector": gen_selector}
+        "branch_status": branch_status,
+        "generator_selector": gen_selector,
+        "generator_injection": gen_injection,
+    }
 
     return action
 
@@ -378,7 +387,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
+    ppc = loadcase(args.path_power)
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power)
+
     state_spaces = get_state_spaces(env)
     action_spaces = get_action_spaces(env)
 
@@ -393,8 +404,8 @@ if __name__ == "__main__":
     target_critic = get_critic(state_spaces, action_spaces)
     target_critic.set_weights((critic.get_weights()))
 
-    total_episode = 10
-    max_steps = 10
+    total_episode = 1
+    max_steps = 1
     buffer = ReplayBuffer(state_spaces, action_spaces, 3000, 64)
 
     epsilon = 0.7               # initial exploration rate

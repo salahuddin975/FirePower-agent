@@ -332,7 +332,7 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
     return selected_generators, generators_ramp
 
 
-def get_np_action(tf_action, generators_current_output, explore_network = False):
+def get_processed_action(tf_action, generators_current_output, explore_network = False):
     # print(f"explore network: {explore_network}")
 
     # bus status
@@ -482,13 +482,13 @@ if __name__ == "__main__":
 
         for step in range(max_steps):
             tf_state = get_tf_state(state)
-            actor_action = actor(tf_state)
+            tf_action = actor(tf_state)
 
             tradeoff = random.uniform(0, 1)
             if tradeoff < epsilon:
-                action = get_np_action(actor_action, state["generator_injection"], True)        # explore
+                action = get_processed_action(tf_action, state["generator_injection"], True)        # explore
             else:
-                action = get_np_action(actor_action, state["generator_injection"], False)
+                action = get_processed_action(tf_action, state["generator_injection"], False)
 
             next_state, reward, done, _ = env.step(action)
             print(f"Episode: {episode}, at step: {step}, reward: {reward}")

@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers
 from pypower.idx_gen import *
+from pypower.idx_brch import *
 from pypower.loadcase import loadcase
 
 
@@ -298,13 +299,13 @@ def get_generators_info():
 
 
 def get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio):
-    print("generators current output: ", generators_current_output)
+    # print("generators current output: ", generators_current_output)
 
     generators, generators_min_output, generators_max_output, generators_max_ramp = get_generators_info()
-    print("generators: ", generators)
-    print("generators min output: ", generators_min_output)
-    print("generators max output: ", generators_max_output)
-    print("generators max ramp: ", generators_max_ramp)
+    # print("generators: ", generators)
+    # print("generators min output: ", generators_min_output)
+    # print("generators max output: ", generators_max_output)
+    # print("generators max ramp: ", generators_max_ramp)
 
     selected_indices = np.abs(indices_prob * generators.size)
     selected_indices = selected_indices.astype(int)
@@ -313,7 +314,7 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
     selected_generators_current_output = np.zeros(selected_generators.size)
     for i in range(selected_generators.size):
         selected_generators_current_output[i] = generators_current_output[selected_generators[i] - 1]
-    print("selected generators current output: ", selected_generators_current_output)
+    # print("selected generators current output: ", selected_generators_current_output)
 
     index = -1
     generators_ramp = np.zeros(selected_generators.size)
@@ -332,6 +333,19 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
     return selected_generators, generators_ramp
 
 
+def check_branch_violation(bus_status, branch_status):
+    branches = ppc["branch"][:, F_BUS]
+    print("branches size: ", branches.size)
+    print("branch status size: ", branch_status.size)
+    for i in range(bus_status.size):
+        if bus_status[i] == False:
+            for j in range(branch_status.size):    # should be branches; size differ, need to talk
+                if branches[j] == i+1:
+                    branch_status[j] = False
+
+    return branch_status
+
+
 def get_processed_action(tf_action, generators_current_output, explore_network = False):
     # print(f"explore network: {explore_network}")
 
@@ -342,7 +356,7 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
             bus_status[i] = bus_status[i] + noise_generator()
     bus_status[: 1] = bus_status[:] > 0
     bus_status = np.squeeze(bus_status.astype(int))
-    # print ("bus status: ", bus_status)
+    print ("bus status: ", bus_status)
 
     # branch status
     branch_status = np.array(tf_action[1])
@@ -351,7 +365,9 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
             branch_status[i] = branch_status[i] + noise_generator()
     branch_status[: 1] = branch_status[:] > -0.9
     branch_status = np.squeeze(branch_status.astype(int))
-    # print ("branch status: ", branch_status)
+    print ("branch status: ", branch_status)
+    branch_status = check_branch_violation(bus_status, branch_status)
+    print ("branch status: ", branch_status)
 
     # select generators for power ramping up/down
     indices_prob = np.array(tf.squeeze(tf_action[2]))
@@ -364,11 +380,11 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     if explore_network:
         for i, x in enumerate(ramp_ratio):
             ramp_ratio[i] = ramp_ratio[i] + noise_generator()
-    print("ramp ratio: ", ramp_ratio)
+    # print("ramp ratio: ", ramp_ratio)
 
     selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio)
-    print("selected generators: ", selected_generators)
-    print("generators ramp: ", generators_ramp)
+    # print("selected generators: ", selected_generators)
+    # print("generators ramp: ", generators_ramp)
 
     # bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
     # branch_status = np.ones(34, int)       # overwrite by dummy branch status (need to remove)

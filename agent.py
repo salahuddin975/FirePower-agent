@@ -9,7 +9,7 @@ from pypower.idx_brch import *
 from pypower.loadcase import loadcase
 
 
-gym.logger.set_level(40)
+gym.logger.set_level(10)
 
 
 class ReplayBuffer:
@@ -330,15 +330,16 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
     return selected_generators, generators_ramp
 
 
-def check_branch_violations(bus_status, branch_status):
-    # if bus is false then related branches should be false
-    print(ppc["branch"][:, [F_BUS, T_BUS]])
-    branches = ppc["branch"][:, F_BUS]
-    for i in range(bus_status.size):
-        if bus_status[i] == False:
-            for j in range(branches.size):
-                if branches[j] == i+1:
-                    branch_status[j] = False
+def check_network_violations(bus_status, branch_status):
+    from_buses = ppc["branch"][:, F_BUS].astype('int')
+    to_buses = ppc["branch"][:, T_BUS].astype('int')
+
+    for ctr in range(bus_status.size):
+        b_status = bus_status[ctr]
+        for ctr2 in range(branch_status.size):
+            if (ctr+1) in [from_buses[ctr2], to_buses[ctr2]]:
+                if b_status == 0:
+                    branch_status[ctr2] = 0
 
     return branch_status
 
@@ -351,19 +352,19 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     if explore_network:
         for i, x in enumerate(bus_status):
             bus_status[i] = bus_status[i] + noise_generator()
-    bus_status[: 1] = bus_status[:] > 0.5
+    bus_status[: 1] = bus_status[:] > 0.45
     bus_status = np.squeeze(bus_status.astype(int))
-    print ("bus status: ", bus_status)
+    # print ("bus status: ", bus_status)
 
     # branch status
     branch_status = np.array(tf_action[1])
     if explore_network:
         for i, x in enumerate(branch_status):
             branch_status[i] = branch_status[i] + noise_generator()
-    branch_status[: 1] = branch_status[:] > 0.0
+    branch_status[: 1] = branch_status[:] > 0.1
     branch_status = np.squeeze(branch_status.astype(int))
-    branch_status = check_branch_violations(bus_status, branch_status)
-    print ("branch status: ", branch_status)
+    branch_status = check_network_violations(bus_status, branch_status)
+    # print ("branch status: ", branch_status)
 
     # select generators for power ramping up/down
     indices_prob = np.array(tf.squeeze(tf_action[2]))
@@ -384,7 +385,7 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     # print("selected generators: ", selected_generators)
     # print("generators ramp: ", generators_ramp)
 
-    bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
+    #bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
     # branch_status = np.ones(34, int)       # overwrite by dummy branch status (need to remove)
     selected_generators = np.array([24]*10)       # overwrite by dummy value (need to remove)
     generators_ramp = np.zeros(10, int)      # overwrite by dummy value (need to remove)

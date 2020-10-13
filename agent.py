@@ -7,9 +7,11 @@ from tensorflow.keras import layers
 from pypower.idx_gen import *
 from pypower.idx_brch import *
 from pypower.loadcase import loadcase
+from pypower.ext2int import ext2int
 
 
-gym.logger.set_level(40)
+
+gym.logger.set_level(10)
 
 
 class ReplayBuffer:
@@ -307,27 +309,51 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
     selected_indices = selected_indices.astype(int)
     # print("selected indices: ", selected_indices, "; generators_size: ", generators.size)
     selected_generators = generators[selected_indices]
+    print("selected generators: ", selected_generators)
 
-    selected_generators_current_output = np.zeros(selected_generators.size)
+    gene_current_output = np.zeros(generators.size)
+    for i in range(generators.size):
+        gene_current_output[i] = generators_current_output[generators[i] - 1]
+    selected_generators_output = gene_current_output[selected_indices]
+    selected_generators_max_output = generators_max_output[selected_indices]
+    selected_generators_max_ramp = generators_max_ramp[selected_indices]
+    selected_generators_ramp = selected_generators_max_ramp * ramp_ratio
+    # print("selected generators: ", selected_generators)
+    # print("selected generators max ramp: ", selected_generators_max_ramp)
+    # print("selected generators ramp: ", selected_generators_ramp)
+
+    selected_generators_set_ramp = np.zeros(selected_generators.size)
     for i in range(selected_generators.size):
-        selected_generators_current_output[i] = generators_current_output[selected_generators[i] - 1]
-    # print("selected generators current output: ", selected_generators_current_output)
+        index = selected_generators[i] - 1
+        # print("index: ", index, "; ramp: ", selected_generators_ramp[i], "; cur: ", generators_current_output[index],
+        #       "; total: ",selected_generators_ramp[i] + generators_current_output[index], "; max_output: ", selected_generators_max_output[i])
+        if selected_generators_ramp[i] > 0:
+            if generators_current_output[index] == selected_generators_max_output[i]:
+                selected_generators_set_ramp[i] = 0
+            elif selected_generators_max_output[i] <= (selected_generators_ramp[i] + generators_current_output[index]):
+                selected_generators_set_ramp[i] = selected_generators_ramp[i]
+                generators_current_output[index] = generators_current_output[index] + selected_generators_ramp[i]
+            else:
+                selected_generators_set_ramp[i] = selected_generators_max_output[i] - generators_current_output[index]
+                generators_current_output[index] = selected_generators_max_output[i]
+                # print("ramp: ", selected_generators_set_ramp[i], "; curr: ", generators_current_output[index])
 
-    index = -1
-    generators_ramp = np.zeros(selected_generators.size)
-    for i in range(selected_generators.size):
-        generator = selected_generators[i]
-        for j in range(generators.size):
-            if generators[j] == generator:
-                index = j
-                break
-        generators_ramp[i] = generators_ramp[i] + ramp_ratio[i] * generators_max_ramp[index]
-        if selected_generators_current_output[i] + generators_ramp[i] > generators_max_output[index]:
-            generators_ramp[i] = generators_max_output[index] - selected_generators_current_output[i]
-        if selected_generators_current_output[i] + generators_ramp[i] < generators_min_output[index]:
-            generators_ramp[i] = generators_min_output[index] - selected_generators_current_output[i]
+        else:
+            if generators_current_output[index] == 0:
+                selected_generators_set_ramp[i] = 0
+            elif 0 <= (selected_generators_ramp[i] + generators_current_output[index]):
+                selected_generators_set_ramp[i] = selected_generators_ramp[i]
+                generators_current_output[index] = generators_current_output[index] + selected_generators_ramp[i]
+            else:
+                selected_generators_set_ramp[i] = 0 - generators_current_output[index]
+                generators_current_output[index] = 0
+        # print("updated output: ", generators_current_output)
 
-    return selected_generators, generators_ramp
+    print("selected generators current output: ", selected_generators_output)
+    print("selected generators max output: ", selected_generators_max_output)
+    # print("generators set ramp: ", selected_generators_set_ramp)
+
+    return selected_generators, selected_generators_set_ramp
 
 
 def check_network_violations(bus_status, branch_status):
@@ -352,7 +378,7 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     if explore_network:
         for i, x in enumerate(bus_status):
             bus_status[i] = bus_status[i] + noise_generator()
-    bus_status[: 1] = bus_status[:] > 0.1
+    bus_status[: 1] = bus_status[:] > 0.0
     bus_status = np.squeeze(bus_status.astype(int))
     # print ("bus status: ", bus_status)
 
@@ -361,7 +387,7 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     if explore_network:
         for i, x in enumerate(branch_status):
             branch_status[i] = branch_status[i] + noise_generator()
-    branch_status[: 1] = branch_status[:] > 0.1
+    branch_status[: 1] = branch_status[:] > 0.0
     branch_status = np.squeeze(branch_status.astype(int))
     branch_status = check_network_violations(bus_status, branch_status)
     # print ("branch status: ", branch_status)
@@ -383,12 +409,12 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
 
     selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio)
     # print("selected generators: ", selected_generators)
-    # print("generators ramp: ", generators_ramp)
+    print("generators ramp: ", generators_ramp)
 
-    #bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
+    # bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
     # branch_status = np.ones(34, int)       # overwrite by dummy branch status (need to remove)
-    selected_generators = np.array([24]*10)       # overwrite by dummy value (need to remove)
-    generators_ramp = np.zeros(10, int)      # overwrite by dummy value (need to remove)
+    # selected_generators = np.array([24]*10)       # overwrite by dummy value (need to remove)
+    # generators_ramp = np.zeros(10, int)      # overwrite by dummy value (need to remove)
 
     action = {
         "bus_status": bus_status,
@@ -502,6 +528,7 @@ if __name__ == "__main__":
     ppc = loadcase(args.path_power)
     merge_generators()
     merge_branches()
+    # ppc = ext2int(ppc)
 
     generators, generators_min_output, generators_max_output, generators_max_ramp = get_generators_info(ramp_frequency_in_hour=6)
     print("generators: ", generators)
@@ -540,8 +567,8 @@ if __name__ == "__main__":
         target_critic.load_weights(f"saved_model/agent_target_critic{reload_version}_{reload_episode_num}.h5")
         print("weights are loaded successfully!")
 
-    total_episode = 10
-    max_steps = 300
+    total_episode = 1
+    max_steps = 1
     buffer = ReplayBuffer(state_spaces, action_spaces, 3000, 64)
 
     epsilon = 0.7               # initial exploration rate

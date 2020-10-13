@@ -330,13 +330,13 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
     return selected_generators, generators_ramp
 
 
-def check_branch_violation(bus_status, branch_status):
+def check_branch_violations(bus_status, branch_status):
+    # if bus is false then related branches should be false
+    print(ppc["branch"][:, [F_BUS, T_BUS]])
     branches = ppc["branch"][:, F_BUS]
-    # print("branches size: ", branches.size)
-    # print("branch status size: ", branch_status.size)
     for i in range(bus_status.size):
         if bus_status[i] == False:
-            for j in range(branch_status.size):    # should be branches; size differ, need to talk
+            for j in range(branches.size):
                 if branches[j] == i+1:
                     branch_status[j] = False
 
@@ -351,19 +351,19 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     if explore_network:
         for i, x in enumerate(bus_status):
             bus_status[i] = bus_status[i] + noise_generator()
-    bus_status[: 1] = bus_status[:] > 0.1
+    bus_status[: 1] = bus_status[:] > 0.5
     bus_status = np.squeeze(bus_status.astype(int))
-    # print ("bus status: ", bus_status)
+    print ("bus status: ", bus_status)
 
     # branch status
     branch_status = np.array(tf_action[1])
     if explore_network:
         for i, x in enumerate(branch_status):
             branch_status[i] = branch_status[i] + noise_generator()
-    branch_status[: 1] = branch_status[:] > 0.1
+    branch_status[: 1] = branch_status[:] > 0.0
     branch_status = np.squeeze(branch_status.astype(int))
-    branch_status = check_branch_violation(bus_status, branch_status)
-    # print ("branch status: ", branch_status)
+    branch_status = check_branch_violations(bus_status, branch_status)
+    print ("branch status: ", branch_status)
 
     # select generators for power ramping up/down
     indices_prob = np.array(tf.squeeze(tf_action[2]))
@@ -423,6 +423,41 @@ class NoiseGenerator:
         return x
 
 
+def merge_generators():
+    ppc_gen_trim = []
+    temp = ppc["gen"][0, :]
+    ptr = 0
+    ptr1 = 1
+    while(ptr1 < ppc["gen"].shape[0]):
+        if ppc["gen"][ptr, GEN_BUS] == ppc["gen"][ptr1, GEN_BUS]:
+            temp[PG:QMIN+1] += ppc["gen"][ptr1, PG:QMIN+1]
+            temp[PMAX:APF+1] += ppc["gen"][ptr1, PMAX:APF+1]
+        else:
+            ppc_gen_trim.append(temp)
+            temp = ppc["gen"][ptr1, :]
+            ptr = ptr1
+        ptr1 += 1
+    ppc_gen_trim.append(temp)
+    ppc["gen"] = np.asarray(ppc_gen_trim)
+
+
+def merge_branches():
+    ppc_branch_trim = []
+    temp = ppc["branch"][0, :]
+    ptr = 0
+    ptr1 = 1
+    while(ptr1 < ppc["branch"].shape[0]):
+        if np.all(ppc["branch"][ptr, F_BUS:T_BUS+1] == ppc["branch"][ptr1, GEN_BUS:T_BUS+1]):
+            temp[BR_R: RATE_C+1] += ppc["branch"][ptr1, BR_R: RATE_C+1]
+        else:
+            ppc_branch_trim.append(temp)
+            temp = ppc["branch"][ptr1, :]
+            ptr = ptr1
+        ptr1 += 1
+    ppc_branch_trim.append(temp)
+    ppc["branch"] = np.asarray(ppc_branch_trim)
+
+
 def get_state_spaces(env):
     observation_space = env.observation_space
     num_st_bus = observation_space["bus_status"].shape[0]
@@ -464,6 +499,9 @@ if __name__ == "__main__":
     print(args)
 
     ppc = loadcase(args.path_power)
+    merge_generators()
+    merge_branches()
+
     generators, generators_min_output, generators_max_output, generators_max_ramp = get_generators_info(ramp_frequency_in_hour=6)
     print("generators: ", generators)
     print("generators min output: ", generators_min_output)
@@ -488,7 +526,7 @@ if __name__ == "__main__":
     target_critic.set_weights((critic.get_weights()))
 
     total_episode = 1
-    max_steps = 300
+    max_steps = 1
     buffer = ReplayBuffer(state_spaces, action_spaces, 3000, 64)
 
     epsilon = 0.7               # initial exploration rate

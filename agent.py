@@ -9,7 +9,7 @@ from pypower.idx_brch import *
 from pypower.loadcase import loadcase
 
 
-gym.logger.set_level(10)
+gym.logger.set_level(40)
 
 
 class ReplayBuffer:
@@ -352,7 +352,7 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     if explore_network:
         for i, x in enumerate(bus_status):
             bus_status[i] = bus_status[i] + noise_generator()
-    bus_status[: 1] = bus_status[:] > 0.45
+    bus_status[: 1] = bus_status[:] > 0.1
     bus_status = np.squeeze(bus_status.astype(int))
     # print ("bus status: ", bus_status)
 
@@ -520,14 +520,28 @@ if __name__ == "__main__":
 
     actor = get_actor(state_spaces, action_spaces)
     target_actor = get_actor(state_spaces, action_spaces)
-    target_actor.set_weights(actor.get_weights())
 
     critic = get_critic(state_spaces, action_spaces)
     target_critic = get_critic(state_spaces, action_spaces)
-    target_critic.set_weights((critic.get_weights()))
 
-    total_episode = 1
-    max_steps = 1
+    # save trained model to reuse
+    save_model = False
+    reload_model = False
+    model_version = 0
+    reload_version = 0
+    reload_episode_num = 0
+    if reload_model == False:
+        target_actor.set_weights(actor.get_weights())
+        target_critic.set_weights(critic.get_weights())
+    else:
+        actor.load_weights(f"saved_model/agent_actor{reload_version}_{reload_episode_num}.h5")
+        target_actor.load_weights(f"saved_model/agent_target_actor{reload_version}_{reload_episode_num}.h5")
+        critic.load_weights(f"saved_model/agent_critic{reload_version}_{reload_episode_num}.h5")
+        target_critic.load_weights(f"saved_model/agent_target_critic{reload_version}_{reload_episode_num}.h5")
+        print("weights are loaded successfully!")
+
+    total_episode = 10
+    max_steps = 300
     buffer = ReplayBuffer(state_spaces, action_spaces, 3000, 64)
 
     epsilon = 0.7               # initial exploration rate
@@ -551,7 +565,7 @@ if __name__ == "__main__":
                 action = get_processed_action(tf_action, state["generator_injection"], False)
 
             next_state, reward, done, _ = env.step(action)
-            print(f"Episode: {episode}, at step: {step}, reward: {reward}")
+            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
             buffer.add_record((state, action, reward, next_state))
             episodic_reward += reward[0]
@@ -568,4 +582,14 @@ if __name__ == "__main__":
 
         episodic_rewards.append(episodic_reward)
         avg_reward = np.mean(episodic_rewards)
+
+        if (episode % 10 == 0) and save_model:
+            actor.save_weights(f"saved_model/agent_actor{model_version}_{episode}.h5")
+            critic.save_weights(f"saved_model/agent_critic{model_version}_{episode}.h5")
+            target_actor.save_weights(f"saved_model/agent_target_actor{model_version}_{episode}.h5")
+            target_critic.save_weights(f"saved_model/agent_target_critic{model_version}_{episode}.h5")
+
+            log_file = open("saved_model/reward_log.txt", "a")
+            log_file.write(f"Episode: {model_version}_{episode}, Avg reward: {avg_reward}\n")
+            log_file.close()
 

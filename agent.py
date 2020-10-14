@@ -285,7 +285,7 @@ def check_network_violations(bus_status, branch_status):
 
 
 def get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio):
-    print("generators current output: ", generators_current_output)
+    # print("generators current output: ", generators_current_output)
 
     selected_indices = indices_prob * (generators.size)
     selected_indices = selected_indices.astype(int)
@@ -322,7 +322,6 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
                 selected_generators_ramp[i] = selected_generators_max_output[i] - generators_current_output[index]
                 generators_current_output[index] = selected_generators_max_output[i]
                 # print("ramp: ", selected_generators_set_ramp[i], "; curr: ", generators_current_output[index])
-
         else:
             if generators_current_output[index] == 0:
                 selected_generators_ramp[i] = 0
@@ -341,6 +340,17 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
     return selected_generators, selected_generators_ramp
 
 
+def check_bus_generator_violation(bus_status, selected_generators, generators_ramp):
+    for bus in range(bus_status.size):
+        flag = bus_status[bus]
+        for j in range(selected_generators.size):
+            gen_bus = selected_generators[j]
+            if bus == gen_bus and flag == False:
+                generators_ramp[j] = False
+
+    return generators_ramp
+
+
 def get_processed_action(tf_action, generators_current_output, explore_network = False):
     # print(f"explore network: {explore_network}")
 
@@ -349,7 +359,7 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     if explore_network:
         for i, x in enumerate(bus_status):
             bus_status[i] = bus_status[i] + noise_generator()
-    bus_status[: 1] = bus_status[:] > 0.0
+    bus_status[: 1] = bus_status[:] > 0.1
     bus_status = np.squeeze(bus_status.astype(int))
     # print ("bus status: ", bus_status)
 
@@ -358,10 +368,10 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     if explore_network:
         for i, x in enumerate(branch_status):
             branch_status[i] = branch_status[i] + noise_generator()
-    branch_status[: 1] = branch_status[:] > 0.0
+    branch_status[: 1] = branch_status[:] > 0.1
     branch_status = np.squeeze(branch_status.astype(int))
     branch_status = check_network_violations(bus_status, branch_status)
-    # print ("branch status: ", branch_status)
+    print ("branch status: ", branch_status)
 
     # select generators for power ramping up/down
     indices_prob = np.array(tf.squeeze(tf_action[2]))
@@ -380,6 +390,7 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
 
     selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio)
     # print("selected generators: ", selected_generators)
+    generators_ramp = check_bus_generator_violation(bus_status, selected_generators, generators_ramp)
     # print("generators ramp: ", generators_ramp)
 
     # bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
@@ -546,8 +557,8 @@ if __name__ == "__main__":
         target_critic.load_weights(f"saved_model/agent_target_critic{reload_version}_{reload_episode_num}.h5")
         print("weights are loaded successfully!")
 
-    total_episode = 1
-    max_steps = 10
+    total_episode = 10
+    max_steps = 100
     buffer = ReplayBuffer(state_spaces, action_spaces, 3000, 64)
 
     epsilon = 0.7               # initial exploration rate

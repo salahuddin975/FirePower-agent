@@ -1,5 +1,6 @@
 import gym
 import random
+import math
 import argparse
 import numpy as np
 import tensorflow as tf
@@ -331,6 +332,8 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
             else:
                 selected_generators_ramp[i] = 0 - generators_current_output[index]
                 generators_current_output[index] = 0
+
+        selected_generators_ramp[i] = math.floor(selected_generators_ramp[i]*10000)/10000
         # print("updated output: ", generators_current_output)
 
     print("selected generators current output: ", selected_generators_current_output)
@@ -359,7 +362,7 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     if explore_network:
         for i, x in enumerate(bus_status):
             bus_status[i] = bus_status[i] + noise_generator()
-    bus_status[: 1] = bus_status[:] > 0.1
+    bus_status[: 1] = bus_status[:] > 0
     bus_status = np.squeeze(bus_status.astype(int))
     # print ("bus status: ", bus_status)
 
@@ -368,7 +371,7 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     if explore_network:
         for i, x in enumerate(branch_status):
             branch_status[i] = branch_status[i] + noise_generator()
-    branch_status[: 1] = branch_status[:] > 0.1
+    branch_status[: 1] = branch_status[:] > 0
     branch_status = np.squeeze(branch_status.astype(int))
     branch_status = check_network_violations(bus_status, branch_status)
     print ("branch status: ", branch_status)
@@ -557,8 +560,8 @@ if __name__ == "__main__":
         target_critic.load_weights(f"saved_model/agent_target_critic{reload_version}_{reload_episode_num}.h5")
         print("weights are loaded successfully!")
 
-    total_episode = 10
-    max_steps = 100
+    total_episode = 1
+    max_steps = 10
     buffer = ReplayBuffer(state_spaces, action_spaces, 3000, 64)
 
     epsilon = 0.7               # initial exploration rate

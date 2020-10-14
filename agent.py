@@ -270,38 +270,6 @@ def get_tf_state(state):
     return [tf_bus_status, tf_branch_status, tf_fire_state, tf_generator_injection, tf_load_demand, tf_theta]
 
 
-def get_generators_info(ramp_frequency_in_hour = 6):
-    # generators information from config file
-    generators = np.unique(ppc["gen"][:, GEN_BUS]).astype("int")
-    generators = np.append(generators, 24)
-    number_of_generators = generators.size
-
-    gen_rows = ppc["gen"][:, GEN_BUS]
-    generators_min_output = np.zeros(number_of_generators)
-    generators_max_output = np.zeros(number_of_generators)
-    generators_max_ramp = np.zeros(number_of_generators)
-
-    i = 0
-    val = gen_rows[0]
-    for j in range(gen_rows.size):
-        if val == gen_rows[j]:
-            generators_min_output[i] = generators_min_output[i] + ppc["gen"][:, PMIN][j]
-            generators_max_output[i] = generators_max_output[i] + ppc["gen"][:, PMAX][j]
-            generators_max_ramp[i] = generators_max_ramp[i] + ppc["gen"][:, RAMP_10][j]
-        else:
-            i = i+1
-            val = gen_rows[j]
-            generators_min_output[i] = generators_min_output[i] + ppc["gen"][:, PMIN][j]
-            generators_max_output[i] = generators_max_output[i] + ppc["gen"][:, PMAX][j]
-            generators_max_ramp[i] = generators_max_ramp[i] + ppc["gen"][:, RAMP_10][j]
-
-    generators_min_output = np.zeros(number_of_generators)        # minimum output is 0
-    generators_max_output = generators_max_output/ppc["baseMVA"]
-    generators_max_ramp = (generators_max_ramp/ppc["baseMVA"]) * (1/ramp_frequency_in_hour)
-
-    return generators, generators_min_output, generators_max_output, generators_max_ramp
-
-
 def get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio):
     # print("generators current output: ", generators_current_output)
 
@@ -380,17 +348,17 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
             bus_status[i] = bus_status[i] + noise_generator()
     bus_status[: 1] = bus_status[:] > 0.45
     bus_status = np.squeeze(bus_status.astype(int))
-    print ("bus status: ", bus_status)
+    # print ("bus status: ", bus_status)
 
     # branch status
     branch_status = np.array(tf_action[1])
     if explore_network:
         for i, x in enumerate(branch_status):
             branch_status[i] = branch_status[i] + noise_generator()
-    branch_status[: 1] = branch_status[:] > 0.0
+    branch_status[: 1] = branch_status[:] > 0.1
     branch_status = np.squeeze(branch_status.astype(int))
     branch_status = check_network_violations(bus_status, branch_status)
-    print ("branch status: ", branch_status)
+    # print ("branch status: ", branch_status)
 
     # select generators for power ramping up/down
     indices_prob = np.array(tf.squeeze(tf_action[2]))
@@ -485,6 +453,20 @@ def merge_branches():
     ppc["branch"] = np.asarray(ppc_branch_trim)
 
 
+def get_generators_info(ramp_frequency_in_hour = 6):
+    # generators information from config file
+    generators = ppc["gen"][:, GEN_BUS].astype("int")
+    generators_min_output = np.zeros(generators.size)
+    generators_max_output = ppc["gen"][:, PMAX]/ppc["baseMVA"]
+    generators_max_ramp = (ppc["gen"][:, RAMP_10]/ppc["baseMVA"]) * (1/ramp_frequency_in_hour)
+
+    # print ("generators: ", generators)
+    # print ("generators max output: ", generators_max_output)
+    # print ("generators max ramp: ", generators_max_ramp)
+    #
+    return generators, generators_min_output, generators_max_output, generators_max_ramp
+
+
 def get_state_spaces(env):
     observation_space = env.observation_space
     num_st_bus = observation_space["bus_status"].shape[0]
@@ -529,13 +511,7 @@ if __name__ == "__main__":
     merge_generators()
     merge_branches()
     ppc = ext2int(ppc)
-
     generators, generators_min_output, generators_max_output, generators_max_ramp = get_generators_info(ramp_frequency_in_hour=6)
-    print("generators: ", generators)
-    print("generators min output: ", generators_min_output)
-    print("generators max output: ", generators_max_output)
-    print("generators max ramp: ", generators_max_ramp)
-
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power)
 

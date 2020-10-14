@@ -309,7 +309,7 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
     selected_indices = selected_indices.astype(int)
     # print("selected indices: ", selected_indices, "; generators_size: ", generators.size)
     selected_generators = generators[selected_indices]
-    print("selected generators: ", selected_generators)
+    # print("selected generators: ", selected_generators)
 
     gene_current_output = np.zeros(generators.size)
     for i in range(generators.size):
@@ -349,8 +349,8 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
                 generators_current_output[index] = 0
         # print("updated output: ", generators_current_output)
 
-    print("selected generators current output: ", selected_generators_output)
-    print("selected generators max output: ", selected_generators_max_output)
+    # print("selected generators current output: ", selected_generators_output)
+    # print("selected generators max output: ", selected_generators_max_output)
     # print("generators set ramp: ", selected_generators_set_ramp)
 
     return selected_generators, selected_generators_set_ramp
@@ -360,12 +360,12 @@ def check_network_violations(bus_status, branch_status):
     from_buses = ppc["branch"][:, F_BUS].astype('int')
     to_buses = ppc["branch"][:, T_BUS].astype('int')
 
-    for ctr in range(bus_status.size):
-        b_status = bus_status[ctr]
-        for ctr2 in range(branch_status.size):
-            if (ctr+1) in [from_buses[ctr2], to_buses[ctr2]]:
-                if b_status == 0:
-                    branch_status[ctr2] = 0
+    for bus in range(bus_status.size):
+        is_active = bus_status[bus]
+        for branch in range(branch_status.size):
+            if bus in [from_buses[branch], to_buses[branch]]:
+                if is_active == 0:
+                    branch_status[branch] = 0
 
     return branch_status
 
@@ -378,9 +378,9 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     if explore_network:
         for i, x in enumerate(bus_status):
             bus_status[i] = bus_status[i] + noise_generator()
-    bus_status[: 1] = bus_status[:] > 0.0
+    bus_status[: 1] = bus_status[:] > 0.45
     bus_status = np.squeeze(bus_status.astype(int))
-    # print ("bus status: ", bus_status)
+    print ("bus status: ", bus_status)
 
     # branch status
     branch_status = np.array(tf_action[1])
@@ -390,7 +390,7 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     branch_status[: 1] = branch_status[:] > 0.0
     branch_status = np.squeeze(branch_status.astype(int))
     branch_status = check_network_violations(bus_status, branch_status)
-    # print ("branch status: ", branch_status)
+    print ("branch status: ", branch_status)
 
     # select generators for power ramping up/down
     indices_prob = np.array(tf.squeeze(tf_action[2]))
@@ -409,12 +409,12 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
 
     selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio)
     # print("selected generators: ", selected_generators)
-    print("generators ramp: ", generators_ramp)
+    # print("generators ramp: ", generators_ramp)
 
     # bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
     # branch_status = np.ones(34, int)       # overwrite by dummy branch status (need to remove)
-    # selected_generators = np.array([24]*10)       # overwrite by dummy value (need to remove)
-    # generators_ramp = np.zeros(10, int)      # overwrite by dummy value (need to remove)
+    selected_generators = np.array([24]*10)       # overwrite by dummy value (need to remove)
+    generators_ramp = np.zeros(10, int)      # overwrite by dummy value (need to remove)
 
     action = {
         "bus_status": bus_status,
@@ -528,7 +528,7 @@ if __name__ == "__main__":
     ppc = loadcase(args.path_power)
     merge_generators()
     merge_branches()
-    # ppc = ext2int(ppc)
+    ppc = ext2int(ppc)
 
     generators, generators_min_output, generators_max_output, generators_max_ramp = get_generators_info(ramp_frequency_in_hour=6)
     print("generators: ", generators)

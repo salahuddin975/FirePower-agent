@@ -12,7 +12,7 @@ from pypower.ext2int import ext2int
 
 
 
-gym.logger.set_level(10)
+gym.logger.set_level(40)
 
 
 class ReplayBuffer:
@@ -29,7 +29,8 @@ class ReplayBuffer:
 
         self.st_bus = np.zeros((self.capacity, state_spaces[0]))
         self.st_branch = np.zeros((self.capacity, state_spaces[1]))
-        self.st_fire = np.zeros((self.capacity, state_spaces[2], state_spaces[2]))
+        # self.st_fire = np.zeros((self.capacity, state_spaces[2], state_spaces[2]))
+        self.st_fire_distance = np.zeros((self.capacity, state_spaces[2]))
         self.st_gen_output = np.zeros((self.capacity, state_spaces[3]))
         self.st_load_demand = np.zeros((self.capacity, state_spaces[4]))
         self.st_theta = np.zeros((self.capacity, state_spaces[5]))
@@ -43,7 +44,8 @@ class ReplayBuffer:
 
         self.next_st_bus = np.zeros((self.capacity, state_spaces[0]))
         self.next_st_branch = np.zeros((self.capacity, state_spaces[1]))
-        self.next_st_fire = np.zeros((self.capacity, state_spaces[2], state_spaces[2]))
+        # self.next_st_fire = np.zeros((self.capacity, state_spaces[2], state_spaces[2]))
+        self.next_st_fire_distance = np.zeros((self.capacity, state_spaces[2]))
         self.next_st_gen_output = np.zeros((self.capacity, state_spaces[3]))
         self.next_st_load_demand = np.zeros((self.capacity, state_spaces[4]))
         self.next_st_theta = np.zeros((self.capacity, state_spaces[5]))
@@ -54,7 +56,8 @@ class ReplayBuffer:
 
         self.st_bus[index] = np.copy(record[0]["bus_status"])
         self.st_branch[index] = np.copy(record[0]["branch_status"])
-        self.st_fire[index] = np.copy(record[0]["fire_state"])
+        # self.st_fire[index] = np.copy(record[0]["fire_state"])
+        self.st_fire_distance[index] = np.copy(record[0]["fire_distance"])
         self.st_gen_output[index] = np.copy(record[0]["generator_injection"])
         self.st_load_demand[index] = np.copy(record[0]["load_demand"])
         self.st_theta[index] = np.copy(record[0]["theta"])
@@ -68,7 +71,8 @@ class ReplayBuffer:
 
         self.next_st_bus[index] = np.copy(record[3]["bus_status"])
         self.next_st_branch[index] = np.copy(record[3]["branch_status"])
-        self.next_st_fire[index] = np.copy(record[3]["fire_state"])
+        # self.next_st_fire[index] = np.copy(record[3]["fire_state"])
+        self.next_st_fire_distance[index] = np.copy(record[3]["fire_distance"])
         self.next_st_gen_output[index] = np.copy(record[3]["generator_injection"])
         self.next_st_load_demand[index] = np.copy(record[3]["load_demand"])
         self.next_st_theta[index] = np.copy(record[3]["theta"])
@@ -82,7 +86,8 @@ class ReplayBuffer:
 
         st_tf_bus = tf.convert_to_tensor(self.st_bus[batch_indices])
         st_tf_branch = tf.convert_to_tensor(self.st_branch[batch_indices])
-        st_tf_fire = tf.convert_to_tensor(self.st_fire[batch_indices])
+        # st_tf_fire = tf.convert_to_tensor(self.st_fire[batch_indices])
+        st_tf_fire_distance = tf.convert_to_tensor(self.st_fire_distance[batch_indices])
         st_tf_gen_output = tf.convert_to_tensor(self.st_gen_output[batch_indices])
         st_tf_load_demand = tf.convert_to_tensor(self.st_load_demand[batch_indices])
         st_tf_theta = tf.convert_to_tensor(self.st_theta[batch_indices])
@@ -96,19 +101,20 @@ class ReplayBuffer:
 
         next_st_tf_bus = tf.convert_to_tensor(self.next_st_bus[batch_indices])
         next_st_tf_branch = tf.convert_to_tensor(self.next_st_branch[batch_indices])
-        next_st_tf_fire = tf.convert_to_tensor(self.next_st_fire[batch_indices])
+        # next_st_tf_fire = tf.convert_to_tensor(self.next_st_fire[batch_indices])
+        next_st_tf_fire_distance = tf.convert_to_tensor(self.next_st_fire_distance[batch_indices])
         next_st_tf_gen_output = tf.convert_to_tensor(self.next_st_gen_output[batch_indices])
         next_st_tf_load_demand = tf.convert_to_tensor(self.next_st_load_demand[batch_indices])
         next_st_tf_theta = tf.convert_to_tensor(self.next_st_theta[batch_indices])
 
         # update critic network
         with tf.GradientTape() as tape:
-            target_actions = target_actor([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire, next_st_tf_gen_output,
+            target_actions = target_actor([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance, next_st_tf_gen_output,
                                     next_st_tf_load_demand, next_st_tf_theta])
             # need to check if target action needs to be converted
-            y = reward_batch + self.gamma * target_critic([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire,
+            y = reward_batch + self.gamma * target_critic([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance,
                                     next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta, target_actions])
-            critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand,
+            critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand,
                                    st_tf_theta, act_tf_bus, act_tf_branch, act_tf_gen_selector, act_tf_gen_injection])
             critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
         critic_grad = tape.gradient(critic_loss, critic.trainable_variables)
@@ -116,9 +122,9 @@ class ReplayBuffer:
 
         # update actor network
         with tf.GradientTape() as tape:
-            actions = actor([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta])
+            actions = actor([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta])
             # need to check if target action needs to be converted
-            critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire, st_tf_gen_output, st_tf_load_demand, st_tf_theta, actions])
+            critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta, actions])
             actor_loss = -tf.math.reduce_mean(critic_value)
         actor_grad = tape.gradient(actor_loss, actor.trainable_variables)
         self.actor_optimizer.apply_gradients(zip(actor_grad, actor.trainable_variables))
@@ -149,10 +155,14 @@ def get_actor(state_space, action_space):
     branch_input = layers.Input(shape=(state_space[1],))
     branch_input1 = layers.Dense(30, activation="relu") (branch_input)
 
-    # fire_status -> Box(350, 350)
-    fire_input = layers.Input(shape=(state_space[2], state_space[2]))
-    fire_input1 = layers.Flatten()(fire_input)
-    fire_input1 = layers.Dense(500, activation="relu") (fire_input1)
+    # # fire_status -> Box(350, 350)
+    # fire_input = layers.Input(shape=(state_space[2], state_space[2]))
+    # fire_input1 = layers.Flatten()(fire_input)
+    # fire_input1 = layers.Dense(500, activation="relu") (fire_input1)
+
+    # fire_distance -> Box(58, )
+    fire_distance_input = layers.Input(shape=(state_space[2],))
+    fire_distance_input1 = layers.Dense(75, activation="relu") (fire_distance_input)
 
     # generator_injection -> Box(24, )
     gen_inj_input = layers.Input(shape=(state_space[3],))
@@ -166,7 +176,7 @@ def get_actor(state_space, action_space):
     theta_input = layers.Input(shape=(state_space[5], ))
     theta_input1 = layers.Dense(30, activation="relu") (theta_input)
 
-    state = layers.Concatenate() ([bus_input1, branch_input1, fire_input1, gen_inj_input1, load_demand_input1, theta_input1])
+    state = layers.Concatenate() ([bus_input1, branch_input1, fire_distance_input1, gen_inj_input1, load_demand_input1, theta_input1])
     hidden = layers.Dense(512, activation="relu") (state)
     hidden = layers.Dense(512, activation="relu") (hidden)
     hidden = layers.Dense(512, activation="relu") (hidden)
@@ -183,7 +193,7 @@ def get_actor(state_space, action_space):
     # generator_injection (generator output) -> Box(5, )
     gen_inj_output = layers.Dense(action_space[3], activation="tanh") (hidden)
 
-    model = tf.keras.Model([bus_input, branch_input, fire_input, gen_inj_input, load_demand_input, theta_input],
+    model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input],
                            [bus_output, branch_output, gen_selector_output, gen_inj_output])
     return model
 
@@ -197,10 +207,14 @@ def get_critic(state_spaces, action_spaces):
     st_branch = layers.Input(shape=(state_spaces[1],))
     st_branch1 = layers.Dense(30, activation="relu") (st_branch)
 
-    # fire_status -> Box(350, 350)
-    st_fire = layers.Input(shape=(state_spaces[2], state_spaces[2]))
-    st_fire1 = layers.Flatten()(st_fire)
-    st_fire1 = layers.Dense(500, activation="relu") (st_fire1)
+    # # fire_status -> Box(350, 350)
+    # st_fire = layers.Input(shape=(state_spaces[2], state_spaces[2]))
+    # st_fire1 = layers.Flatten()(st_fire)
+    # st_fire1 = layers.Dense(500, activation="relu") (st_fire1)
+
+    # fire_distance -> Box(58, )
+    st_fire_distance = layers.Input(shape=(state_spaces[2],))
+    st_fire_distance1 = layers.Dense(60, activation="relu") (st_fire_distance)
 
     # generator_injection (output) -> Box(24, )
     st_gen_output = layers.Input(shape=(state_spaces[3],))                     # Generator current total output
@@ -230,7 +244,7 @@ def get_critic(state_spaces, action_spaces):
     act_gen_injection = layers.Input(shape=(action_spaces[3],))
     act_gen_injection1 = layers.Dense(30, activation="relu") (act_gen_injection)          # power ramping up/down
 
-    state = layers.Concatenate() ([st_bus1, st_branch1, st_fire1, st_gen_output1, st_load_demand1, st_theta1])
+    state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1])
     action = layers.Concatenate() ([act_bus1, act_branch1, act_gen_selector1, act_gen_injection1])
     hidden = layers.Concatenate() ([state, action])
 
@@ -238,7 +252,7 @@ def get_critic(state_spaces, action_spaces):
     hidden = layers.Dense(512, activation="relu") (hidden)
     reward = layers.Dense(1, activation="linear") (hidden)
 
-    model = tf.keras.Model([st_bus, st_branch, st_fire, st_gen_output, st_load_demand, st_theta,
+    model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
                             act_bus, act_branch, act_gen_selector, act_gen_injection], reward)
     return model
 
@@ -263,12 +277,13 @@ def  get_tf_critic_input(state, action):
 def get_tf_state(state):
     tf_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
     tf_branch_status = tf.expand_dims(tf.convert_to_tensor(state["branch_status"]), 0)
-    tf_fire_state = tf.expand_dims(tf.convert_to_tensor(state["fire_state"]), 0)
+    # tf_fire_state = tf.expand_dims(tf.convert_to_tensor(state["fire_state"]), 0)
+    tf_fire_distance = tf.expand_dims(tf.convert_to_tensor(state["fire_distance"]), 0)
     tf_generator_injection = tf.expand_dims(tf.convert_to_tensor(state["generator_injection"]), 0)
     tf_load_demand = tf.expand_dims(tf.convert_to_tensor(state["load_demand"]), 0)
     tf_theta = tf.expand_dims(tf.convert_to_tensor(state["theta"]), 0)
 
-    return [tf_bus_status, tf_branch_status, tf_fire_state, tf_generator_injection, tf_load_demand, tf_theta]
+    return [tf_bus_status, tf_branch_status, tf_fire_distance, tf_generator_injection, tf_load_demand, tf_theta]
 
 
 def check_network_violations(bus_status, branch_status):
@@ -364,7 +379,7 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
             bus_status[i] = bus_status[i] + noise_generator()
     bus_status[: 1] = bus_status[:] > 0
     bus_status = np.squeeze(bus_status.astype(int))
-    # print ("bus status: ", bus_status)
+    print ("bus status: ", bus_status)
 
     # branch status
     branch_status = np.array(tf_action[1])
@@ -486,14 +501,17 @@ def get_generators_info(ramp_frequency_in_hour = 6):
 
 def get_state_spaces(env):
     observation_space = env.observation_space
+    print("observation space: ", observation_space)
+
     num_st_bus = observation_space["bus_status"].shape[0]
     num_st_branch = observation_space["branch_status"].shape[0]
-    num_fire_status = observation_space["fire_status"].shape[0]
+    # num_fire_status = observation_space["fire_status"].shape[0]
+    num_fire_distance = observation_space["fire_distance"].shape[0]
     num_gen_output = observation_space["generator_injection"].shape[0]
     num_load_demand = observation_space["load_demand"].shape[0]
     num_theta = observation_space["theta"].shape[0]
-    state_spaces = [num_st_bus, num_st_branch, num_fire_status, num_gen_output, num_load_demand, num_theta]
-    print(f"State Spaces: num bus: {num_st_bus}, num branch: {num_st_branch}, fire status: {num_fire_status}, "
+    state_spaces = [num_st_bus, num_st_branch, num_fire_distance, num_gen_output, num_load_demand, num_theta]
+    print(f"State Spaces: num bus: {num_st_bus}, num branch: {num_st_branch}, fire distance: {num_fire_distance}, "
           f"num_gen_injection: {num_gen_output}, num_load_demand: {num_load_demand}, num_theta: {num_theta}")
 
     return state_spaces
@@ -530,7 +548,7 @@ if __name__ == "__main__":
     ppc = ext2int(ppc)
     generators, generators_min_output, generators_max_output, generators_max_ramp = get_generators_info(ramp_frequency_in_hour=6)
 
-    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power)
+    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=5)
 
     state_spaces = get_state_spaces(env)
     action_spaces = get_action_spaces(env)
@@ -560,9 +578,9 @@ if __name__ == "__main__":
         target_critic.load_weights(f"saved_model/agent_target_critic{reload_version}_{reload_episode_num}.h5")
         print("weights are loaded successfully!")
 
-    total_episode = 1
+    total_episode = 10
     max_steps = 10
-    buffer = ReplayBuffer(state_spaces, action_spaces, 3000, 64)
+    buffer = ReplayBuffer(state_spaces, action_spaces, 5000, 64)
 
     epsilon = 0.7               # initial exploration rate
     max_epsilon = .7

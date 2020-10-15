@@ -16,7 +16,7 @@ gym.logger.set_level(40)
 
 
 class ReplayBuffer:
-    def __init__(self, state_spaces, action_spaces, buffer_capacity=100000, batch_size=64):
+    def __init__(self, state_spaces, action_spaces, buffer_capacity=50000, batch_size=64):
         self.counter = 0
         self.gamma = 0.99      # discount factor
         self.tau = 0.005       # used to update target network
@@ -307,7 +307,7 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
     selected_indices = selected_indices.astype(int)
     # print("selected indices: ", selected_indices, "; generators_size: ", generators.size)
     selected_generators = generators[selected_indices]
-    print("selected generators: ", selected_generators)
+    # print("selected generators: ", selected_generators)
 
     gene_current_output = np.zeros(generators.size)
     for i in range(generators.size):
@@ -348,12 +348,12 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
                 selected_generators_ramp[i] = 0 - generators_current_output[index]
                 generators_current_output[index] = 0
 
-        selected_generators_ramp[i] = math.floor(selected_generators_ramp[i]*10000)/10000
+        selected_generators_ramp[i] = math.floor(selected_generators_ramp[i]*1000)/1000
         # print("updated output: ", generators_current_output)
 
-    print("selected generators current output: ", selected_generators_current_output)
-    print("selected generators max output: ", selected_generators_max_output)
-    print("generators set ramp: ", selected_generators_ramp)
+    # print("selected generators current output: ", selected_generators_current_output)
+    # print("selected generators max output: ", selected_generators_max_output)
+    # print("generators set ramp: ", selected_generators_ramp)
 
     return selected_generators, selected_generators_ramp
 
@@ -369,24 +369,28 @@ def check_bus_generator_violation(bus_status, selected_generators, generators_ra
     return generators_ramp
 
 
-def get_processed_action(tf_action, generators_current_output, explore_network = False):
+def get_processed_action(tf_action, generators_current_output, bus_threshold=0.1, branch_threshold=0.1, explore_network = False):
     # print(f"explore network: {explore_network}")
 
     # bus status
-    bus_status = np.array(tf_action[0])
+    bus_status = np.squeeze(np.array(tf_action[0]))
     if explore_network:
-        for i, x in enumerate(bus_status):
-            bus_status[i] = bus_status[i] + noise_generator()
-    bus_status[: 1] = bus_status[:] > 0
+        for i in range(bus_status.size):
+            total = bus_status[i] + noise_generator()
+            bus_status[i] = total if 0 <= total and total >= 1 else bus_status[i]
+    bus_status= np.expand_dims(bus_status, axis=0)
+    bus_status[:1] = bus_status[:] > bus_threshold
     bus_status = np.squeeze(bus_status.astype(int))
     print ("bus status: ", bus_status)
 
     # branch status
-    branch_status = np.array(tf_action[1])
+    branch_status = np.squeeze(np.array(tf_action[1]))
     if explore_network:
-        for i, x in enumerate(branch_status):
-            branch_status[i] = branch_status[i] + noise_generator()
-    branch_status[: 1] = branch_status[:] > 0
+        for i in range(branch_status.size):
+            total = branch_status[i] + noise_generator()
+            branch_status[i] = total if total >= 0 and total <=1 else branch_status[i]
+    branch_status = np.expand_dims(branch_status, axis=0)
+    branch_status[: 1] = branch_status[:] > branch_threshold
     branch_status = np.squeeze(branch_status.astype(int))
     branch_status = check_network_violations(bus_status, branch_status)
     print ("branch status: ", branch_status)
@@ -395,8 +399,10 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     indices_prob = np.array(tf.squeeze(tf_action[2]))
     if explore_network:
         for i, x in enumerate(indices_prob):
-            total_prob = indices_prob[i] + noise_generator()
-            indices_prob[i] = total_prob if total_prob < 1  else 0.999
+            indices_prob[i] = indices_prob[i] + noise_generator()
+    for i, x in enumerate(indices_prob):
+        indices_prob[i] = indices_prob[i] if indices_prob[i] < 1  else 0.999
+        indices_prob[i] = indices_prob[i] if indices_prob[i] < 0 else 0
     # print ("indices prob: ", indices_prob)
 
     # amount of power for ramping up/down
@@ -407,9 +413,9 @@ def get_processed_action(tf_action, generators_current_output, explore_network =
     # print("ramp ratio: ", ramp_ratio)
 
     selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio)
-    # print("selected generators: ", selected_generators)
+    print("selected generators: ", selected_generators)
     generators_ramp = check_bus_generator_violation(bus_status, selected_generators, generators_ramp)
-    # print("generators ramp: ", generators_ramp)
+    print("generators ramp: ", generators_ramp)
 
     # bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
     # branch_status = np.ones(34, int)       # overwrite by dummy branch status (need to remove)
@@ -580,7 +586,7 @@ if __name__ == "__main__":
 
     total_episode = 10
     max_steps = 10
-    buffer = ReplayBuffer(state_spaces, action_spaces, 5000, 64)
+    buffer = ReplayBuffer(state_spaces, action_spaces, 10000, 64)
 
     epsilon = 0.7               # initial exploration rate
     max_epsilon = .7
@@ -598,9 +604,9 @@ if __name__ == "__main__":
 
             tradeoff = random.uniform(0, 1)
             if tradeoff < epsilon:
-                action = get_processed_action(tf_action, state["generator_injection"], True)        # explore
+                action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=.01, branch_threshold=.01, explore_network=True)        # explore
             else:
-                action = get_processed_action(tf_action, state["generator_injection"], False)
+                action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=0.01, branch_threshold=0.01, explore_network=False)
 
             next_state, reward, done, _ = env.step(action)
             print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")

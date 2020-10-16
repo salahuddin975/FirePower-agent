@@ -646,20 +646,20 @@ if __name__ == "__main__":
         if dummy_agent_flag == False:
             epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
         if episode > 50 and dummy_agent_flag == True:
-		dummy_agent_epsilon = min_dummy_agent + (max_dummy_agent - min_dummy_agent) * np.exp(-dummy_agent_decay_rate * episode)
+            dummy_agent_epsilon = min_dummy_agent + (max_dummy_agent - min_dummy_agent) * np.exp(-dummy_agent_decay_rate * episode)
 
         episodic_rewards.append(episodic_reward)
         avg_reward = np.mean(episodic_rewards[-500:])
 
-        if (episode % 500 == 0) and save_model:
+        if (episode % 200 == 0) and save_model:
             actor.save_weights(f"saved_model/agent_actor{model_version}_{episode}.h5")
             critic.save_weights(f"saved_model/agent_critic{model_version}_{episode}.h5")
             target_actor.save_weights(f"saved_model/agent_target_actor{model_version}_{episode}.h5")
             target_critic.save_weights(f"saved_model/agent_target_critic{model_version}_{episode}.h5")
 
 	
-        if (episode % 50 == 0) and save_model:
+        if (episode % 10 == 0) and save_model:
             log_file = open("saved_model/reward_log.txt", "a")
-            log_file.write(f"dummy_agent: {dummy_agent_flag}, Episode: {model_version}_{episode}, Reward: {episodic_reward}, Avg reward: {avg_reward}\n")
+            log_file.write(f"Episode: {model_version}_{episode}, dummy_agent: {dummy_agent_flag}, Reward: {episodic_reward}, Avg reward: {avg_reward}\n")
             log_file.close()
 

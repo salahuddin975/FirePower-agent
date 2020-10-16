@@ -9,7 +9,7 @@ from pypower.idx_gen import *
 from pypower.idx_brch import *
 from pypower.loadcase import loadcase
 from pypower.ext2int import ext2int
-
+import dummy_agent
 
 
 gym.logger.set_level(40)
@@ -381,7 +381,7 @@ def get_processed_action(tf_action, generators_current_output, bus_threshold=0.1
     bus_status= np.expand_dims(bus_status, axis=0)
     bus_status[:1] = bus_status[:] > bus_threshold
     bus_status = np.squeeze(bus_status.astype(int))
-    print ("bus status: ", bus_status)
+    # print ("bus status: ", bus_status)
 
     # branch status
     branch_status = np.squeeze(np.array(tf_action[1]))
@@ -393,7 +393,7 @@ def get_processed_action(tf_action, generators_current_output, bus_threshold=0.1
     branch_status[: 1] = branch_status[:] > branch_threshold
     branch_status = np.squeeze(branch_status.astype(int))
     branch_status = check_network_violations(bus_status, branch_status)
-    print ("branch status: ", branch_status)
+    # print ("branch status: ", branch_status)
 
     # select generators for power ramping up/down
     indices_prob = np.array(tf.squeeze(tf_action[2]))
@@ -413,9 +413,9 @@ def get_processed_action(tf_action, generators_current_output, bus_threshold=0.1
     # print("ramp ratio: ", ramp_ratio)
 
     selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio)
-    print("selected generators: ", selected_generators)
+    # print("selected generators: ", selected_generators)
     generators_ramp = check_bus_generator_violation(bus_status, selected_generators, generators_ramp)
-    print("generators ramp: ", generators_ramp)
+    # print("generators ramp: ", generators_ramp)
 
     # bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
     # branch_status = np.ones(34, int)       # overwrite by dummy branch status (need to remove)
@@ -554,7 +554,7 @@ if __name__ == "__main__":
     ppc = ext2int(ppc)
     generators, generators_min_output, generators_max_output, generators_max_ramp = get_generators_info(ramp_frequency_in_hour=6)
 
-    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=5)
+    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=10)
 
     state_spaces = get_state_spaces(env)
     action_spaces = get_action_spaces(env)
@@ -568,8 +568,10 @@ if __name__ == "__main__":
     critic = get_critic(state_spaces, action_spaces)
     target_critic = get_critic(state_spaces, action_spaces)
 
+    dummy_cleaver_agent = dummy_agent.CleverAgent(env.action_space)
+
     # save trained model to reuse
-    save_model = False
+    save_model = True
     reload_model = False
     model_version = 0
     reload_version = 0
@@ -584,8 +586,8 @@ if __name__ == "__main__":
         target_critic.load_weights(f"saved_model/agent_target_critic{reload_version}_{reload_episode_num}.h5")
         print("weights are loaded successfully!")
 
-    total_episode = 10
-    max_steps = 10
+    total_episode = 100
+    max_steps = 300
     buffer = ReplayBuffer(state_spaces, action_spaces, 10000, 64)
 
     epsilon = 0.7               # initial exploration rate
@@ -593,36 +595,57 @@ if __name__ == "__main__":
     min_epsilon = 0.01
     decay_rate = 0.005          # exponential decay rate for exploration probability
 
+    dummy_agent_epsilon = 0.95
+    max_dummy_agent = 0.95
+    min_dummy_agent = 0.0
+    dummy_agent_decay_rate = 0.05
+
     episodic_rewards = []
     for episode in range(total_episode):
         state = env.reset()
         episodic_reward = 0
 
-        for step in range(max_steps):
-            tf_state = get_tf_state(state)
-            tf_action = actor(tf_state)
+        dummy_agent_flag = False
+        dummy_agent_tradeoff = random.uniform(0, 1)
+        if dummy_agent_tradeoff < dummy_agent_epsilon:
+            print(f"dummy agent enabled at: {episode}")
+            dummy_agent_flag = True
 
-            tradeoff = random.uniform(0, 1)
-            if tradeoff < epsilon:
-                action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=.01, branch_threshold=.01, explore_network=True)        # explore
+        for step in range(max_steps):
+            if dummy_agent_flag:
+                action = dummy_cleaver_agent.act(state, 0, False, step)
             else:
-                action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=0.01, branch_threshold=0.01, explore_network=False)
+                tf_state = get_tf_state(state)
+                tf_action = actor(tf_state)
+
+                tradeoff = random.uniform(0, 1)
+                if tradeoff < epsilon:
+                    action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=.01, branch_threshold=.01, explore_network=True)        # explore
+
+                else:
+                    action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=0.01, branch_threshold=0.01, explore_network=False)
 
             next_state, reward, done, _ = env.step(action)
-            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+            print(f"Episode: {episode}, dummy_agent: {dummy_agent_flag}, at step: {step}, reward: {reward[0]}")
 
             buffer.add_record((state, action, reward, next_state))
             episodic_reward += reward[0]
 
             if done:
-                print(f"Episode: {episode}, done at step: {step}, total reward: {episodic_reward}")
+                print(f"Episode: {episode}, dummy_agent: {dummy_agent_flag}, done at step: {step}, total reward: {episodic_reward}")
                 break
+
+            if step % 25:
+                buffer.learn()
+                buffer.update_target()
 
         buffer.learn()
         buffer.update_target()
 
         # reduce epsilon as we need less and less exploration
-        epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
+        if dummy_agent_flag == False:
+            epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
+        dummy_agent_epsilon = min_dummy_agent + (max_dummy_agent - min_dummy_agent) * np.exp(-dummy_agent_decay_rate * episode)
 
         episodic_rewards.append(episodic_reward)
         avg_reward = np.mean(episodic_rewards)

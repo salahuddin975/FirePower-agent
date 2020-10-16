@@ -586,19 +586,19 @@ if __name__ == "__main__":
         target_critic.load_weights(f"saved_model/agent_target_critic{reload_version}_{reload_episode_num}.h5")
         print("weights are loaded successfully!")
 
-    total_episode = 100
+    total_episode = 50000
     max_steps = 300
-    buffer = ReplayBuffer(state_spaces, action_spaces, 10000, 64)
+    buffer = ReplayBuffer(state_spaces, action_spaces, 25000, 64)
 
     epsilon = 0.7               # initial exploration rate
     max_epsilon = .7
     min_epsilon = 0.01
     decay_rate = 0.005          # exponential decay rate for exploration probability
 
-    dummy_agent_epsilon = 0.95
-    max_dummy_agent = 0.95
+    dummy_agent_epsilon = 1.0
+    max_dummy_agent = 1.0
     min_dummy_agent = 0.0
-    dummy_agent_decay_rate = 0.05
+    dummy_agent_decay_rate = 0.005
 
     episodic_rewards = []
     for episode in range(total_episode):
@@ -620,10 +620,10 @@ if __name__ == "__main__":
 
                 tradeoff = random.uniform(0, 1)
                 if tradeoff < epsilon:
-                    action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=.01, branch_threshold=.01, explore_network=True)        # explore
+                    action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=True)        # explore
 
                 else:
-                    action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=0.01, branch_threshold=0.01, explore_network=False)
+                    action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=False)
 
             next_state, reward, done, _ = env.step(action)
             print(f"Episode: {episode}, dummy_agent: {dummy_agent_flag}, at step: {step}, reward: {reward[0]}")
@@ -645,18 +645,21 @@ if __name__ == "__main__":
         # reduce epsilon as we need less and less exploration
         if dummy_agent_flag == False:
             epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
-        dummy_agent_epsilon = min_dummy_agent + (max_dummy_agent - min_dummy_agent) * np.exp(-dummy_agent_decay_rate * episode)
+        if episode > 50 and dummy_agent_flag == True:
+		dummy_agent_epsilon = min_dummy_agent + (max_dummy_agent - min_dummy_agent) * np.exp(-dummy_agent_decay_rate * episode)
 
         episodic_rewards.append(episodic_reward)
-        avg_reward = np.mean(episodic_rewards)
+        avg_reward = np.mean(episodic_rewards[-500:])
 
-        if (episode % 10 == 0) and save_model:
+        if (episode % 500 == 0) and save_model:
             actor.save_weights(f"saved_model/agent_actor{model_version}_{episode}.h5")
             critic.save_weights(f"saved_model/agent_critic{model_version}_{episode}.h5")
             target_actor.save_weights(f"saved_model/agent_target_actor{model_version}_{episode}.h5")
             target_critic.save_weights(f"saved_model/agent_target_critic{model_version}_{episode}.h5")
 
+	
+        if (episode % 50 == 0) and save_model:
             log_file = open("saved_model/reward_log.txt", "a")
-            log_file.write(f"Episode: {model_version}_{episode}, Avg reward: {avg_reward}\n")
+            log_file.write(f"dummy_agent: {dummy_agent_flag}, Episode: {model_version}_{episode}, Reward: {episodic_reward}, Avg reward: {avg_reward}\n")
             log_file.close()
 

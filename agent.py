@@ -12,7 +12,7 @@ from pypower.ext2int import ext2int
 import dummy_agent
 
 
-gym.logger.set_level(40)
+gym.logger.set_level(10)
 
 
 class ReplayBuffer:
@@ -341,14 +341,20 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
         else:
             if generators_current_output[index] == 0:
                 selected_generators_ramp[i] = 0
-            elif 0 <= (selected_generators_initial_ramp[i] + generators_current_output[index]):
+            elif 0 < (selected_generators_initial_ramp[i] + generators_current_output[index]):
                 selected_generators_ramp[i] = selected_generators_initial_ramp[i]
                 generators_current_output[index] = generators_current_output[index] + selected_generators_initial_ramp[i]
             else:
                 selected_generators_ramp[i] = 0 - generators_current_output[index]
                 generators_current_output[index] = 0
 
-        selected_generators_ramp[i] = math.floor(selected_generators_ramp[i]*1000)/1000
+        if selected_generators_ramp[i] > 0:
+            selected_generators_ramp[i] = math.floor(selected_generators_ramp[i] * 10000) / 10000
+            generators_current_output[index] = math.floor(generators_current_output[index] * 10000)/10000
+        elif selected_generators_ramp[i] < 0:
+            selected_generators_ramp[i] = math.ceil(selected_generators_ramp[i] * 10000) / 10000
+            generators_current_output[index] = math.ceil(generators_current_output[index] * 10000)/10000
+
         # print("updated output: ", generators_current_output)
 
     # print("selected generators current output: ", selected_generators_current_output)
@@ -571,7 +577,7 @@ if __name__ == "__main__":
     dummy_cleaver_agent = dummy_agent.CleverAgent(env.action_space)
 
     # save trained model to reuse
-    save_model = True
+    save_model = False
     reload_model = False
     model_version = 0
     reload_version = 0

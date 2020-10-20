@@ -16,7 +16,7 @@ gym.logger.set_level(10)
 
 
 class ReplayBuffer:
-    def __init__(self, state_spaces, action_spaces, buffer_capacity=50000, batch_size=64):
+    def __init__(self, state_spaces, action_spaces, buffer_capacity=20000, batch_size=64):
         self.counter = 0
         self.gamma = 0.99      # discount factor
         self.tau = 0.005       # used to update target network
@@ -321,6 +321,7 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
     # print("selected generators max ramp: ", selected_generators_max_ramp)
     # print("selected generators ramp: ", selected_generators_initial_ramp)
 
+    decimal = 10000
     selected_generators_ramp = np.zeros(selected_generators.size)
     for i in range(selected_generators.size):
         index = selected_generators[i]
@@ -332,28 +333,21 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
             if generators_current_output[index] == selected_generators_max_output[i]:
                 selected_generators_ramp[i] = 0
             elif selected_generators_max_output[i] >= (selected_generators_initial_ramp[i] + generators_current_output[index]):
-                selected_generators_ramp[i] = selected_generators_initial_ramp[i]
-                generators_current_output[index] = generators_current_output[index] + selected_generators_initial_ramp[i]
+                selected_generators_ramp[i] = math.floor(selected_generators_initial_ramp[i] * decimal) / decimal
+                generators_current_output[index] = generators_current_output[index] + selected_generators_ramp[i]
             else:
-                selected_generators_ramp[i] = selected_generators_max_output[i] - generators_current_output[index]
+                selected_generators_ramp[i] = math.floor((selected_generators_max_output[i] - generators_current_output[index]) * decimal) / decimal
                 generators_current_output[index] = selected_generators_max_output[i]
                 # print("ramp: ", selected_generators_set_ramp[i], "; curr: ", generators_current_output[index])
         else:
             if generators_current_output[index] == 0:
                 selected_generators_ramp[i] = 0
             elif 0 < (selected_generators_initial_ramp[i] + generators_current_output[index]):
-                selected_generators_ramp[i] = selected_generators_initial_ramp[i]
-                generators_current_output[index] = generators_current_output[index] + selected_generators_initial_ramp[i]
+                selected_generators_ramp[i] = math.ceil(selected_generators_initial_ramp[i] * decimal)/decimal
+                generators_current_output[index] = generators_current_output[index] + selected_generators_ramp[i]
             else:
-                selected_generators_ramp[i] = 0 - generators_current_output[index]
-                generators_current_output[index] = 0
-
-        if selected_generators_ramp[i] > 0:
-            selected_generators_ramp[i] = math.floor(selected_generators_ramp[i] * 10000) / 10000
-            generators_current_output[index] = math.floor(generators_current_output[index] * 10000)/10000
-        elif selected_generators_ramp[i] < 0:
-            selected_generators_ramp[i] = math.ceil(selected_generators_ramp[i] * 10000) / 10000
-            generators_current_output[index] = math.ceil(generators_current_output[index] * 10000)/10000
+                selected_generators_ramp[i] = math.ceil((0 - generators_current_output[index]) * decimal)/decimal
+                generators_current_output[index] = 0.0
 
         # print("updated output: ", generators_current_output)
 
@@ -651,7 +645,7 @@ if __name__ == "__main__":
             epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
 
         # reduce taking actions from dummy agents
-        if episode > 50 and dummy_agent_flag == True:
+        if episode > 30 and dummy_agent_flag == True:
             dummy_agent_epsilon = min_dummy_agent + (max_dummy_agent - min_dummy_agent) * np.exp(-dummy_agent_decay_rate * episode)
 
         episodic_rewards.append(episodic_reward)

@@ -402,7 +402,7 @@ def get_processed_action(tf_action, generators_current_output, bus_threshold=0.1
             indices_prob[i] = indices_prob[i] + noise_generator()
     for i, x in enumerate(indices_prob):
         indices_prob[i] = indices_prob[i] if indices_prob[i] < 1  else 0.999
-        indices_prob[i] = indices_prob[i] if indices_prob[i] < 0 else 0
+        indices_prob[i] = indices_prob[i] if indices_prob[i] > 0 else 0
     # print ("indices prob: ", indices_prob)
 
     # amount of power for ramping up/down

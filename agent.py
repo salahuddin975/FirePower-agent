@@ -1,3 +1,4 @@
+import os
 import gym
 import random
 import math
@@ -11,9 +12,13 @@ from pypower.loadcase import loadcase
 from pypower.ext2int import ext2int
 import dummy_agent
 
+seed_value = 50
+os.environ['PYTHONHASHSEED']=str(seed_value)
+random.seed(seed_value)
+np.random.seed(seed_value)
+tf.random.set_seed(seed_value)
 
 gym.logger.set_level(10)
-
 
 class ReplayBuffer:
     def __init__(self, state_spaces, action_spaces, buffer_capacity=20000, batch_size=64):
@@ -588,7 +593,7 @@ if __name__ == "__main__":
 
     total_episode = 10000
     max_steps_per_episode = 300
-    train_agent_per_episode = 25
+    train_agent_per_episode = 100
     buffer = ReplayBuffer(state_spaces, action_spaces, 15000, 64)
 
     epsilon = 0.7               # initial exploration rate

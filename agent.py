@@ -56,6 +56,11 @@ class ReplayBuffer:
         self.next_st_theta = np.zeros((self.capacity, state_spaces[5]))
 
 
+    def current_record_size(self):
+        record_size = min(self.capacity, self.counter)
+        return record_size
+
+
     def add_record(self, record):
         index = self.counter % self.capacity
 
@@ -576,7 +581,7 @@ if __name__ == "__main__":
     dummy_cleaver_agent = dummy_agent.CleverAgent(env.action_space)
 
     # save trained model to reuse
-    save_model = False
+    save_model = True
     reload_model = False
     model_version = 0
     reload_version = 0
@@ -591,32 +596,27 @@ if __name__ == "__main__":
         target_critic.load_weights(f"saved_model/agent_target_critic{reload_version}_{reload_episode_num}.h5")
         print("weights are loaded successfully!")
 
-    total_episode = 1
+    total_episode = 200
     max_steps_per_episode = 300
-    train_agent_per_episode = 10
+    train_agent_per_episode = 100
     buffer = ReplayBuffer(state_spaces, action_spaces, 15000, 64)
 
-    epsilon = 0.7               # initial exploration rate
-    max_epsilon = .7
+    epsilon = 0.02               # initial exploration rate
+    max_epsilon = .02
     min_epsilon = 0.01
     decay_rate = 0.005          # exponential decay rate for exploration probability
 
-    # initially train the network from the dummy agent
-    dummy_agent_epsilon = 1.0
-    max_dummy_agent = 1.0
-    min_dummy_agent = 0.0
-    dummy_agent_decay_rate = 0.005
-
     episodic_rewards = []
+    dummy_agent_flag = False
     for episode in range(total_episode):
         state = env.reset()
         episodic_reward = 0
 
-        dummy_agent_flag = False
-        dummy_agent_tradeoff = random.uniform(0, 1)
-        if dummy_agent_tradeoff < dummy_agent_epsilon:
+        if episode == 0:
             print(f"dummy agent enabled at: {episode}")
             dummy_agent_flag = True
+        else:
+            dummy_agent_flag = False
 
         for step in range(max_steps_per_episode):
             if dummy_agent_flag:            # dummy agent
@@ -634,7 +634,8 @@ if __name__ == "__main__":
             next_state, reward, done, _ = env.step(action)
             print(f"Episode: {episode}, dummy_agent: {dummy_agent_flag}, at step: {step}, reward: {reward[0]}")
 
-            buffer.add_record((state, action, reward, next_state))
+            if dummy_agent_flag:
+                buffer.add_record((state, action, reward, next_state))
             episodic_reward += reward[0]
 
             if done:
@@ -642,30 +643,26 @@ if __name__ == "__main__":
                 break
 
             state = next_state
+        print("Train agent, current number of records: ", buffer.current_record_size())
         for i in range(train_agent_per_episode):
             buffer.learn()
             buffer.update_target()
 
         # reduce epsilon as we need less and less exploration
-        if dummy_agent_flag == False:
-            epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
-
-        # reduce taking actions from dummy agents
-        if episode > 1 and dummy_agent_flag == True:
-            dummy_agent_epsilon = min_dummy_agent + (max_dummy_agent - min_dummy_agent) * np.exp(-dummy_agent_decay_rate * episode)
+        epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
 
         episodic_rewards.append(episodic_reward)
-        avg_reward = np.mean(episodic_rewards[-300:])        # calculate moving average
+        avg_reward = np.mean(episodic_rewards[-25:])        # calculate moving average
 
         # save model weights
-        if (episode % 200 == 0) and save_model:
+        if (episode % 10 == 0) and save_model:
             actor.save_weights(f"saved_model/agent_actor{model_version}_{episode}.h5")
             critic.save_weights(f"saved_model/agent_critic{model_version}_{episode}.h5")
             target_actor.save_weights(f"saved_model/agent_target_actor{model_version}_{episode}.h5")
             target_critic.save_weights(f"saved_model/agent_target_critic{model_version}_{episode}.h5")
 
         # save logs
-        if (episode % 10 == 0) and save_model:
+        if (episode % 1 == 0) and save_model:
             log_file = open("saved_model/reward_log.txt", "a")
             log_file.write(f"Episode: {model_version}_{episode}, dummy_agent: {dummy_agent_flag}, Reward: {episodic_reward}, Avg reward: {avg_reward}\n")
             log_file.close()

@@ -39,17 +39,17 @@ class CleverAgent(object):
             action["generator_selector"] = np.array(
                 [24]*10)
 
-        if itr >= 114:
-            action["generator_selector"] = np.array(
-                [0, 1, 6, 12, 14, 15, 17, 20, 21, 22])
-            action["generator_injection"] = np.array(
-                [0, 0, 0, 0, 0, -1.11, -1.983, 1.96327, -0.82327, 1.516])
+        # if itr >= 114:
+        #     action["generator_selector"] = np.array(
+        #         [0, 1, 6, 12, 14, 15, 17, 20, 21, 22])
+        #     action["generator_injection"] = np.array(
+        #         [0, 0, 0, 0, 0, -1.11, -1.983, 1.96327, -0.82327, 1.516])
 
         if itr >= 115:
             action["generator_selector"] = np.array(
                 [0, 1, 6, 12, 14, 15, 17, 20, 21, 22])
             action["generator_injection"] = np.array(
-                [0, 0, 0, 0, 0, -0.44, 0, 0, 0, 0])
+                [0, 0, 0, 0, 0, -1.0325, -1.983, 1.91327, -0.82327, 0.771])
 
         if itr >= 116:
             # opening line (13,15)

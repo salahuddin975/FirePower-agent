@@ -641,6 +641,7 @@ if __name__ == "__main__":
                 print(f"Episode: {episode}, dummy_agent: {dummy_agent_flag}, done at step: {step}, total reward: {episodic_reward}")
                 break
 
+            state = next_state
         for i in range(train_agent_per_episode):
             buffer.learn()
             buffer.update_target()

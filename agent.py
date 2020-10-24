@@ -581,7 +581,7 @@ if __name__ == "__main__":
     dummy_cleaver_agent = dummy_agent.CleverAgent(env.action_space)
 
     # save trained model to reuse
-    save_model = True
+    save_model = False
     reload_model = False
     model_version = 0
     reload_version = 0
@@ -596,15 +596,15 @@ if __name__ == "__main__":
         target_critic.load_weights(f"saved_model/agent_target_critic{reload_version}_{reload_episode_num}.h5")
         print("weights are loaded successfully!")
 
-    total_episode = 200
+    total_episode = 5000
     max_steps_per_episode = 300
     train_agent_per_episode = 100
     buffer = ReplayBuffer(state_spaces, action_spaces, 15000, 64)
 
-    epsilon = 0.02               # initial exploration rate
-    max_epsilon = .02
+    epsilon = 0.5               # initial exploration rate
+    max_epsilon = 0.5
     min_epsilon = 0.01
-    decay_rate = 0.005          # exponential decay rate for exploration probability
+    decay_rate = 0.002          # exponential decay rate for exploration probability
 
     episodic_rewards = []
     dummy_agent_flag = False
@@ -634,15 +634,15 @@ if __name__ == "__main__":
             next_state, reward, done, _ = env.step(action)
             print(f"Episode: {episode}, dummy_agent: {dummy_agent_flag}, at step: {step}, reward: {reward[0]}")
 
-            if dummy_agent_flag:
-                buffer.add_record((state, action, reward, next_state))
             episodic_reward += reward[0]
+            buffer.add_record((state, action, reward, next_state))
 
             if done:
                 print(f"Episode: {episode}, dummy_agent: {dummy_agent_flag}, done at step: {step}, total reward: {episodic_reward}")
                 break
 
             state = next_state
+
         print("Train agent, current number of records: ", buffer.current_record_size())
         for i in range(train_agent_per_episode):
             buffer.learn()
@@ -655,14 +655,14 @@ if __name__ == "__main__":
         avg_reward = np.mean(episodic_rewards[-25:])        # calculate moving average
 
         # save model weights
-        if (episode % 10 == 0) and save_model:
+        if (episode % 100 == 0) and save_model:
             actor.save_weights(f"saved_model/agent_actor{model_version}_{episode}.h5")
             critic.save_weights(f"saved_model/agent_critic{model_version}_{episode}.h5")
             target_actor.save_weights(f"saved_model/agent_target_actor{model_version}_{episode}.h5")
             target_critic.save_weights(f"saved_model/agent_target_critic{model_version}_{episode}.h5")
 
         # save logs
-        if (episode % 1 == 0) and save_model:
+        if (episode % 5 == 0) and save_model:
             log_file = open("saved_model/reward_log.txt", "a")
             log_file.write(f"Episode: {model_version}_{episode}, dummy_agent: {dummy_agent_flag}, Reward: {episodic_reward}, Avg reward: {avg_reward}\n")
             log_file.close()

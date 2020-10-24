@@ -18,7 +18,7 @@ random.seed(seed_value)
 np.random.seed(seed_value)
 tf.random.set_seed(seed_value)
 
-gym.logger.set_level(10)
+gym.logger.set_level(25)
 
 class ReplayBuffer:
     def __init__(self, state_spaces, action_spaces, buffer_capacity=20000, batch_size=64):
@@ -591,9 +591,9 @@ if __name__ == "__main__":
         target_critic.load_weights(f"saved_model/agent_target_critic{reload_version}_{reload_episode_num}.h5")
         print("weights are loaded successfully!")
 
-    total_episode = 10000
+    total_episode = 1
     max_steps_per_episode = 300
-    train_agent_per_episode = 100
+    train_agent_per_episode = 10
     buffer = ReplayBuffer(state_spaces, action_spaces, 15000, 64)
 
     epsilon = 0.7               # initial exploration rate
@@ -651,7 +651,7 @@ if __name__ == "__main__":
             epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
 
         # reduce taking actions from dummy agents
-        if episode > 30 and dummy_agent_flag == True:
+        if episode > 1 and dummy_agent_flag == True:
             dummy_agent_epsilon = min_dummy_agent + (max_dummy_agent - min_dummy_agent) * np.exp(-dummy_agent_decay_rate * episode)
 
         episodic_rewards.append(episodic_reward)

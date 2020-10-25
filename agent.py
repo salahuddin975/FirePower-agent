@@ -580,7 +580,7 @@ if __name__ == "__main__":
     ppc = ext2int(ppc)
     generators, generators_min_output, generators_max_output, generators_max_ramp = get_generators_info(ramp_frequency_in_hour=6)
 
-    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=10)
+    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=3)
 
     state_spaces = get_state_spaces(env)
     action_spaces = get_action_spaces(env)
@@ -598,9 +598,9 @@ if __name__ == "__main__":
     target_critic = get_critic(state_spaces, action_spaces)
 
     # save trained model to reuse
-    save_model = False
+    save_model = True
     reload_model = False
-    save_model_version = 0
+    save_model_version = 4
     reload_model_version = 0
     reload_episode_num = 0
     if reload_model == False:
@@ -618,12 +618,12 @@ if __name__ == "__main__":
     train_agent_per_episode = 100
     buffer = ReplayBuffer(state_spaces, action_spaces, 15000, 64)
 
-    epsilon = 0.5               # initial exploration rate
-    max_epsilon = 0.5
+    epsilon = 0.6               # initial exploration rate
+    max_epsilon = 0.6
     min_epsilon = 0.01
     decay_rate = 0.002          # exponential decay rate for exploration probability
 
-    with open('fire_power_reward_list.csv', 'w') as fd:
+    with open(f'fire_power_reward_list_v{save_model_version}.csv', 'w') as fd:
         writer = csv.writer(fd)
         writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
 
@@ -657,8 +657,8 @@ if __name__ == "__main__":
 
             state = next_state
 
-        print("Train agent, current number of records: ", buffer.current_record_size())
-        for i in range(train_agent_per_episode):
+        # print("Train agent, current number of records: ", buffer.current_record_size())
+        # for i in range(train_agent_per_episode):
             buffer.learn()
             buffer.update_target()
 
@@ -668,7 +668,7 @@ if __name__ == "__main__":
         episodic_rewards.append(episodic_reward)
         avg_reward = np.mean(episodic_rewards[-25:])        # calculate moving average
 
-        with open('fire_power_reward_list.csv', 'a') as fd:
+        with open(f'fire_power_reward_list_v{save_model_version}.csv', 'a') as fd:
             writer = csv.writer(fd)
             writer.writerow([str(save_model_version), str(episode), str(max_reached_step), str(episodic_reward)])
 

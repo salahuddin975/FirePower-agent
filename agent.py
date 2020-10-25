@@ -598,9 +598,9 @@ if __name__ == "__main__":
     target_critic = get_critic(state_spaces, action_spaces)
 
     # save trained model to reuse
-    save_model = False
+    save_model = True
     reload_model = False
-    save_model_version = 0
+    save_model_version = 3
     reload_model_version = 0
     reload_episode_num = 0
     if reload_model == False:
@@ -650,15 +650,15 @@ if __name__ == "__main__":
             episodic_reward += reward[0]
             buffer.add_record((state, action, reward, next_state))
 
-            if done or step == max_steps_per_episode:
+            if done or (step == max_steps_per_episode-1):
                 print(f"Episode: V{save_model_version}_{episode}, dummy_agent: {dummy_agent_flag}, done at step: {step}, total reward: {episodic_reward}")
                 max_reached_step = step
                 break
 
             state = next_state
 
-        print("Train agent, current number of records: ", buffer.current_record_size())
-        for i in range(train_agent_per_episode):
+        # print("Train agent, current number of records: ", buffer.current_record_size())
+        # for i in range(train_agent_per_episode):
             buffer.learn()
             buffer.update_target()
 

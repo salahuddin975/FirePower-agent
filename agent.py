@@ -659,6 +659,7 @@ if __name__ == "__main__":
 
         # print("Train agent, current number of records: ", buffer.current_record_size())
         # for i in range(train_agent_per_episode):
+        if (buffer.current_record_size() > 1000):
             buffer.learn()
             buffer.update_target()
 

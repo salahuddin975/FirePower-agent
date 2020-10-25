@@ -581,19 +581,19 @@ if __name__ == "__main__":
     dummy_cleaver_agent = dummy_agent.CleverAgent(env.action_space)
 
     # save trained model to reuse
-    save_model = False
+    save_model = True
     reload_model = False
-    model_version = 0
-    reload_version = 0
+    save_model_version = 0
+    reload_model_version = 0
     reload_episode_num = 0
     if reload_model == False:
         target_actor.set_weights(actor.get_weights())
         target_critic.set_weights(critic.get_weights())
     else:
-        actor.load_weights(f"saved_model/agent_actor{reload_version}_{reload_episode_num}.h5")
-        target_actor.load_weights(f"saved_model/agent_target_actor{reload_version}_{reload_episode_num}.h5")
-        critic.load_weights(f"saved_model/agent_critic{reload_version}_{reload_episode_num}.h5")
-        target_critic.load_weights(f"saved_model/agent_target_critic{reload_version}_{reload_episode_num}.h5")
+        actor.load_weights(f"saved_model/agent_actor{reload_model_version}_{reload_episode_num}.h5")
+        target_actor.load_weights(f"saved_model/agent_target_actor{reload_model_version}_{reload_episode_num}.h5")
+        critic.load_weights(f"saved_model/agent_critic{reload_model_version}_{reload_episode_num}.h5")
+        target_critic.load_weights(f"saved_model/agent_target_critic{reload_model_version}_{reload_episode_num}.h5")
         print("weights are loaded successfully!")
 
     total_episode = 5000
@@ -612,24 +612,15 @@ if __name__ == "__main__":
         state = env.reset()
         episodic_reward = 0
 
-        if episode == 0:
-            print(f"dummy agent enabled at: {episode}")
-            dummy_agent_flag = True
-        else:
-            dummy_agent_flag = False
-
         for step in range(max_steps_per_episode):
-            if dummy_agent_flag:            # dummy agent
-                action = dummy_cleaver_agent.act(state, 0, False, step)
-            else:                           # rl agent
-                tf_state = get_tf_state(state)
-                tf_action = actor(tf_state)
+            tf_state = get_tf_state(state)
+            tf_action = actor(tf_state)
 
-                tradeoff = random.uniform(0, 1)
-                if tradeoff < epsilon:              # explore (add noise)
-                    action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=True)
-                else:                               # exploit (use network)
-                    action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=False)
+            tradeoff = random.uniform(0, 1)
+            if tradeoff < epsilon:              # explore (add noise)
+                action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=True)
+            else:                               # exploit (use network)
+                action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=False)
 
             next_state, reward, done, _ = env.step(action)
             print(f"Episode: {episode}, dummy_agent: {dummy_agent_flag}, at step: {step}, reward: {reward[0]}")
@@ -638,7 +629,7 @@ if __name__ == "__main__":
             buffer.add_record((state, action, reward, next_state))
 
             if done:
-                print(f"Episode: {episode}, dummy_agent: {dummy_agent_flag}, done at step: {step}, total reward: {episodic_reward}")
+                print(f"Episode: V{save_model_version}_{episode}, dummy_agent: {dummy_agent_flag}, done at step: {step}, total reward: {episodic_reward}")
                 break
 
             state = next_state
@@ -656,14 +647,14 @@ if __name__ == "__main__":
 
         # save model weights
         if (episode % 100 == 0) and save_model:
-            actor.save_weights(f"saved_model/agent_actor{model_version}_{episode}.h5")
-            critic.save_weights(f"saved_model/agent_critic{model_version}_{episode}.h5")
-            target_actor.save_weights(f"saved_model/agent_target_actor{model_version}_{episode}.h5")
-            target_critic.save_weights(f"saved_model/agent_target_critic{model_version}_{episode}.h5")
+            actor.save_weights(f"saved_model/agent_actor{save_model_version}_{episode}.h5")
+            critic.save_weights(f"saved_model/agent_critic{save_model_version}_{episode}.h5")
+            target_actor.save_weights(f"saved_model/agent_target_actor{save_model_version}_{episode}.h5")
+            target_critic.save_weights(f"saved_model/agent_target_critic{save_model_version}_{episode}.h5")
 
         # save logs
         if (episode % 5 == 0) and save_model:
             log_file = open("saved_model/reward_log.txt", "a")
-            log_file.write(f"Episode: {model_version}_{episode}, dummy_agent: {dummy_agent_flag}, Reward: {episodic_reward}, Avg reward: {avg_reward}\n")
+            log_file.write(f"Episode: V{save_model_version}_{episode}, dummy_agent: {dummy_agent_flag}, Reward: {episodic_reward}, Avg reward: {avg_reward}\n")
             log_file.close()
 

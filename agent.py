@@ -39,8 +39,8 @@ class ReplayBuffer:
         self.st_load_demand = np.zeros((self.capacity, state_spaces[4]))
         self.st_theta = np.zeros((self.capacity, state_spaces[5]))
 
-        self.act_bus = np.zeros((self.capacity, action_spaces[0]))
-        self.act_branch = np.zeros((self.capacity, action_spaces[1]))
+        # self.act_bus = np.zeros((self.capacity, action_spaces[0]))
+        # self.act_branch = np.zeros((self.capacity, action_spaces[1]))
         self.act_gen_selector = np.zeros((self.capacity, action_spaces[2]))
         self.act_gen_injection = np.zeros((self.capacity, action_spaces[3]))
 
@@ -71,8 +71,8 @@ class ReplayBuffer:
         self.st_load_demand[index] = np.copy(record[0]["load_demand"])
         self.st_theta[index] = np.copy(record[0]["theta"])
 
-        self.act_bus[index] = np.copy(record[1]["bus_status"])
-        self.act_branch[index] = np.copy(record[1]["branch_status"])
+        # self.act_bus[index] = np.copy(record[1]["bus_status"])
+        # self.act_branch[index] = np.copy(record[1]["branch_status"])
         self.act_gen_selector[index] = np.copy(record[1]["generator_selector"])
         self.act_gen_injection[index] = np.copy(record[1]["generator_injection"])
 
@@ -101,8 +101,8 @@ class ReplayBuffer:
         st_tf_load_demand = tf.convert_to_tensor(self.st_load_demand[batch_indices])
         st_tf_theta = tf.convert_to_tensor(self.st_theta[batch_indices])
 
-        act_tf_bus = tf.convert_to_tensor(self.act_bus[batch_indices])
-        act_tf_branch = tf.convert_to_tensor(self.act_branch[batch_indices])
+        # act_tf_bus = tf.convert_to_tensor(self.act_bus[batch_indices])
+        # act_tf_branch = tf.convert_to_tensor(self.act_branch[batch_indices])
         act_tf_gen_selector = tf.convert_to_tensor(self.act_gen_selector[batch_indices])
         act_tf_gen_injection = tf.convert_to_tensor(self.act_gen_injection[batch_indices])
 
@@ -124,7 +124,7 @@ class ReplayBuffer:
             y = reward_batch + self.gamma * target_critic([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance,
                                     next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta, target_actions])
             critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand,
-                                   st_tf_theta, act_tf_bus, act_tf_branch, act_tf_gen_selector, act_tf_gen_injection])
+                                   st_tf_theta, act_tf_gen_selector, act_tf_gen_injection])
             critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
         critic_grad = tape.gradient(critic_loss, critic.trainable_variables)
         self.critic_optimizer.apply_gradients(zip(critic_grad, critic.trainable_variables))
@@ -191,10 +191,10 @@ def get_actor(state_space, action_space):
     hidden = layers.Dense(512, activation="relu") (hidden)
 
     # bus -> MultiBinary(24)
-    bus_output = layers.Dense(action_space[0], activation="sigmoid") (hidden)
-
-    # num_branch -> MultiBinary(34)
-    branch_output = layers.Dense(action_space[1], activation="sigmoid") (hidden)
+    # bus_output = layers.Dense(action_space[0], activation="sigmoid") (hidden)
+    #
+    # # num_branch -> MultiBinary(34)
+    # branch_output = layers.Dense(action_space[1], activation="sigmoid") (hidden)
 
     # generator_selector -> MultiDiscrete([12 12 12 12 12])
     gen_selector_output = layers.Dense(action_space[2], activation="sigmoid") (hidden)
@@ -203,7 +203,7 @@ def get_actor(state_space, action_space):
     gen_inj_output = layers.Dense(action_space[3], activation="tanh") (hidden)
 
     model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input],
-                           [bus_output, branch_output, gen_selector_output, gen_inj_output])
+                           [gen_selector_output, gen_inj_output])
     return model
 
 
@@ -238,12 +238,12 @@ def get_critic(state_spaces, action_spaces):
     st_theta1 = layers.Dense(30, activation="relu") (st_theta)
 
     # bus -> MultiBinary(24)
-    act_bus = layers.Input(shape=(action_spaces[0],))
-    act_bus1 = layers.Dense(30, activation="relu") (act_bus)
-
-    # num_branch -> MultiBinary(34)
-    act_branch = layers.Input(shape=(action_spaces[1],))
-    act_branch1 = layers.Dense(30, activation="relu") (act_branch)
+    # act_bus = layers.Input(shape=(action_spaces[0],))
+    # act_bus1 = layers.Dense(30, activation="relu") (act_bus)
+    #
+    # # num_branch -> MultiBinary(34)
+    # act_branch = layers.Input(shape=(action_spaces[1],))
+    # act_branch1 = layers.Dense(30, activation="relu") (act_branch)
 
     # generator_selector -> MultiDiscrete([12 12 12 12 12])
     act_gen_selector = layers.Input(shape=(action_spaces[2],))
@@ -254,7 +254,7 @@ def get_critic(state_spaces, action_spaces):
     act_gen_injection1 = layers.Dense(30, activation="relu") (act_gen_injection)          # power ramping up/down
 
     state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1])
-    action = layers.Concatenate() ([act_bus1, act_branch1, act_gen_selector1, act_gen_injection1])
+    action = layers.Concatenate() ([act_gen_selector1, act_gen_injection1])
     hidden = layers.Concatenate() ([state, action])
 
     hidden = layers.Dense(512, activation="relu") (hidden)
@@ -262,7 +262,7 @@ def get_critic(state_spaces, action_spaces):
     reward = layers.Dense(1, activation="linear") (hidden)
 
     model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
-                            act_bus, act_branch, act_gen_selector, act_gen_injection], reward)
+                             act_gen_selector, act_gen_injection], reward)
     return model
 
 
@@ -421,7 +421,7 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     # print ("branch status: ", branch_status)
 
     # select generators for power ramping up/down
-    indices_prob = np.array(tf.squeeze(tf_action[2]))
+    indices_prob = np.array(tf.squeeze(tf_action[0]))
     if explore_network:
         for i, x in enumerate(indices_prob):
             indices_prob[i] = indices_prob[i] + noise_generator()
@@ -431,7 +431,7 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     # print ("indices prob: ", indices_prob)
 
     # amount of power for ramping up/down
-    ramp_ratio = np.array(tf.squeeze(tf_action[3]))
+    ramp_ratio = np.array(tf.squeeze(tf_action[1]))
     if explore_network:
         for i, x in enumerate(ramp_ratio):
             ramp_ratio[i] = ramp_ratio[i] + noise_generator()
@@ -598,10 +598,10 @@ if __name__ == "__main__":
 
     # save trained model to reuse
     save_model = False
-    reload_model = True
+    reload_model = False
     save_model_version = 0
-    reload_model_version = 1
-    reload_episode_num = 600
+    reload_model_version = 0
+    reload_episode_num = 0
     if reload_model == False:
         target_actor.set_weights(actor.get_weights())
         target_critic.set_weights(critic.get_weights())

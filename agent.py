@@ -10,7 +10,6 @@ from pypower.idx_gen import *
 from pypower.idx_brch import *
 from pypower.loadcase import loadcase
 from pypower.ext2int import ext2int
-import dummy_agent
 
 seed_value = 50
 os.environ['PYTHONHASHSEED']=str(seed_value)
@@ -379,8 +378,9 @@ def check_bus_generator_violation(bus_status, selected_generators, generators_ra
     return generators_ramp
 
 
-def get_processed_action(tf_action, generators_current_output, bus_threshold=0.1, branch_threshold=0.1, explore_network = False):
+def get_processed_action(tf_action, fire_distance, generators_current_output, bus_threshold=0.1, branch_threshold=0.1, explore_network = False):
     # print(f"explore network: {explore_network}")
+    print("fire distance: ", fire_distance)
 
     # bus status
     bus_status = np.squeeze(np.array(tf_action[0]))
@@ -578,14 +578,12 @@ if __name__ == "__main__":
     critic = get_critic(state_spaces, action_spaces)
     target_critic = get_critic(state_spaces, action_spaces)
 
-    dummy_cleaver_agent = dummy_agent.CleverAgent(env.action_space)
-
     # save trained model to reuse
-    save_model = True
-    reload_model = False
+    save_model = False
+    reload_model = True
     save_model_version = 0
-    reload_model_version = 0
-    reload_episode_num = 0
+    reload_model_version = 1
+    reload_episode_num = 600
     if reload_model == False:
         target_actor.set_weights(actor.get_weights())
         target_critic.set_weights(critic.get_weights())
@@ -618,9 +616,9 @@ if __name__ == "__main__":
 
             tradeoff = random.uniform(0, 1)
             if tradeoff < epsilon:              # explore (add noise)
-                action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=True)
+                action = get_processed_action(tf_action, state["fire_distance"], state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=True)
             else:                               # exploit (use network)
-                action = get_processed_action(tf_action, state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=False)
+                action = get_processed_action(tf_action, state["fire_distance"], state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=False)
 
             next_state, reward, done, _ = env.step(action)
             print(f"Episode: {episode}, dummy_agent: {dummy_agent_flag}, at step: {step}, reward: {reward[0]}")

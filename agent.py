@@ -599,10 +599,10 @@ if __name__ == "__main__":
 
     # save trained model to reuse
     save_model = True
-    reload_model = False
-    save_model_version = 4
-    reload_model_version = 0
-    reload_episode_num = 0
+    reload_model = True
+    save_model_version = 5
+    reload_model_version = 4
+    reload_episode_num = 100
     if reload_model == False:
         target_actor.set_weights(actor.get_weights())
         target_critic.set_weights(critic.get_weights())
@@ -616,10 +616,10 @@ if __name__ == "__main__":
     total_episode = 5000
     max_steps_per_episode = 300
     train_agent_per_episode = 100
-    buffer = ReplayBuffer(state_spaces, action_spaces, 15000, 64)
+    buffer = ReplayBuffer(state_spaces, action_spaces, 30000, 64)
 
-    epsilon = 0.6               # initial exploration rate
-    max_epsilon = 0.6
+    epsilon = 0.5               # initial exploration rate
+    max_epsilon = 0.5
     min_epsilon = 0.01
     decay_rate = 0.002          # exponential decay rate for exploration probability
 
@@ -663,7 +663,7 @@ if __name__ == "__main__":
             buffer.update_target()
 
         # reduce epsilon as we need less and less exploration
-        epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
+        # epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
 
         episodic_rewards.append(episodic_reward)
         avg_reward = np.mean(episodic_rewards[-25:])        # calculate moving average
@@ -673,7 +673,7 @@ if __name__ == "__main__":
             writer.writerow([str(save_model_version), str(episode), str(max_reached_step), str(episodic_reward)])
 
         # save model weights
-        if (episode % 100 == 0) and save_model:
+        if (episode % 50 == 0) and save_model:
             actor.save_weights(f"saved_model/agent_actor{save_model_version}_{episode}.h5")
             critic.save_weights(f"saved_model/agent_critic{save_model_version}_{episode}.h5")
             target_actor.save_weights(f"saved_model/agent_target_actor{save_model_version}_{episode}.h5")

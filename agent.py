@@ -380,29 +380,44 @@ def check_bus_generator_violation(bus_status, selected_generators, generators_ra
 
 def get_processed_action(tf_action, fire_distance, generators_current_output, bus_threshold=0.1, branch_threshold=0.1, explore_network = False):
     # print(f"explore network: {explore_network}")
-    print("fire distance: ", fire_distance)
+    # print("fire distance: ", fire_distance)
+
+    bus_status = np.ones(num_bus)
+    for i in range(num_bus):
+        if fire_distance[i] < 2.0:
+            bus_status[i] = 0
+
+    branch_status = np.ones(num_branch)
+    for i in range(num_branch):
+        if fire_distance[num_bus+i] < 2.0:
+            branch_status[i] = 0
+
+    branch_status = check_network_violations(bus_status, branch_status)
+
+    # print("bus status: ", bus_status)
+    # print("branch status: ", branch_status)
 
     # bus status
-    bus_status = np.squeeze(np.array(tf_action[0]))
-    if explore_network:
-        for i in range(bus_status.size):
-            total = bus_status[i] + noise_generator()
-            bus_status[i] = total if 0 <= total and total >= 1 else bus_status[i]
-    bus_status= np.expand_dims(bus_status, axis=0)
-    bus_status[:1] = bus_status[:] > bus_threshold
-    bus_status = np.squeeze(bus_status.astype(int))
-    # print ("bus status: ", bus_status)
-
-    # branch status
-    branch_status = np.squeeze(np.array(tf_action[1]))
-    if explore_network:
-        for i in range(branch_status.size):
-            total = branch_status[i] + noise_generator()
-            branch_status[i] = total if total >= 0 and total <=1 else branch_status[i]
-    branch_status = np.expand_dims(branch_status, axis=0)
-    branch_status[: 1] = branch_status[:] > branch_threshold
-    branch_status = np.squeeze(branch_status.astype(int))
-    branch_status = check_network_violations(bus_status, branch_status)
+    # bus_status = np.squeeze(np.array(tf_action[0]))
+    # if explore_network:
+    #     for i in range(bus_status.size):
+    #         total = bus_status[i] + noise_generator()
+    #         bus_status[i] = total if 0 <= total and total >= 1 else bus_status[i]
+    # bus_status= np.expand_dims(bus_status, axis=0)
+    # bus_status[:1] = bus_status[:] > bus_threshold
+    # bus_status = np.squeeze(bus_status.astype(int))
+    # # print ("bus status: ", bus_status)
+    #
+    # # branch status
+    # branch_status = np.squeeze(np.array(tf_action[1]))
+    # if explore_network:
+    #     for i in range(branch_status.size):
+    #         total = branch_status[i] + noise_generator()
+    #         branch_status[i] = total if total >= 0 and total <=1 else branch_status[i]
+    # branch_status = np.expand_dims(branch_status, axis=0)
+    # branch_status[: 1] = branch_status[:] > branch_threshold
+    # branch_status = np.squeeze(branch_status.astype(int))
+    # branch_status = check_network_violations(bus_status, branch_status)
     # print ("branch status: ", branch_status)
 
     # select generators for power ramping up/down
@@ -568,6 +583,9 @@ if __name__ == "__main__":
 
     state_spaces = get_state_spaces(env)
     action_spaces = get_action_spaces(env)
+
+    num_bus = state_spaces[0]
+    num_branch = state_spaces[1]
 
     std_dev = 0.2
     noise_generator = NoiseGenerator(mean=np.zeros(1), std_deviation=float(std_dev) * np.ones(1))

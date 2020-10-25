@@ -598,9 +598,9 @@ if __name__ == "__main__":
     target_critic = get_critic(state_spaces, action_spaces)
 
     # save trained model to reuse
-    save_model = True
+    save_model = False
     reload_model = False
-    save_model_version = 3
+    save_model_version = 0
     reload_model_version = 0
     reload_episode_num = 0
     if reload_model == False:
@@ -657,8 +657,8 @@ if __name__ == "__main__":
 
             state = next_state
 
-        # print("Train agent, current number of records: ", buffer.current_record_size())
-        # for i in range(train_agent_per_episode):
+        print("Train agent, current number of records: ", buffer.current_record_size())
+        for i in range(train_agent_per_episode):
             buffer.learn()
             buffer.update_target()
 

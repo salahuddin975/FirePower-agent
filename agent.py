@@ -1,4 +1,5 @@
 import os
+import csv
 import gym
 import random
 import math
@@ -622,11 +623,16 @@ if __name__ == "__main__":
     min_epsilon = 0.01
     decay_rate = 0.002          # exponential decay rate for exploration probability
 
+    with open('fire_power_reward_list.csv', 'w') as fd:
+        writer = csv.writer(fd)
+        writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
+
     episodic_rewards = []
     dummy_agent_flag = False
     for episode in range(total_episode):
         state = env.reset()
         episodic_reward = 0
+        max_reached_step = 0
 
         for step in range(max_steps_per_episode):
             tf_state = get_tf_state(state)
@@ -646,6 +652,7 @@ if __name__ == "__main__":
 
             if done:
                 print(f"Episode: V{save_model_version}_{episode}, dummy_agent: {dummy_agent_flag}, done at step: {step}, total reward: {episodic_reward}")
+                max_reached_step = step
                 break
 
             state = next_state
@@ -660,6 +667,10 @@ if __name__ == "__main__":
 
         episodic_rewards.append(episodic_reward)
         avg_reward = np.mean(episodic_rewards[-25:])        # calculate moving average
+
+        with open('fire_power_reward_list.csv', 'a') as fd:
+            writer = csv.writer(fd)
+            writer.writerow([str(save_model_version), str(episode), str(max_reached_step), str(episodic_reward)])
 
         # save model weights
         if (episode % 100 == 0) and save_model:

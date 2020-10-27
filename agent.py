@@ -377,7 +377,7 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
     # print("generators current output: ", generators_current_output)
 
     selected_indices = indices_prob * (generators.size)
-    selected_indices = selected_indices.astype(int)
+    selected_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]       # selected_indices.astype(int)
     # print("selected indices: ", selected_indices, "; generators_size: ", generators.size)
     selected_generators = generators[selected_indices]
     # print("selected generators: ", selected_generators)
@@ -392,7 +392,7 @@ def get_selected_generators_with_ramp(generators_current_output, indices_prob, r
     selected_generators_max_ramp = generators_max_ramp[selected_indices]
     selected_generators_initial_ramp = selected_generators_max_ramp * ramp_ratio
     # print("selected generators max ramp: ", selected_generators_max_ramp)
-    # print("selected generators ramp: ", selected_generators_initial_ramp)
+    # print("selected generators initial ramp: ", selected_generators_initial_ramp)
 
     decimal = 10000
     selected_generators_ramp = np.zeros(selected_generators.size)
@@ -642,8 +642,8 @@ if __name__ == "__main__":
     merge_branches()
     ppc = ext2int(ppc)
     generators, generators_min_output, generators_max_output, generators_max_ramp = get_generators_info(ramp_frequency_in_hour=6)
-
-    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=3)
+    num_generators = generators.size
+    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=11)
 
     state_spaces = get_state_spaces(env)
     action_spaces = get_action_spaces(env)
@@ -662,40 +662,39 @@ if __name__ == "__main__":
 
     # save trained model to reuse
     save_model = False
-    reload_model = True
-    save_model_version = 7
-    reload_model_version = 6
-    reload_episode_num = 350
-    if reload_model == False:
+    load_model = False
+    save_model_version = 0
+    load_model_version = 0
+    load_episode_num = 0
+    if load_model == False:
         target_actor.set_weights(actor.get_weights())
         target_critic.set_weights(critic.get_weights())
     else:
-        actor.load_weights(f"saved_model/agent_actor{reload_model_version}_{reload_episode_num}.h5")
-        target_actor.load_weights(f"saved_model/agent_target_actor{reload_model_version}_{reload_episode_num}.h5")
-        critic.load_weights(f"saved_model/agent_critic{reload_model_version}_{reload_episode_num}.h5")
-        target_critic.load_weights(f"saved_model/agent_target_critic{reload_model_version}_{reload_episode_num}.h5")
+        actor.load_weights(f"saved_model/agent_actor{load_model_version}_{load_episode_num}.h5")
+        target_actor.load_weights(f"saved_model/agent_target_actor{load_model_version}_{load_episode_num}.h5")
+        critic.load_weights(f"saved_model/agent_critic{load_model_version}_{load_episode_num}.h5")
+        target_critic.load_weights(f"saved_model/agent_target_critic{load_model_version}_{load_episode_num}.h5")
         print("weights are loaded successfully!")
 
-    save_replay_buffer = True
-    load_replay_buffer = True
+    save_replay_buffer = False
+    load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
-    total_episode = 500
+    total_episode = 150
     max_steps_per_episode = 300
     train_agent_per_episode = 100
     buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, 30000, 64)
 
-    epsilon = 0.5               # initial exploration rate
-    max_epsilon = 0.5
+    epsilon = 1.0               # initial exploration rate
+    max_epsilon = 1.0
     min_epsilon = 0.01
-    decay_rate = 0.002          # exponential decay rate for exploration probability
+    decay_rate = 0.005          # exponential decay rate for exploration probability
 
     with open(f'fire_power_reward_list_v{save_model_version}.csv', 'w') as fd:
         writer = csv.writer(fd)
         writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
 
     episodic_rewards = []
-    dummy_agent_flag = False
     for episode in range(total_episode):
         state = env.reset()
         episodic_reward = 0
@@ -712,13 +711,13 @@ if __name__ == "__main__":
                 action = get_processed_action(tf_action, state["fire_distance"], state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=False)
 
             next_state, reward, done, _ = env.step(action)
-            print(f"Episode: {episode}, dummy_agent: {dummy_agent_flag}, at step: {step}, reward: {reward[0]}")
+            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
             episodic_reward += reward[0]
             buffer.add_record((state, action, reward, next_state))
 
             if done or (step == max_steps_per_episode-1):
-                print(f"Episode: V{save_model_version}_{episode}, dummy_agent: {dummy_agent_flag}, done at step: {step}, total reward: {episodic_reward}")
+                print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_reward}")
                 max_reached_step = step
                 break
 
@@ -731,7 +730,8 @@ if __name__ == "__main__":
             buffer.update_target()
 
         # reduce epsilon as we need less and less exploration
-        # epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
+        if episode > 20:
+            epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
 
         episodic_rewards.append(episodic_reward)
         avg_reward = np.mean(episodic_rewards[-25:])        # calculate moving average
@@ -750,7 +750,7 @@ if __name__ == "__main__":
         # save logs
         if (episode % 5 == 0) and save_model:
             log_file = open("saved_model/reward_log.txt", "a")
-            log_file.write(f"Episode: V{save_model_version}_{episode}, dummy_agent: {dummy_agent_flag}, Reward: {episodic_reward}, Avg reward: {avg_reward}\n")
+            log_file.write(f"Episode: V{save_model_version}_{episode}, Reward: {episodic_reward}, Avg reward: {avg_reward}\n")
             log_file.close()
 
         if (episode % 25 == 0) and save_replay_buffer:

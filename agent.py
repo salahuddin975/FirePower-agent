@@ -661,7 +661,7 @@ if __name__ == "__main__":
     target_critic = get_critic(state_spaces, action_spaces)
 
     # save trained model to reuse
-    save_model = False
+    save_model = True
     load_model = False
     save_model_version = 0
     load_model_version = 0
@@ -676,13 +676,13 @@ if __name__ == "__main__":
         target_critic.load_weights(f"saved_model/agent_target_critic{load_model_version}_{load_episode_num}.h5")
         print("weights are loaded successfully!")
 
-    save_replay_buffer = False
+    save_replay_buffer = True
     load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
     total_episode = 150
     max_steps_per_episode = 300
-    train_agent_per_episode = 100
+    train_agent_per_episode = 300
     buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, 30000, 64)
 
     epsilon = 1.0               # initial exploration rate
@@ -723,11 +723,11 @@ if __name__ == "__main__":
 
             state = next_state
 
-        # print("Train agent, current number of records: ", buffer.current_record_size())
-        # for i in range(train_agent_per_episode):
         if (buffer.current_record_size() > 1000):
-            buffer.learn()
-            buffer.update_target()
+            print("Train agent, current number of records: ", buffer.current_record_size())
+            for i in range(train_agent_per_episode):
+                buffer.learn()
+                buffer.update_target()
 
         # reduce epsilon as we need less and less exploration
         if episode > 20:

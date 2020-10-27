@@ -680,7 +680,7 @@ if __name__ == "__main__":
     load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
-    total_episode = 150
+    total_episode = 1001
     max_steps_per_episode = 300
     train_agent_per_episode = 300
     buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, 30000, 64)

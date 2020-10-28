@@ -359,7 +359,7 @@ def get_selected_generators_with_ramp(generators_current_output, ramp_ratio):
     # print("all generators current output: ", gene_current_output)
 
     selected_generators_current_output = gene_current_output[selected_indices]
-    selected_generators_max_output = generators_max_output[selected_indices]
+    selected_generators_max_output = gene_current_output[selected_indices] # generators_max_output[selected_indices]
     selected_generators_max_ramp = generators_max_ramp[selected_indices]
     selected_generators_initial_ramp = selected_generators_max_ramp * ramp_ratio
     # print("selected generators max ramp: ", selected_generators_max_ramp)

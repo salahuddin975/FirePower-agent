@@ -417,7 +417,7 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     # print(f"explore network: {explore_network}")
     # print("fire distance: ", fire_distance)
 
-    noise_range = 0.25
+    noise_range = 0.5
 
     bus_status = np.ones(num_bus)
     for i in range(num_bus):
@@ -616,7 +616,7 @@ if __name__ == "__main__":
     load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
-    total_episode = 1001
+    total_episode = 100001
     max_steps_per_episode = 300
     train_agent_per_episode = 300
     buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, 30000, 64)

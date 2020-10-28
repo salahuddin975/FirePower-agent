@@ -21,7 +21,7 @@ tf.random.set_seed(seed_value)
 gym.logger.set_level(25)
 
 class ReplayBuffer:
-    def __init__(self, state_spaces, action_spaces, load_replay_buffer, buffer_capacity=20000, batch_size=64):
+    def __init__(self, state_spaces, action_spaces, load_replay_buffer, buffer_capacity=200000, batch_size=64):
         self.counter = 0
         self.gamma = 0.99      # discount factor
         self.tau = 0.005       # used to update target network
@@ -619,7 +619,7 @@ if __name__ == "__main__":
     total_episode = 100001
     max_steps_per_episode = 300
     train_agent_per_episode = 300
-    buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, 30000, 64)
+    buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, 200000, 64)
 
     epsilon = 1.0               # initial exploration rate
     max_epsilon = 1.0
@@ -660,7 +660,7 @@ if __name__ == "__main__":
 
             state = next_state
 
-            if (buffer.current_record_size() > 1000):
+            if (buffer.current_record_size() > 6000):
                 # print("Train agent, current number of records: ", buffer.current_record_size())
                 # for i in range(train_agent_per_episode):
                     buffer.learn()

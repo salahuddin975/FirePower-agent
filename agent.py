@@ -41,7 +41,6 @@ class ReplayBuffer:
     def initialize_buffer(self, state_spaces, action_spaces):
         self.st_bus = np.zeros((self.capacity, state_spaces[0]))
         self.st_branch = np.zeros((self.capacity, state_spaces[1]))
-        # self.st_fire = np.zeros((self.capacity, state_spaces[2], state_spaces[2]))
         self.st_fire_distance = np.zeros((self.capacity, state_spaces[2]))
         self.st_gen_output = np.zeros((self.capacity, state_spaces[3]))
         self.st_load_demand = np.zeros((self.capacity, state_spaces[4]))
@@ -49,14 +48,12 @@ class ReplayBuffer:
 
         # self.act_bus = np.zeros((self.capacity, action_spaces[0]))
         # self.act_branch = np.zeros((self.capacity, action_spaces[1]))
-        # self.act_gen_selector = np.zeros((self.capacity, action_spaces[2]))
         self.act_gen_injection = np.zeros((self.capacity, action_spaces[3]))
 
         self.rewards = np.zeros((self.capacity, 1))
 
         self.next_st_bus = np.zeros((self.capacity, state_spaces[0]))
         self.next_st_branch = np.zeros((self.capacity, state_spaces[1]))
-        # self.next_st_fire = np.zeros((self.capacity, state_spaces[2], state_spaces[2]))
         self.next_st_fire_distance = np.zeros((self.capacity, state_spaces[2]))
         self.next_st_gen_output = np.zeros((self.capacity, state_spaces[3]))
         self.next_st_load_demand = np.zeros((self.capacity, state_spaces[4]))
@@ -75,7 +72,6 @@ class ReplayBuffer:
 
         # np.save(f'replay_buffer/act_bus_v{save_replay_buffer_version}.npy', self.act_bus)
         # np.save(f'replay_buffer/act_branch_v{save_replay_buffer_version}.npy', self.act_branch)
-        # np.save(f'replay_buffer/act_gen_selector_v{save_replay_buffer_version}.npy', self.act_gen_selector)
         np.save(f'replay_buffer/act_gen_injection_v{save_replay_buffer_version}.npy', self.act_gen_injection)
 
         np.save(f'replay_buffer/rewards_v{save_replay_buffer_version}.npy', self.rewards)
@@ -101,7 +97,6 @@ class ReplayBuffer:
 
         # self.act_bus = np.load(f'replay_buffer/act_bus_v{load_replay_buffer_version}.npy')
         # self.act_branch = np.load(f'replay_buffer/act_branch_v{load_replay_buffer_version}.npy')
-        # self.act_gen_selector = np.load(f'replay_buffer/act_gen_selector_v{load_replay_buffer_version}.npy')
         self.act_gen_injection = np.load(f'replay_buffer/act_gen_injection_v{load_replay_buffer_version}.npy')
 
         self.rewards = np.load(f'replay_buffer/rewards_v{load_replay_buffer_version}.npy')
@@ -129,7 +124,6 @@ class ReplayBuffer:
 
         self.st_bus[index] = np.copy(record[0]["bus_status"])
         self.st_branch[index] = np.copy(record[0]["branch_status"])
-        # self.st_fire[index] = np.copy(record[0]["fire_state"])
         self.st_fire_distance[index] = np.copy(record[0]["fire_distance"])
         self.st_gen_output[index] = np.copy(record[0]["generator_injection"])
         self.st_load_demand[index] = np.copy(record[0]["load_demand"])
@@ -137,14 +131,12 @@ class ReplayBuffer:
 
         # self.act_bus[index] = np.copy(record[1]["bus_status"])
         # self.act_branch[index] = np.copy(record[1]["branch_status"])
-        # self.act_gen_selector[index] = np.copy(record[1]["generator_selector"])
         self.act_gen_injection[index] = np.copy(record[1]["generator_injection"])
 
         self.rewards[index] = record[2][0]
 
         self.next_st_bus[index] = np.copy(record[3]["bus_status"])
         self.next_st_branch[index] = np.copy(record[3]["branch_status"])
-        # self.next_st_fire[index] = np.copy(record[3]["fire_state"])
         self.next_st_fire_distance[index] = np.copy(record[3]["fire_distance"])
         self.next_st_gen_output[index] = np.copy(record[3]["generator_injection"])
         self.next_st_load_demand[index] = np.copy(record[3]["load_demand"])
@@ -159,7 +151,6 @@ class ReplayBuffer:
 
         st_tf_bus = tf.convert_to_tensor(self.st_bus[batch_indices])
         st_tf_branch = tf.convert_to_tensor(self.st_branch[batch_indices])
-        # st_tf_fire = tf.convert_to_tensor(self.st_fire[batch_indices])
         st_tf_fire_distance = tf.convert_to_tensor(self.st_fire_distance[batch_indices])
         st_tf_gen_output = tf.convert_to_tensor(self.st_gen_output[batch_indices])
         st_tf_load_demand = tf.convert_to_tensor(self.st_load_demand[batch_indices])
@@ -167,14 +158,12 @@ class ReplayBuffer:
 
         # act_tf_bus = tf.convert_to_tensor(self.act_bus[batch_indices])
         # act_tf_branch = tf.convert_to_tensor(self.act_branch[batch_indices])
-        # act_tf_gen_selector = tf.convert_to_tensor(self.act_gen_selector[batch_indices])
         act_tf_gen_injection = tf.convert_to_tensor(self.act_gen_injection[batch_indices])
 
         reward_batch = tf.convert_to_tensor(self.rewards[batch_indices], dtype=tf.float32)
 
         next_st_tf_bus = tf.convert_to_tensor(self.next_st_bus[batch_indices])
         next_st_tf_branch = tf.convert_to_tensor(self.next_st_branch[batch_indices])
-        # next_st_tf_fire = tf.convert_to_tensor(self.next_st_fire[batch_indices])
         next_st_tf_fire_distance = tf.convert_to_tensor(self.next_st_fire_distance[batch_indices])
         next_st_tf_gen_output = tf.convert_to_tensor(self.next_st_gen_output[batch_indices])
         next_st_tf_load_demand = tf.convert_to_tensor(self.next_st_load_demand[batch_indices])
@@ -228,11 +217,6 @@ def get_actor(state_space, action_space):
     branch_input = layers.Input(shape=(state_space[1],))
     branch_input1 = layers.Dense(30, activation="relu") (branch_input)
 
-    # # fire_status -> Box(350, 350)
-    # fire_input = layers.Input(shape=(state_space[2], state_space[2]))
-    # fire_input1 = layers.Flatten()(fire_input)
-    # fire_input1 = layers.Dense(500, activation="relu") (fire_input1)
-
     # fire_distance -> Box(58, )
     fire_distance_input = layers.Input(shape=(state_space[2],))
     fire_distance_input1 = layers.Dense(75, activation="relu") (fire_distance_input)
@@ -260,9 +244,6 @@ def get_actor(state_space, action_space):
     # # num_branch -> MultiBinary(34)
     # branch_output = layers.Dense(action_space[1], activation="sigmoid") (hidden)
 
-    # generator_selector -> MultiDiscrete([12 12 12 12 12])
-    # gen_selector_output = layers.Dense(action_space[2], activation="sigmoid") (hidden)
-
     # generator_injection (generator output) -> Box(5, )
     gen_inj_output = layers.Dense(action_space[3], activation="tanh") (hidden)
 
@@ -279,11 +260,6 @@ def get_critic(state_spaces, action_spaces):
     # num_branch -> MultiBinary(34)
     st_branch = layers.Input(shape=(state_spaces[1],))
     st_branch1 = layers.Dense(30, activation="relu") (st_branch)
-
-    # # fire_status -> Box(350, 350)
-    # st_fire = layers.Input(shape=(state_spaces[2], state_spaces[2]))
-    # st_fire1 = layers.Flatten()(st_fire)
-    # st_fire1 = layers.Dense(500, activation="relu") (st_fire1)
 
     # fire_distance -> Box(58, )
     st_fire_distance = layers.Input(shape=(state_spaces[2],))
@@ -308,10 +284,6 @@ def get_critic(state_spaces, action_spaces):
     # # num_branch -> MultiBinary(34)
     # act_branch = layers.Input(shape=(action_spaces[1],))
     # act_branch1 = layers.Dense(30, activation="relu") (act_branch)
-
-    # generator_selector -> MultiDiscrete([12 12 12 12 12])
-    # act_gen_selector = layers.Input(shape=(action_spaces[2],))
-    # act_gen_selector1 = layers.Dense(30, activation="relu") (act_gen_selector)
 
     # generator_injection -> Box(5, )
     act_gen_injection = layers.Input(shape=(action_spaces[3],))
@@ -373,10 +345,9 @@ def check_network_violations(bus_status, branch_status):
     return branch_status
 
 
-def get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio):
+def get_selected_generators_with_ramp(generators_current_output, ramp_ratio):
     # print("generators current output: ", generators_current_output)
 
-    # selected_indices = indices_prob * (generators.size)
     selected_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]       # selected_indices.astype(int)
     # print("selected indices: ", selected_indices, "; generators_size: ", generators.size)
     selected_generators = generators[selected_indices]
@@ -484,17 +455,6 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     # branch_status = check_network_violations(bus_status, branch_status)
     # print ("branch status: ", branch_status)
 
-    # select generators for power ramping up/down
-    # indices_prob = np.array(tf.squeeze(tf_action[0]))
-    # if explore_network:
-    #     for i, x in enumerate(indices_prob):
-    #         indices_prob[i] = indices_prob[i] + noise_generator()
-    # for i, x in enumerate(indices_prob):
-    #     indices_prob[i] = indices_prob[i] if indices_prob[i] < 1  else 0.999
-    #     indices_prob[i] = indices_prob[i] if indices_prob[i] > 0 else 0
-    # print ("indices prob: ", indices_prob)
-    indices_prob = 0
-
     # amount of power for ramping up/down
     ramp_ratio = np.array(tf.squeeze(tf_action[0]))
     if explore_network:
@@ -502,7 +462,7 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
             ramp_ratio[i] = ramp_ratio[i] + noise_generator()
     # print("ramp ratio: ", ramp_ratio)
 
-    selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio)
+    selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, ramp_ratio)
     # print("selected generators: ", selected_generators)
     generators_ramp = check_bus_generator_violation(bus_status, selected_generators, generators_ramp)
     print("generators ramp: ", generators_ramp)

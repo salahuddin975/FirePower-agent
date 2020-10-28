@@ -359,7 +359,7 @@ def get_selected_generators_with_ramp(generators_current_output, ramp_ratio):
     # print("all generators current output: ", gene_current_output)
 
     selected_generators_current_output = gene_current_output[selected_indices]
-    selected_generators_max_output = gene_current_output[selected_indices] # generators_max_output[selected_indices]
+    selected_generators_max_output = generators_max_output[selected_indices]
     selected_generators_max_ramp = generators_max_ramp[selected_indices]
     selected_generators_initial_ramp = selected_generators_max_ramp * ramp_ratio
     # print("selected generators max ramp: ", selected_generators_max_ramp)
@@ -467,7 +467,7 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, ramp_ratio)
     # print("selected generators: ", selected_generators)
     generators_ramp = check_bus_generator_violation(bus_status, selected_generators, generators_ramp)
-    print("generators ramp: ", generators_ramp)
+    # print("generators ramp: ", generators_ramp)
 
     # bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
     # branch_status = np.ones(34, int)       # overwrite by dummy branch status (need to remove)
@@ -635,6 +635,7 @@ if __name__ == "__main__":
         state = env.reset()
         episodic_reward = 0
         max_reached_step = 0
+        generators_max_output = state["generator_injection"][generators]
 
         for step in range(max_steps_per_episode):
             tf_state = get_tf_state(state)

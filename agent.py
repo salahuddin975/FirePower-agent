@@ -648,10 +648,11 @@ if __name__ == "__main__":
     train_agent_per_episode = 300
     buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, 200000, 64)
 
-    epsilon = 1.0               # initial exploration rate
-    max_epsilon = 1.0
-    min_epsilon = 0.01
-    decay_rate = 0.005          # exponential decay rate for exploration probability
+    explore_network = True
+    # epsilon = 1.0               # initial exploration rate
+    # max_epsilon = 1.0
+    # min_epsilon = 0.01
+    # decay_rate = 0.005          # exponential decay rate for exploration probability
 
     with open(f'fire_power_reward_list_v{save_model_version}.csv', 'w') as fd:
         writer = csv.writer(fd)
@@ -668,8 +669,8 @@ if __name__ == "__main__":
             tf_state = get_tf_state(state)
             tf_action = actor(tf_state)
 
-            tradeoff = random.uniform(0, 1)
-            if tradeoff < epsilon:              # explore (add noise)
+            # tradeoff = random.uniform(0, 1)
+            if explore_network:        # (tradeoff < epsilon) and       # explore (add noise)
                 action = get_processed_action(tf_action, state["fire_distance"], state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=True)
             else:                               # exploit (use network)
                 action = get_processed_action(tf_action, state["fire_distance"], state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=False)
@@ -694,12 +695,20 @@ if __name__ == "__main__":
                     buffer.update_target()
 
         # reduce epsilon as we need less and less exploration
-        if episode > 20:
-            epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
+        # if episode > 20:
+        #     epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
+        #
+        # if episode % 120 == 0:
+        #     epsilon = 0.8
+        #     max_epsilon = 0.8
 
-        if episode % 120 == 0:
-            epsilon = 0.8
-            max_epsilon = 0.8
+        if episode and episode % 50 == 0:
+            print ("Start testing network at: ", episode)
+            explore_network = False
+        if episode % 50 == 5:
+            print ("Start exploring network at: ", episode)
+            explore_network = True
+
 
         episodic_rewards.append(episodic_reward)
         avg_reward = np.mean(episodic_rewards[-25:])        # calculate moving average

@@ -458,6 +458,7 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     # print ("branch status: ", branch_status)
 
     # amount of power for ramping up/down
+    # print("tf: ", tf_action[0])
     ramp_ratio = np.array(tf.squeeze(tf_action[0]))
     if explore_network:
         for i, x in enumerate(ramp_ratio):
@@ -624,7 +625,7 @@ if __name__ == "__main__":
     target_critic = get_critic(state_spaces, action_spaces)
 
     # save trained model to reuse
-    save_model = True
+    save_model = False
     load_model = False
     save_model_version = 0
     load_model_version = 0
@@ -639,7 +640,7 @@ if __name__ == "__main__":
         target_critic.load_weights(f"saved_model/agent_target_critic{load_model_version}_{load_episode_num}.h5")
         print("weights are loaded successfully!")
 
-    save_replay_buffer = True
+    save_replay_buffer = False
     load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
@@ -702,10 +703,10 @@ if __name__ == "__main__":
         #     epsilon = 0.8
         #     max_epsilon = 0.8
 
-        if episode and episode % 50 == 0:
+        if episode and (episode % 50 == 0):
             print ("Start testing network at: ", episode)
             explore_network = False
-        if episode % 50 == 5:
+        if episode and (episode % 50 == 5):
             print ("Start exploring network at: ", episode)
             explore_network = True
 

@@ -461,7 +461,7 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     ramp_ratio = np.array(tf.squeeze(tf_action[0]))
     if explore_network:
         for i, x in enumerate(ramp_ratio):
-            ramp_ratio[i] = ramp_ratio[i] + noise_generator() # random.uniform(-1 * noise_range, noise_range)
+            ramp_ratio[i] = ramp_ratio[i] + random.uniform(-1 * noise_range, noise_range)    # noise_generator() #
     # print("ramp ratio: ", ramp_ratio)
 
     selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, ramp_ratio)

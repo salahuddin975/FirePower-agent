@@ -12,6 +12,9 @@ from pypower.idx_brch import *
 from pypower.loadcase import loadcase
 from pypower.ext2int import ext2int
 
+np.set_printoptions(linewidth=300)
+
+
 seed_value = 50
 os.environ['PYTHONHASHSEED']=str(seed_value)
 random.seed(seed_value)
@@ -179,6 +182,8 @@ class ReplayBuffer:
             critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand,
                                    st_tf_theta, act_tf_gen_injection])
             critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
+
+        # print(f"critic_loss: {critic_loss}")
         critic_grad = tape.gradient(critic_loss, critic.trainable_variables)
         self.critic_optimizer.apply_gradients(zip(critic_grad, critic.trainable_variables))
 
@@ -462,8 +467,8 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     ramp_ratio = np.array(tf.squeeze(tf_action[0]))
     if explore_network:
         for i, x in enumerate(ramp_ratio):
-            ramp_ratio[i] = ramp_ratio[i] + random.uniform(-1 * noise_range, noise_range)    # noise_generator() #
-    # print("ramp ratio: ", ramp_ratio)
+            ramp_ratio[i] = ramp_ratio[i] + random.uniform(-1 * noise_range, noise_range)
+    print("ramp: ", ramp_ratio)
 
     selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, ramp_ratio)
     # print("selected generators: ", selected_generators)
@@ -483,30 +488,6 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     }
 
     return action
-
-
-class NoiseGenerator:
-    def __init__(self, mean, std_deviation, theta=0.15, dt = 1e-2, x_initial=None):
-        self.mean = mean
-        self.std_deviation = std_deviation
-        self.theta = theta
-        self.dt = dt
-        self.x_initial = x_initial
-        self.reset()
-
-    def __call__(self):
-        x = (self.x_prev
-             + self.theta * (self.mean - self.x_prev) * self.dt
-             + self.std_deviation * np.sqrt(self.dt) * np.random.normal(size=self.mean.shape))
-
-        self.x_prev = x
-        return x
-
-    def reset(self):
-        if self.x_initial is not None:
-            self.x_prev = self.x_initial
-        else:
-            self.x_prev = np.zeros_like(self.mean)
 
 
 def merge_generators():
@@ -608,9 +589,6 @@ if __name__ == "__main__":
     generators, generators_min_output, generators_max_output, generators_max_ramp = get_generators_info(ramp_frequency_in_hour=6)
     num_generators = generators.size
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=11)
-
-    std_dev = 0.2
-    noise_generator = NoiseGenerator(mean=np.zeros(1), std_deviation=float(std_dev) * np.ones(1))
 
     state_spaces = get_state_spaces(env)
     action_spaces = get_action_spaces(env)

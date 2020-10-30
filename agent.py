@@ -66,7 +66,6 @@ class ReplayBuffer:
 
         self.st_bus[index] = np.copy(record[0]["bus_status"])
         self.st_branch[index] = np.copy(record[0]["branch_status"])
-        # self.st_fire[index] = np.copy(record[0]["fire_state"])
         self.st_fire_distance[index] = np.copy(record[0]["fire_distance"])
         self.st_gen_output[index] = np.copy(record[0]["generator_injection"])
         self.st_load_demand[index] = np.copy(record[0]["load_demand"])
@@ -81,7 +80,6 @@ class ReplayBuffer:
 
         self.next_st_bus[index] = np.copy(record[3]["bus_status"])
         self.next_st_branch[index] = np.copy(record[3]["branch_status"])
-        # self.next_st_fire[index] = np.copy(record[3]["fire_state"])
         self.next_st_fire_distance[index] = np.copy(record[3]["fire_distance"])
         self.next_st_gen_output[index] = np.copy(record[3]["generator_injection"])
         self.next_st_load_demand[index] = np.copy(record[3]["load_demand"])
@@ -96,7 +94,6 @@ class ReplayBuffer:
 
         st_tf_bus = tf.convert_to_tensor(self.st_bus[batch_indices])
         st_tf_branch = tf.convert_to_tensor(self.st_branch[batch_indices])
-        # st_tf_fire = tf.convert_to_tensor(self.st_fire[batch_indices])
         st_tf_fire_distance = tf.convert_to_tensor(self.st_fire_distance[batch_indices])
         st_tf_gen_output = tf.convert_to_tensor(self.st_gen_output[batch_indices])
         st_tf_load_demand = tf.convert_to_tensor(self.st_load_demand[batch_indices])
@@ -111,7 +108,6 @@ class ReplayBuffer:
 
         next_st_tf_bus = tf.convert_to_tensor(self.next_st_bus[batch_indices])
         next_st_tf_branch = tf.convert_to_tensor(self.next_st_branch[batch_indices])
-        # next_st_tf_fire = tf.convert_to_tensor(self.next_st_fire[batch_indices])
         next_st_tf_fire_distance = tf.convert_to_tensor(self.next_st_fire_distance[batch_indices])
         next_st_tf_gen_output = tf.convert_to_tensor(self.next_st_gen_output[batch_indices])
         next_st_tf_load_demand = tf.convert_to_tensor(self.next_st_load_demand[batch_indices])
@@ -165,11 +161,6 @@ def get_actor(state_space, action_space):
     branch_input = layers.Input(shape=(state_space[1],))
     branch_input1 = layers.Dense(30, activation="relu") (branch_input)
 
-    # # fire_status -> Box(350, 350)
-    # fire_input = layers.Input(shape=(state_space[2], state_space[2]))
-    # fire_input1 = layers.Flatten()(fire_input)
-    # fire_input1 = layers.Dense(500, activation="relu") (fire_input1)
-
     # fire_distance -> Box(58, )
     fire_distance_input = layers.Input(shape=(state_space[2],))
     fire_distance_input1 = layers.Dense(75, activation="relu") (fire_distance_input)
@@ -216,11 +207,6 @@ def get_critic(state_spaces, action_spaces):
     # num_branch -> MultiBinary(34)
     st_branch = layers.Input(shape=(state_spaces[1],))
     st_branch1 = layers.Dense(30, activation="relu") (st_branch)
-
-    # # fire_status -> Box(350, 350)
-    # st_fire = layers.Input(shape=(state_spaces[2], state_spaces[2]))
-    # st_fire1 = layers.Flatten()(st_fire)
-    # st_fire1 = layers.Dense(500, activation="relu") (st_fire1)
 
     # fire_distance -> Box(58, )
     st_fire_distance = layers.Input(shape=(state_spaces[2],))

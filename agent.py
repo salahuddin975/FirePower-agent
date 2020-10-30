@@ -27,9 +27,9 @@ class ReplayBuffer:
     def __init__(self, state_spaces, action_spaces, load_replay_buffer, buffer_capacity=200000, batch_size=64):
         self.counter = 0
         self.gamma = 0.99      # discount factor
-        self.tau = 0.005       # used to update target network
-        actor_lr = 0.001
-        critic_lr = 0.002
+        self.tau = 0.01       # used to update target network
+        actor_lr = 0.003
+        critic_lr = 0.006
         self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
         self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
         self.capacity = buffer_capacity
@@ -625,7 +625,7 @@ if __name__ == "__main__":
     total_episode = 100001
     max_steps_per_episode = 300
     train_agent_per_episode = 300
-    buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, 200000, 64)
+    buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, 200000, 256)
 
     explore_network = True
     # epsilon = 1.0               # initial exploration rate
@@ -670,8 +670,9 @@ if __name__ == "__main__":
             if (buffer.current_record_size() > 5000):
                 # print("Train agent, current number of records: ", buffer.current_record_size())
                 # for i in range(train_agent_per_episode):
-                buffer.learn()
-                buffer.update_target()
+                if step % 10 == 0:
+                    buffer.learn()
+                    buffer.update_target()
 
         # reduce epsilon as we need less and less exploration
         # if episode > 20:

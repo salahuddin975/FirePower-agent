@@ -383,6 +383,8 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     # print(f"explore network: {explore_network}")
     # print("fire distance: ", fire_distance)
 
+    noise_range = 0.3
+
     bus_status = np.ones(num_bus)
     for i in range(num_bus):
         if fire_distance[i] < 2.0:
@@ -402,7 +404,7 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     # bus_status = np.squeeze(np.array(tf_action[0]))
     # if explore_network:
     #     for i in range(bus_status.size):
-    #         total = bus_status[i] + noise_generator()
+    #         total = bus_status[i] + random.uniform(-1 * noise_range, noise_range)
     #         bus_status[i] = total if 0 <= total and total >= 1 else bus_status[i]
     # bus_status= np.expand_dims(bus_status, axis=0)
     # bus_status[:1] = bus_status[:] > bus_threshold
@@ -413,7 +415,7 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     # branch_status = np.squeeze(np.array(tf_action[1]))
     # if explore_network:
     #     for i in range(branch_status.size):
-    #         total = branch_status[i] + noise_generator()
+    #         total = branch_status[i] + random.uniform(-1 * noise_range, noise_range)
     #         branch_status[i] = total if total >= 0 and total <=1 else branch_status[i]
     # branch_status = np.expand_dims(branch_status, axis=0)
     # branch_status[: 1] = branch_status[:] > branch_threshold
@@ -425,7 +427,7 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     indices_prob = np.array(tf.squeeze(tf_action[0]))
     if explore_network:
         for i, x in enumerate(indices_prob):
-            indices_prob[i] = indices_prob[i] + noise_generator()
+            indices_prob[i] = indices_prob[i] + + random.uniform(-1 * noise_range, noise_range)
     for i, x in enumerate(indices_prob):
         indices_prob[i] = indices_prob[i] if indices_prob[i] < 1  else 0.999
         indices_prob[i] = indices_prob[i] if indices_prob[i] > 0 else 0
@@ -435,7 +437,7 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     ramp_ratio = np.array(tf.squeeze(tf_action[1]))
     if explore_network:
         for i, x in enumerate(ramp_ratio):
-            ramp_ratio[i] = ramp_ratio[i] + noise_generator()
+            ramp_ratio[i] = ramp_ratio[i] + + random.uniform(-1 * noise_range, noise_range)
     # print("ramp ratio: ", ramp_ratio)
 
     selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio)
@@ -456,30 +458,6 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     }
 
     return action
-
-
-class NoiseGenerator:
-    def __init__(self, mean, std_deviation, theta=0.15, dt=1e-2, x_initial=None):
-        self.mean = mean
-        self.std_deviation = std_deviation
-        self.theta = theta
-        self.dt = dt
-        self.x_initial = x_initial
-        self.reset()
-
-    def reset(self):
-        if self.x_initial is None:
-            self.x_prev = np.zeros_like(self.mean)
-        else:
-            self.x_prev = self.x_initial
-
-    def __call__(self):
-        x = self.x_prev \
-            + self.theta * (self.mean - self.x_prev) * self.dt \
-            + self.std_deviation * np.sqrt(self.dt) * np.random.normal(size=self.mean.shape)
-
-        self.x_prev = x
-        return x
 
 
 def merge_generators():
@@ -587,9 +565,6 @@ if __name__ == "__main__":
 
     num_bus = state_spaces[0]
     num_branch = state_spaces[1]
-
-    std_dev = 0.2
-    noise_generator = NoiseGenerator(mean=np.zeros(1), std_deviation=float(std_dev) * np.ones(1))
 
     actor = get_actor(state_spaces, action_spaces)
     target_actor = get_actor(state_spaces, action_spaces)

@@ -632,11 +632,9 @@ if __name__ == "__main__":
 
             state = next_state
 
-        # print("Train agent, current number of records: ", buffer.current_record_size())
-        # for i in range(train_agent_per_episode):
-        if (buffer.current_record_size() > 1000):
-            buffer.learn()
-            buffer.update_target()
+            if (buffer.current_record_size() > 1000):
+                buffer.learn()
+                buffer.update_target()
 
         # reduce epsilon as we need less and less exploration
         # epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)

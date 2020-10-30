@@ -216,27 +216,27 @@ class ReplayBuffer:
 def get_actor(state_space, action_space):
     # bus -> MultiBinary(24)
     bus_input = layers.Input(shape=(state_space[0],))
-    bus_input1 = layers.Dense(30, activation="tanh") (bus_input)
+    bus_input1 = layers.Dense(30, activation="relu") (bus_input)
 
     # num_branch -> MultiBinary(34)
     branch_input = layers.Input(shape=(state_space[1],))
-    branch_input1 = layers.Dense(30, activation="tanh") (branch_input)
+    branch_input1 = layers.Dense(30, activation="relu") (branch_input)
 
     # fire_distance -> Box(58, )
     fire_distance_input = layers.Input(shape=(state_space[2],))
-    fire_distance_input1 = layers.Dense(75, activation="tanh") (fire_distance_input)
+    fire_distance_input1 = layers.Dense(75, activation="relu") (fire_distance_input)
 
     # generator_injection -> Box(24, )
     gen_inj_input = layers.Input(shape=(state_space[3],))
-    gen_inj_input1 = layers.Dense(30, activation="tanh") (gen_inj_input)
+    gen_inj_input1 = layers.Dense(30, activation="relu") (gen_inj_input)
 
     # load_demand -> Box(24, )
     load_demand_input = layers.Input(shape=(state_space[4], ))
-    load_demand_input1 = layers.Dense(30, activation="tanh") (load_demand_input)
+    load_demand_input1 = layers.Dense(30, activation="relu") (load_demand_input)
 
     # theta -> Box(24, )
     theta_input = layers.Input(shape=(state_space[5], ))
-    theta_input1 = layers.Dense(30, activation="tanh") (theta_input)
+    theta_input1 = layers.Dense(30, activation="relu") (theta_input)
 
     state = layers.Concatenate() ([bus_input1, branch_input1, fire_distance_input1, gen_inj_input1, load_demand_input1, theta_input1])
     hidden = layers.Dense(512, activation="tanh") (state)
@@ -468,7 +468,7 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     if explore_network:
         for i, x in enumerate(ramp_ratio):
             ramp_ratio[i] = ramp_ratio[i] + random.uniform(-1 * noise_range, noise_range)
-    print("ramp: ", ramp_ratio)
+    # print("ramp: ", ramp_ratio)
 
     selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, ramp_ratio)
     # print("selected generators: ", selected_generators)
@@ -655,7 +655,7 @@ if __name__ == "__main__":
                 action = get_processed_action(tf_action, state["fire_distance"], state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=False)
 
             next_state, reward, done, _ = env.step(action)
-            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+            # print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
             episodic_reward += reward[0]
             buffer.add_record((state, action, reward, next_state))

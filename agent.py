@@ -292,14 +292,14 @@ def get_critic(state_spaces, action_spaces):
 
     # generator_injection -> Box(5, )
     act_gen_injection = layers.Input(shape=(action_spaces[3],))
-    act_gen_injection1 = layers.Dense(30, activation="relu") (act_gen_injection)          # power ramping up/down
+    act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
 
     state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, act_gen_injection1])
     # action = layers.Concatenate() ([act_gen_injection1])
     # hidden = layers.Concatenate() ([state, act_gen_injection1])
 
-    # hidden = layers.Dense(512, activation="relu") (hidden)
     hidden = layers.Dense(128, activation="relu") (state)
+    hidden = layers.Dense(64, activation="relu") (hidden)
     reward = layers.Dense(1, activation="linear") (hidden)
 
     model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand,

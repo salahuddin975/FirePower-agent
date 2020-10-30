@@ -175,12 +175,12 @@ class ReplayBuffer:
         # update critic network
         with tf.GradientTape() as tape:
             target_actions = target_actor([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance, next_st_tf_gen_output,
-                                    next_st_tf_load_demand, next_st_tf_theta])
+                                    next_st_tf_load_demand])
             # need to check if target action needs to be converted
             y = reward_batch + self.gamma * target_critic([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance,
-                                    next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta, target_actions])
+                                    next_st_tf_gen_output, next_st_tf_load_demand, target_actions])
             critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand,
-                                   st_tf_theta, act_tf_gen_injection])
+                                   act_tf_gen_injection])
             critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
 
         # print(f"critic_loss: {critic_loss}")
@@ -189,9 +189,9 @@ class ReplayBuffer:
 
         # update actor network
         with tf.GradientTape() as tape:
-            actions = actor([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta])
+            actions = actor([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand])
             # need to check if target action needs to be converted
-            critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta, actions])
+            critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, actions])
             actor_loss = -tf.math.reduce_mean(critic_value)
         actor_grad = tape.gradient(actor_loss, actor.trainable_variables)
         self.actor_optimizer.apply_gradients(zip(actor_grad, actor.trainable_variables))
@@ -216,31 +216,31 @@ class ReplayBuffer:
 def get_actor(state_space, action_space):
     # bus -> MultiBinary(24)
     bus_input = layers.Input(shape=(state_space[0],))
-    bus_input1 = layers.Dense(30, activation="relu") (bus_input)
+    bus_input1 = layers.Dense(32, activation="tanh") (bus_input)
 
     # num_branch -> MultiBinary(34)
     branch_input = layers.Input(shape=(state_space[1],))
-    branch_input1 = layers.Dense(30, activation="relu") (branch_input)
+    branch_input1 = layers.Dense(32, activation="tanh") (branch_input)
 
     # fire_distance -> Box(58, )
     fire_distance_input = layers.Input(shape=(state_space[2],))
-    fire_distance_input1 = layers.Dense(75, activation="relu") (fire_distance_input)
+    fire_distance_input1 = layers.Dense(64, activation="tanh") (fire_distance_input)
 
     # generator_injection -> Box(24, )
     gen_inj_input = layers.Input(shape=(state_space[3],))
-    gen_inj_input1 = layers.Dense(30, activation="relu") (gen_inj_input)
+    gen_inj_input1 = layers.Dense(32, activation="tanh") (gen_inj_input)
 
     # load_demand -> Box(24, )
     load_demand_input = layers.Input(shape=(state_space[4], ))
-    load_demand_input1 = layers.Dense(30, activation="relu") (load_demand_input)
+    load_demand_input1 = layers.Dense(32, activation="tanh") (load_demand_input)
 
     # theta -> Box(24, )
-    theta_input = layers.Input(shape=(state_space[5], ))
-    theta_input1 = layers.Dense(30, activation="relu") (theta_input)
+    # theta_input = layers.Input(shape=(state_space[5], ))
+    # theta_input1 = layers.Dense(32, activation="tanh") (theta_input)
 
-    state = layers.Concatenate() ([bus_input1, branch_input1, fire_distance_input1, gen_inj_input1, load_demand_input1, theta_input1])
-    # hidden = layers.Dense(512, activation="tanh") (state)
+    state = layers.Concatenate() ([bus_input1, branch_input1, fire_distance_input1, gen_inj_input1, load_demand_input1])
     hidden = layers.Dense(128, activation="tanh") (state)
+    hidden = layers.Dense(64, activation="tanh") (hidden)
     # hidden = layers.Dense(512, activation="relu") (hidden)
 
     # bus -> MultiBinary(24)
@@ -252,7 +252,7 @@ def get_actor(state_space, action_space):
     # generator_injection (generator output) -> Box(5, )
     gen_inj_output = layers.Dense(action_space[3], activation="tanh") (hidden)
 
-    model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input],
+    model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input],
                            [gen_inj_output])
     return model
 
@@ -260,27 +260,27 @@ def get_actor(state_space, action_space):
 def get_critic(state_spaces, action_spaces):
     # bus -> MultiBinary(24)
     st_bus = layers.Input(shape=(state_spaces[0],))
-    st_bus1 = layers.Dense(30, activation="relu") (st_bus)
+    st_bus1 = layers.Dense(32, activation="relu") (st_bus)
 
     # num_branch -> MultiBinary(34)
     st_branch = layers.Input(shape=(state_spaces[1],))
-    st_branch1 = layers.Dense(30, activation="relu") (st_branch)
+    st_branch1 = layers.Dense(32, activation="relu") (st_branch)
 
     # fire_distance -> Box(58, )
     st_fire_distance = layers.Input(shape=(state_spaces[2],))
-    st_fire_distance1 = layers.Dense(60, activation="relu") (st_fire_distance)
+    st_fire_distance1 = layers.Dense(64, activation="relu") (st_fire_distance)
 
     # generator_injection (output) -> Box(24, )
     st_gen_output = layers.Input(shape=(state_spaces[3],))                     # Generator current total output
-    st_gen_output1 = layers.Dense(30, activation="relu") (st_gen_output)
+    st_gen_output1 = layers.Dense(32, activation="relu") (st_gen_output)
 
     # load_demand -> Box(24, )
     st_load_demand = layers.Input(shape=(state_spaces[4], ))
-    st_load_demand1 = layers.Dense(30, activation="relu") (st_load_demand)
+    st_load_demand1 = layers.Dense(32, activation="relu") (st_load_demand)
 
     # theta -> Box(24, )
-    st_theta = layers.Input(shape=(state_spaces[5], ))
-    st_theta1 = layers.Dense(30, activation="relu") (st_theta)
+    # st_theta = layers.Input(shape=(state_spaces[5], ))
+    # st_theta1 = layers.Dense(30, activation="relu") (st_theta)
 
     # bus -> MultiBinary(24)
     # act_bus = layers.Input(shape=(action_spaces[0],))
@@ -294,7 +294,7 @@ def get_critic(state_spaces, action_spaces):
     act_gen_injection = layers.Input(shape=(action_spaces[3],))
     act_gen_injection1 = layers.Dense(30, activation="relu") (act_gen_injection)          # power ramping up/down
 
-    state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1, act_gen_injection1])
+    state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, act_gen_injection1])
     # action = layers.Concatenate() ([act_gen_injection1])
     # hidden = layers.Concatenate() ([state, act_gen_injection1])
 
@@ -302,7 +302,7 @@ def get_critic(state_spaces, action_spaces):
     hidden = layers.Dense(128, activation="relu") (state)
     reward = layers.Dense(1, activation="linear") (hidden)
 
-    model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
+    model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand,
                              act_gen_injection], reward)
     return model
 
@@ -655,7 +655,7 @@ if __name__ == "__main__":
                 action = get_processed_action(tf_action, state["fire_distance"], state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=False)
 
             next_state, reward, done, _ = env.step(action)
-            # print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
             episodic_reward += reward[0]
             buffer.add_record((state, action, reward, next_state))
@@ -667,7 +667,7 @@ if __name__ == "__main__":
 
             state = next_state
 
-            if (buffer.current_record_size() > 5000):
+            if (buffer.current_record_size() > 0):
                 # print("Train agent, current number of records: ", buffer.current_record_size())
                 # for i in range(train_agent_per_episode):
                 if step % 10 == 0:

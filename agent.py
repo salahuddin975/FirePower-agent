@@ -598,11 +598,11 @@ if __name__ == "__main__":
     target_critic = get_critic(state_spaces, action_spaces)
 
     # save trained model to reuse
-    save_model = True
+    save_model = False
     reload_model = True
-    save_model_version = 5
-    reload_model_version = 4
-    reload_episode_num = 100
+    save_model_version = 7
+    reload_model_version = 6
+    reload_episode_num = 350
     if reload_model == False:
         target_actor.set_weights(actor.get_weights())
         target_critic.set_weights(critic.get_weights())

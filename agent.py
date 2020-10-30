@@ -438,12 +438,11 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     if explore_network:
         for i, x in enumerate(ramp_ratio):
             ramp_ratio[i] = ramp_ratio[i] + + random.uniform(-1 * noise_range, noise_range)
-    # print("ramp ratio: ", ramp_ratio)
 
     selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, indices_prob, ramp_ratio)
-    # print("selected generators: ", selected_generators)
+    print("selected generators: ", selected_generators)
     generators_ramp = check_bus_generator_violation(bus_status, selected_generators, generators_ramp)
-    # print("generators ramp: ", generators_ramp)
+    print("generators ramp: ", generators_ramp)
 
     # bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
     # branch_status = np.ones(34, int)       # overwrite by dummy branch status (need to remove)
@@ -593,8 +592,8 @@ if __name__ == "__main__":
     train_agent_per_episode = 100
     buffer = ReplayBuffer(state_spaces, action_spaces, 30000, 64)
 
-    epsilon = 0.5               # initial exploration rate
-    max_epsilon = 0.5
+    epsilon = 1.0               # initial exploration rate
+    max_epsilon = 1.0
     min_epsilon = 0.01
     decay_rate = 0.002          # exponential decay rate for exploration probability
 
@@ -637,7 +636,7 @@ if __name__ == "__main__":
                 buffer.update_target()
 
         # reduce epsilon as we need less and less exploration
-        # epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
+        epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
 
         episodic_rewards.append(episodic_reward)
         avg_reward = np.mean(episodic_rewards[-25:])        # calculate moving average

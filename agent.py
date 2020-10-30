@@ -239,8 +239,8 @@ def get_actor(state_space, action_space):
     theta_input1 = layers.Dense(30, activation="relu") (theta_input)
 
     state = layers.Concatenate() ([bus_input1, branch_input1, fire_distance_input1, gen_inj_input1, load_demand_input1, theta_input1])
-    hidden = layers.Dense(512, activation="tanh") (state)
-    hidden = layers.Dense(128, activation="tanh") (hidden)
+    # hidden = layers.Dense(512, activation="tanh") (state)
+    hidden = layers.Dense(128, activation="tanh") (state)
     # hidden = layers.Dense(512, activation="relu") (hidden)
 
     # bus -> MultiBinary(24)
@@ -294,12 +294,12 @@ def get_critic(state_spaces, action_spaces):
     act_gen_injection = layers.Input(shape=(action_spaces[3],))
     act_gen_injection1 = layers.Dense(30, activation="relu") (act_gen_injection)          # power ramping up/down
 
-    state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1])
+    state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1, act_gen_injection1])
     # action = layers.Concatenate() ([act_gen_injection1])
-    hidden = layers.Concatenate() ([state, act_gen_injection1])
+    # hidden = layers.Concatenate() ([state, act_gen_injection1])
 
-    hidden = layers.Dense(512, activation="relu") (hidden)
-    hidden = layers.Dense(128, activation="relu") (hidden)
+    # hidden = layers.Dense(512, activation="relu") (hidden)
+    hidden = layers.Dense(128, activation="relu") (state)
     reward = layers.Dense(1, activation="linear") (hidden)
 
     model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
@@ -422,7 +422,7 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     # print(f"explore network: {explore_network}")
     # print("fire distance: ", fire_distance)
 
-    noise_range = 0.3
+    noise_range = 0.15
 
     bus_status = np.ones(num_bus)
     for i in range(num_bus):

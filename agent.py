@@ -11,6 +11,7 @@ from pypower.idx_gen import *
 from pypower.idx_brch import *
 from pypower.loadcase import loadcase
 from pypower.ext2int import ext2int
+import matplotlib.pyplot as plt
 
 np.set_printoptions(linewidth=300)
 
@@ -26,10 +27,10 @@ gym.logger.set_level(25)
 class ReplayBuffer:
     def __init__(self, state_spaces, action_spaces, load_replay_buffer, buffer_capacity=200000, batch_size=64):
         self.counter = 0
-        self.gamma = 0.99      # discount factor
-        self.tau = 0.01       # used to update target network
-        actor_lr = 0.003
-        critic_lr = 0.006
+        self.gamma = 0.9      # discount factor
+        self.tau = 0.05       # used to update target network
+        actor_lr = 0.001
+        critic_lr = 0.002
         self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
         self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
         self.capacity = buffer_capacity
@@ -182,8 +183,6 @@ class ReplayBuffer:
             critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand,
                                    act_tf_gen_injection])
             critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
-
-        # print(f"critic_loss: {critic_loss}")
         critic_grad = tape.gradient(critic_loss, critic.trainable_variables)
         self.critic_optimizer.apply_gradients(zip(critic_grad, critic.trainable_variables))
 
@@ -195,6 +194,8 @@ class ReplayBuffer:
             actor_loss = -tf.math.reduce_mean(critic_value)
         actor_grad = tape.gradient(actor_loss, actor.trainable_variables)
         self.actor_optimizer.apply_gradients(zip(actor_grad, actor.trainable_variables))
+
+        return critic_loss, tf.math.reduce_mean(reward_batch), tf.math.reduce_mean(critic_value)
 
 
     def update_target(self):
@@ -467,7 +468,8 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     ramp_ratio = np.array(tf.squeeze(tf_action[0]))
     if explore_network:
         for i, x in enumerate(ramp_ratio):
-            ramp_ratio[i] = ramp_ratio[i] + random.uniform(-1 * noise_range, noise_range)
+            total = ramp_ratio[i] + random.uniform(-1 * noise_range, noise_range)
+            ramp_ratio[i] = total if -1 <= total and total <= 1 else ramp_ratio[i]
     # print("ramp: ", ramp_ratio)
 
     selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, ramp_ratio)
@@ -637,6 +639,11 @@ if __name__ == "__main__":
         writer = csv.writer(fd)
         writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
 
+    plot_debug = True
+    critic_losses = []
+    reward_values = []
+    critic_values = []
+
     episodic_rewards = []
     for episode in range(total_episode):
         state = env.reset()
@@ -655,7 +662,7 @@ if __name__ == "__main__":
                 action = get_processed_action(tf_action, state["fire_distance"], state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=False)
 
             next_state, reward, done, _ = env.step(action)
-            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+            # print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
             episodic_reward += reward[0]
             buffer.add_record((state, action, reward, next_state))
@@ -667,12 +674,16 @@ if __name__ == "__main__":
 
             state = next_state
 
-            if (buffer.current_record_size() > 0):
+            if (buffer.current_record_size() > 500):
                 # print("Train agent, current number of records: ", buffer.current_record_size())
                 # for i in range(train_agent_per_episode):
-                if step % 10 == 0:
-                    buffer.learn()
+                if step % 5 == 0:
+                    critic_loss, rewad_value, critic_value = buffer.learn()   # magnitude of gradient
                     buffer.update_target()
+                    critic_losses.append(critic_loss)
+                    reward_values.append(rewad_value)
+                    critic_values.append(critic_value)
+                    # print(f"critic_loss: {critic_loss}")
 
         # reduce epsilon as we need less and less exploration
         # if episode > 20:
@@ -714,3 +725,18 @@ if __name__ == "__main__":
             print(f"Saving replay buffer at: {episode}")
             buffer.save_buffer()
 
+        if plot_debug and episode and ( episode % 25 == 0):
+            plt.plot(critic_losses)
+            plt.xlabel("iteration")
+            plt.ylabel("avg. critic loss")
+            plt.show()
+
+            plt.plot(reward_values)
+            plt.xlabel("iteration")
+            plt.ylabel("avg. reward values")
+            plt.show()
+
+            plt.plot(critic_values)
+            plt.xlabel("iteration")
+            plt.ylabel("avg. critic values")
+            plt.show()

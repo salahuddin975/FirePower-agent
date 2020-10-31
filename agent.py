@@ -177,7 +177,6 @@ class ReplayBuffer:
         with tf.GradientTape() as tape:
             target_actions = target_actor([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance, next_st_tf_gen_output,
                                     next_st_tf_load_demand])
-            # need to check if target action needs to be converted
             y = reward_batch + self.gamma * target_critic([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance,
                                     next_st_tf_gen_output, next_st_tf_load_demand, target_actions])
             critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand,
@@ -190,8 +189,8 @@ class ReplayBuffer:
         with tf.GradientTape() as tape:
             actions = actor([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand])
             # need to check if target action needs to be converted
-            critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, actions])
-            actor_loss = -tf.math.reduce_mean(critic_value)
+            critic_value1 = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, actions])
+            actor_loss = -1 * tf.math.reduce_mean(critic_value1)
         actor_grad = tape.gradient(actor_loss, actor.trainable_variables)
         self.actor_optimizer.apply_gradients(zip(actor_grad, actor.trainable_variables))
 
@@ -217,30 +216,30 @@ class ReplayBuffer:
 def get_actor(state_space, action_space):
     # bus -> MultiBinary(24)
     bus_input = layers.Input(shape=(state_space[0],))
-    bus_input1 = layers.Dense(32, activation="tanh") (bus_input)
+    # bus_input1 = layers.Dense(32, activation="tanh") (bus_input)
 
     # num_branch -> MultiBinary(34)
     branch_input = layers.Input(shape=(state_space[1],))
-    branch_input1 = layers.Dense(32, activation="tanh") (branch_input)
+    # branch_input1 = layers.Dense(32, activation="tanh") (branch_input)
 
     # fire_distance -> Box(58, )
     fire_distance_input = layers.Input(shape=(state_space[2],))
-    fire_distance_input1 = layers.Dense(64, activation="tanh") (fire_distance_input)
+    # fire_distance_input1 = layers.Dense(64, activation="tanh") (fire_distance_input)
 
     # generator_injection -> Box(24, )
     gen_inj_input = layers.Input(shape=(state_space[3],))
-    gen_inj_input1 = layers.Dense(32, activation="tanh") (gen_inj_input)
+    # gen_inj_input1 = layers.Dense(32, activation="tanh") (gen_inj_input)
 
     # load_demand -> Box(24, )
     load_demand_input = layers.Input(shape=(state_space[4], ))
-    load_demand_input1 = layers.Dense(32, activation="tanh") (load_demand_input)
+    # load_demand_input1 = layers.Dense(32, activation="tanh") (load_demand_input)
 
     # theta -> Box(24, )
     # theta_input = layers.Input(shape=(state_space[5], ))
     # theta_input1 = layers.Dense(32, activation="tanh") (theta_input)
 
-    state = layers.Concatenate() ([bus_input1, branch_input1, fire_distance_input1, gen_inj_input1, load_demand_input1])
-    hidden = layers.Dense(128, activation="tanh") (state)
+    state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input])
+    hidden = layers.Dense(256, activation="tanh") (state)
     hidden = layers.Dense(64, activation="tanh") (hidden)
     # hidden = layers.Dense(512, activation="relu") (hidden)
 
@@ -261,23 +260,23 @@ def get_actor(state_space, action_space):
 def get_critic(state_spaces, action_spaces):
     # bus -> MultiBinary(24)
     st_bus = layers.Input(shape=(state_spaces[0],))
-    st_bus1 = layers.Dense(32, activation="relu") (st_bus)
+    # st_bus1 = layers.Dense(32, activation="relu") (st_bus)
 
     # num_branch -> MultiBinary(34)
     st_branch = layers.Input(shape=(state_spaces[1],))
-    st_branch1 = layers.Dense(32, activation="relu") (st_branch)
+    # st_branch1 = layers.Dense(32, activation="relu") (st_branch)
 
     # fire_distance -> Box(58, )
     st_fire_distance = layers.Input(shape=(state_spaces[2],))
-    st_fire_distance1 = layers.Dense(64, activation="relu") (st_fire_distance)
+    # st_fire_distance1 = layers.Dense(64, activation="relu") (st_fire_distance)
 
     # generator_injection (output) -> Box(24, )
     st_gen_output = layers.Input(shape=(state_spaces[3],))                     # Generator current total output
-    st_gen_output1 = layers.Dense(32, activation="relu") (st_gen_output)
+    # st_gen_output1 = layers.Dense(32, activation="relu") (st_gen_output)
 
     # load_demand -> Box(24, )
     st_load_demand = layers.Input(shape=(state_spaces[4], ))
-    st_load_demand1 = layers.Dense(32, activation="relu") (st_load_demand)
+    # st_load_demand1 = layers.Dense(32, activation="relu") (st_load_demand)
 
     # theta -> Box(24, )
     # st_theta = layers.Input(shape=(state_spaces[5], ))
@@ -293,13 +292,13 @@ def get_critic(state_spaces, action_spaces):
 
     # generator_injection -> Box(5, )
     act_gen_injection = layers.Input(shape=(action_spaces[3],))
-    act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
+    # act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
 
-    state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, act_gen_injection1])
+    state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, act_gen_injection])
     # action = layers.Concatenate() ([act_gen_injection1])
     # hidden = layers.Concatenate() ([state, act_gen_injection1])
 
-    hidden = layers.Dense(128, activation="relu") (state)
+    hidden = layers.Dense(256, activation="relu") (state)
     hidden = layers.Dense(64, activation="relu") (hidden)
     reward = layers.Dense(1, activation="linear") (hidden)
 
@@ -464,7 +463,7 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     # print ("branch status: ", branch_status)
 
     # amount of power for ramping up/down
-    # print("tf ramp value: ", tf_action[0])
+    print("tf ramp value: ", tf_action[0])
     ramp_ratio = np.array(tf.squeeze(tf_action[0]))
     if explore_network:
         for i, x in enumerate(ramp_ratio):
@@ -725,7 +724,7 @@ if __name__ == "__main__":
             print(f"Saving replay buffer at: {episode}")
             buffer.save_buffer()
 
-        if plot_debug and episode and ( episode % 25 == 0):
+        if plot_debug and episode and ( episode % 10 == 0):
             plt.plot(critic_losses)
             plt.xlabel("iteration")
             plt.ylabel("avg. critic loss")

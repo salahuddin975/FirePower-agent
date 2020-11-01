@@ -177,6 +177,7 @@ class ReplayBuffer:
         with tf.GradientTape() as tape:
             target_actions = target_actor([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance, next_st_tf_gen_output,
                                     next_st_tf_load_demand])
+
             y = reward_batch + self.gamma * target_critic([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance,
                                     next_st_tf_gen_output, next_st_tf_load_demand, target_actions])
             critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand,
@@ -350,7 +351,7 @@ def check_network_violations(bus_status, branch_status):
     return branch_status
 
 
-def get_selected_generators_with_ramp(generators_current_output, ramp_ratio):
+def get_selected_generators_with_ramp(ramp_ratio, generators_current_output):
     # print("generators current output: ", generators_current_output)
 
     selected_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]       # selected_indices.astype(int)
@@ -418,12 +419,7 @@ def check_bus_generator_violation(bus_status, selected_generators, generators_ra
     return generators_ramp
 
 
-def get_processed_action(tf_action, fire_distance, generators_current_output, bus_threshold=0.1, branch_threshold=0.1, explore_network = False):
-    # print(f"explore network: {explore_network}")
-    # print("fire distance: ", fire_distance)
-
-    noise_range = 0.15
-
+def check_violations(np_action, fire_distance, generators_current_output, bus_threshold=0.1, branch_threshold=0.1, explore_network = False):
     bus_status = np.ones(num_bus)
     for i in range(num_bus):
         if fire_distance[i] < 2.0:
@@ -435,46 +431,14 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
             branch_status[i] = 0
 
     branch_status = check_network_violations(bus_status, branch_status)
-
     # print("bus status: ", bus_status)
     # print("branch status: ", branch_status)
 
-    # bus status
-    # bus_status = np.squeeze(np.array(tf_action[0]))
-    # if explore_network:
-    #     for i in range(bus_status.size):
-    #         total = bus_status[i] + noise_generator()
-    #         bus_status[i] = total if 0 <= total and total >= 1 else bus_status[i]
-    # bus_status= np.expand_dims(bus_status, axis=0)
-    # bus_status[:1] = bus_status[:] > bus_threshold
-    # bus_status = np.squeeze(bus_status.astype(int))
-    # # print ("bus status: ", bus_status)
-    #
-    # # branch status
-    # branch_status = np.squeeze(np.array(tf_action[1]))
-    # if explore_network:
-    #     for i in range(branch_status.size):
-    #         total = branch_status[i] + noise_generator()
-    #         branch_status[i] = total if total >= 0 and total <=1 else branch_status[i]
-    # branch_status = np.expand_dims(branch_status, axis=0)
-    # branch_status[: 1] = branch_status[:] > branch_threshold
-    # branch_status = np.squeeze(branch_status.astype(int))
-    # branch_status = check_network_violations(bus_status, branch_status)
-    # print ("branch status: ", branch_status)
-
-    # amount of power for ramping up/down
-    print("tf ramp value: ", tf_action[0])
-    ramp_ratio = np.array(tf.squeeze(tf_action[0]))
-    if explore_network:
-        for i, x in enumerate(ramp_ratio):
-            total = ramp_ratio[i] + random.uniform(-1 * noise_range, noise_range)
-            ramp_ratio[i] = total if -1 <= total and total <= 1 else ramp_ratio[i]
-    # print("ramp: ", ramp_ratio)
-
-    selected_generators, generators_ramp = get_selected_generators_with_ramp(generators_current_output, ramp_ratio)
+    ramp_value = np_action["generator_injection"]
+    selected_generators, generators_ramp = get_selected_generators_with_ramp(ramp_value, generators_current_output)
     # print("selected generators: ", selected_generators)
     generators_ramp = check_bus_generator_violation(bus_status, selected_generators, generators_ramp)
-    # print("generators ramp: ", generators_ramp)
+    print("generators ramp: ", generators_ramp)
 
     # bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
     # branch_status = np.ones(34, int)       # overwrite by dummy branch status (need to remove)
@@ -489,6 +453,41 @@ def get_processed_action(tf_action, fire_distance, generators_current_output, bu
     }
 
     return action
+
+
+def explore_network(tf_action, noise_range = 0.15):
+    # bus status
+    # bus_status = np.squeeze(np.array(tf_action[0]))
+    # for i in range(bus_status.size):
+    #     total = bus_status[i] + random.uniform(-1 * noise_range, noise_range)
+    #     bus_status[i] = total if 0 <= total and total >= 1 else bus_status[i]
+    # print ("bus status: ", bus_status)
+
+    # # branch status
+    # branch_status = np.squeeze(np.array(tf_action[1]))
+    # for i in range(branch_status.size):
+    #     total = branch_status[i] + random.uniform(-1 * noise_range, noise_range)
+    #     branch_status[i] = total if total >= 0 and total <=1 else branch_status[i]
+    # print ("branch status: ", branch_status)
+
+    selected_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    selected_generators = generators[selected_indices]
+
+    # amount of power for ramping up/down
+    # print("tf ramp value: ", tf_action[0])
+    ramp_value = np.array(tf.squeeze(tf_action[0]))
+    for i, x in enumerate(ramp_value):
+        total = ramp_value[i] + random.uniform(-1 * noise_range, noise_range)
+        ramp_value[i] = total if -1 <= total and total <= 1 else ramp_value[i]
+    print("ramp: ", ramp_value)
+
+    action = {
+        "generator_selector": selected_generators,
+        "generator_injection": ramp_value,
+    }
+
+    return action
+
 
 
 def merge_generators():
@@ -604,11 +603,11 @@ if __name__ == "__main__":
     target_critic = get_critic(state_spaces, action_spaces)
 
     # save trained model to reuse
-    save_model = False
+    save_model = True
     load_model = False
     save_model_version = 0
     load_model_version = 0
-    load_episode_num = 0
+    load_episode_num = 20
     if load_model == False:
         target_actor.set_weights(actor.get_weights())
         target_critic.set_weights(critic.get_weights())
@@ -619,7 +618,7 @@ if __name__ == "__main__":
         target_critic.load_weights(f"saved_model/agent_target_critic{load_model_version}_{load_episode_num}.h5")
         print("weights are loaded successfully!")
 
-    save_replay_buffer = False
+    save_replay_buffer = True
     load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
@@ -628,7 +627,7 @@ if __name__ == "__main__":
     train_agent_per_episode = 300
     buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, 200000, 256)
 
-    explore_network = True
+    explore_network_flag = True
     # epsilon = 1.0               # initial exploration rate
     # max_epsilon = 1.0
     # min_epsilon = 0.01
@@ -654,17 +653,16 @@ if __name__ == "__main__":
             tf_state = get_tf_state(state)
             tf_action = actor(tf_state)
 
-            # tradeoff = random.uniform(0, 1)
-            if explore_network:        # (tradeoff < epsilon) and       # explore (add noise)
-                action = get_processed_action(tf_action, state["fire_distance"], state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=True)
-            else:                               # exploit (use network)
-                action = get_processed_action(tf_action, state["fire_distance"], state["generator_injection"], bus_threshold=0.1, branch_threshold=0.1, explore_network=False)
+            net_action = explore_network(tf_action)
+            env_action = check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
-            next_state, reward, done, _ = env.step(action)
-            # print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+            next_state, reward, done, _ = env.step(env_action)
+            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+
+            reward = reward - np.sum(np.square(net_action["generator_injection"])) * 200
 
             episodic_reward += reward[0]
-            buffer.add_record((state, action, reward, next_state))
+            buffer.add_record((state, net_action, reward, next_state))
 
             if done or (step == max_steps_per_episode-1):
                 print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_reward}")
@@ -676,7 +674,7 @@ if __name__ == "__main__":
             if (buffer.current_record_size() > 500):
                 # print("Train agent, current number of records: ", buffer.current_record_size())
                 # for i in range(train_agent_per_episode):
-                if step % 5 == 0:
+                # if step % 5 == 0:
                     critic_loss, rewad_value, critic_value = buffer.learn()   # magnitude of gradient
                     buffer.update_target()
                     critic_losses.append(critic_loss)
@@ -694,10 +692,10 @@ if __name__ == "__main__":
 
         if episode and (episode % 50 == 0):
             print ("Start testing network at: ", episode)
-            explore_network = False
+            explore_network_flag = False
         if episode and (episode % 50 == 5):
             print ("Start exploring network at: ", episode)
-            explore_network = True
+            explore_network_flag = True
 
 
         episodic_rewards.append(episodic_reward)
@@ -708,7 +706,7 @@ if __name__ == "__main__":
             writer.writerow([str(save_model_version), str(episode), str(max_reached_step), str(episodic_reward)])
 
         # save model weights
-        if (episode % 50 == 0) and save_model:
+        if (episode % 20 == 0) and save_model:
             actor.save_weights(f"saved_model/agent_actor{save_model_version}_{episode}.h5")
             critic.save_weights(f"saved_model/agent_critic{save_model_version}_{episode}.h5")
             target_actor.save_weights(f"saved_model/agent_target_actor{save_model_version}_{episode}.h5")
@@ -720,22 +718,25 @@ if __name__ == "__main__":
             log_file.write(f"Episode: V{save_model_version}_{episode}, Reward: {episodic_reward}, Avg reward: {avg_reward}\n")
             log_file.close()
 
-        if (episode % 25 == 0) and save_replay_buffer:
+        if (episode % 20 == 0) and save_replay_buffer:
             print(f"Saving replay buffer at: {episode}")
             buffer.save_buffer()
 
-        if plot_debug and episode and ( episode % 10 == 0):
+        if plot_debug and ( episode % 5 == 0):
             plt.plot(critic_losses)
             plt.xlabel("iteration")
             plt.ylabel("avg. critic loss")
-            plt.show()
+            # plt.show()
+            plt.savefig("critic_loss.png")
 
             plt.plot(reward_values)
             plt.xlabel("iteration")
             plt.ylabel("avg. reward values")
-            plt.show()
+            # plt.show()
+            plt.savefig("reward_value.png")
 
             plt.plot(critic_values)
             plt.xlabel("iteration")
             plt.ylabel("avg. critic values")
-            plt.show()
+            # plt.show()
+            plt.savefig("critic_value.png")

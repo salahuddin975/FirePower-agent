@@ -633,18 +633,14 @@ if __name__ == "__main__":
     train_agent_per_episode = 300
     buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, 200000, 256)
 
-    explore_network_flag = True
-    # epsilon = 1.0               # initial exploration rate
-    # max_epsilon = 1.0
-    # min_epsilon = 0.01
-    # decay_rate = 0.005          # exponential decay rate for exploration probability
-
     with open(f'fire_power_reward_list_v{save_model_version}.csv', 'w') as fd:
         writer = csv.writer(fd)
         writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
 
     num_train = 0
     episodic_rewards = []
+    explore_network_flag = True
+
     for episode in range(total_episode):
         state = env.reset()
         episodic_reward = 0
@@ -674,8 +670,6 @@ if __name__ == "__main__":
             state = next_state
 
             if (buffer.current_record_size() > 300):
-                # print("Train agent, current number of records: ", buffer.current_record_size())
-                # for i in range(train_agent_per_episode):
                 # if step % 5 == 0:
                     critic_loss, reward_value, critic_value = buffer.learn()   # magnitude of gradient
                     buffer.update_target()
@@ -686,21 +680,12 @@ if __name__ == "__main__":
                         tf.summary.scalar('reward_value', reward_value, step=num_train)
                         tf.summary.scalar('critic_value', critic_value, step=num_train)
 
-        # reduce epsilon as we need less and less exploration
-        # if episode > 20:
-        #     epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
-        #
-        # if episode % 120 == 0:
-        #     epsilon = 0.8
-        #     max_epsilon = 0.8
-
         if episode and (episode % 50 == 0):
             print ("Start testing network at: ", episode)
             explore_network_flag = False
         if episode and (episode % 50 == 5):
             print ("Start exploring network at: ", episode)
             explore_network_flag = True
-
 
         episodic_rewards.append(episodic_reward)
         avg_reward = np.mean(episodic_rewards[-25:])        # calculate moving average

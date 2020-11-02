@@ -3,6 +3,7 @@ import csv
 import gym
 import random
 import math
+import datetime
 import argparse
 import numpy as np
 import tensorflow as tf
@@ -11,10 +12,10 @@ from pypower.idx_gen import *
 from pypower.idx_brch import *
 from pypower.loadcase import loadcase
 from pypower.ext2int import ext2int
-import matplotlib.pyplot as plt
 
+
+gym.logger.set_level(25)
 np.set_printoptions(linewidth=300)
-
 
 seed_value = 50
 os.environ['PYTHONHASHSEED']=str(seed_value)
@@ -22,7 +23,12 @@ random.seed(seed_value)
 np.random.seed(seed_value)
 tf.random.set_seed(seed_value)
 
-gym.logger.set_level(25)
+current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+actor_log_dir = 'logs/' + current_time + '/actor'
+citic_log_dir = 'logs/' + current_time + '/critic'
+actor_summary_writer = tf.summary.create_file_writer(actor_log_dir)
+critic_summary_writer = tf.summary.create_file_writer(citic_log_dir)
+
 
 class ReplayBuffer:
     def __init__(self, state_spaces, action_spaces, load_replay_buffer, buffer_capacity=200000, batch_size=64):
@@ -637,11 +643,7 @@ if __name__ == "__main__":
         writer = csv.writer(fd)
         writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
 
-    plot_debug = True
-    critic_losses = []
-    reward_values = []
-    critic_values = []
-
+    num_train = 0
     episodic_rewards = []
     for episode in range(total_episode):
         state = env.reset()
@@ -659,7 +661,7 @@ if __name__ == "__main__":
             next_state, reward, done, _ = env.step(env_action)
             print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
-            reward = reward - np.sum(np.square(net_action["generator_injection"])) * 200
+            # reward = reward - np.sum(np.square(net_action["generator_injection"])) * 200
 
             episodic_reward += reward[0]
             buffer.add_record((state, net_action, reward, next_state))
@@ -671,16 +673,18 @@ if __name__ == "__main__":
 
             state = next_state
 
-            if (buffer.current_record_size() > 500):
+            if (buffer.current_record_size() > 300):
                 # print("Train agent, current number of records: ", buffer.current_record_size())
                 # for i in range(train_agent_per_episode):
                 # if step % 5 == 0:
-                    critic_loss, rewad_value, critic_value = buffer.learn()   # magnitude of gradient
+                    critic_loss, reward_value, critic_value = buffer.learn()   # magnitude of gradient
                     buffer.update_target()
-                    critic_losses.append(critic_loss)
-                    reward_values.append(rewad_value)
-                    critic_values.append(critic_value)
-                    # print(f"critic_loss: {critic_loss}")
+
+                    num_train += 1
+                    with critic_summary_writer.as_default():
+                        tf.summary.scalar('critic_loss', critic_loss, step=num_train)
+                        tf.summary.scalar('reward_value', reward_value, step=num_train)
+                        tf.summary.scalar('critic_value', critic_value, step=num_train)
 
         # reduce epsilon as we need less and less exploration
         # if episode > 20:
@@ -721,22 +725,3 @@ if __name__ == "__main__":
         if (episode % 20 == 0) and save_replay_buffer:
             print(f"Saving replay buffer at: {episode}")
             buffer.save_buffer()
-
-        if plot_debug and ( episode % 5 == 0):
-            plt.plot(critic_losses)
-            plt.xlabel("iteration")
-            plt.ylabel("avg. critic loss")
-            # plt.show()
-            plt.savefig("critic_loss.png")
-
-            plt.plot(reward_values)
-            plt.xlabel("iteration")
-            plt.ylabel("avg. reward values")
-            # plt.show()
-            plt.savefig("reward_value.png")
-
-            plt.plot(critic_values)
-            plt.xlabel("iteration")
-            plt.ylabel("avg. critic values")
-            # plt.show()
-            plt.savefig("critic_value.png")

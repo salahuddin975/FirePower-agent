@@ -182,11 +182,11 @@ class ReplayBuffer:
         # update critic network
         with tf.GradientTape() as tape:
             target_actions = target_actor([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance, next_st_tf_gen_output,
-                                    next_st_tf_load_demand])
+                                    next_st_tf_load_demand, next_st_tf_theta])
 
             y = reward_batch + self.gamma * target_critic([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance,
-                                    next_st_tf_gen_output, next_st_tf_load_demand, target_actions])
-            critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand,
+                                    next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta, target_actions])
+            critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta,
                                    act_tf_gen_injection])
             critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
         critic_grad = tape.gradient(critic_loss, critic.trainable_variables)
@@ -194,9 +194,9 @@ class ReplayBuffer:
 
         # update actor network
         with tf.GradientTape() as tape:
-            actions = actor([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand])
+            actions = actor([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta])
             # need to check if target action needs to be converted
-            critic_value1 = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, actions])
+            critic_value1 = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta, actions])
             actor_loss = -1 * tf.math.reduce_mean(critic_value1)
         actor_grad = tape.gradient(actor_loss, actor.trainable_variables)
         self.actor_optimizer.apply_gradients(zip(actor_grad, actor.trainable_variables))
@@ -242,10 +242,10 @@ def get_actor(state_space, action_space):
     # load_demand_input1 = layers.Dense(32, activation="tanh") (load_demand_input)
 
     # theta -> Box(24, )
-    # theta_input = layers.Input(shape=(state_space[5], ))
+    theta_input = layers.Input(shape=(state_space[5], ))
     # theta_input1 = layers.Dense(32, activation="tanh") (theta_input)
 
-    state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input])
+    state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input])
     hidden = layers.Dense(256, activation="tanh") (state)
     hidden = layers.Dense(64, activation="tanh") (hidden)
     # hidden = layers.Dense(512, activation="relu") (hidden)
@@ -259,7 +259,7 @@ def get_actor(state_space, action_space):
     # generator_injection (generator output) -> Box(5, )
     gen_inj_output = layers.Dense(action_space[3], activation="tanh") (hidden)
 
-    model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input],
+    model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input],
                            [gen_inj_output])
     return model
 
@@ -286,7 +286,7 @@ def get_critic(state_spaces, action_spaces):
     # st_load_demand1 = layers.Dense(32, activation="relu") (st_load_demand)
 
     # theta -> Box(24, )
-    # st_theta = layers.Input(shape=(state_spaces[5], ))
+    st_theta = layers.Input(shape=(state_spaces[5], ))
     # st_theta1 = layers.Dense(30, activation="relu") (st_theta)
 
     # bus -> MultiBinary(24)
@@ -301,7 +301,7 @@ def get_critic(state_spaces, action_spaces):
     act_gen_injection = layers.Input(shape=(action_spaces[3],))
     # act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
 
-    state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, act_gen_injection])
+    state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, act_gen_injection])
     # action = layers.Concatenate() ([act_gen_injection1])
     # hidden = layers.Concatenate() ([state, act_gen_injection1])
 
@@ -309,7 +309,7 @@ def get_critic(state_spaces, action_spaces):
     hidden = layers.Dense(64, activation="relu") (hidden)
     reward = layers.Dense(1, activation="linear") (hidden)
 
-    model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand,
+    model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
                              act_gen_injection], reward)
     return model
 

@@ -425,7 +425,7 @@ def check_bus_generator_violation(bus_status, selected_generators, generators_ra
     return generators_ramp
 
 
-def check_violations(np_action, fire_distance, generators_current_output, bus_threshold=0.1, branch_threshold=0.1, explore_network = False):
+def check_violations(np_action, fire_distance, generators_current_output, bus_threshold=0.1, branch_threshold=0.1):
     bus_status = np.ones(num_bus)
     for i in range(num_bus):
         if fire_distance[i] < 2.0:
@@ -461,7 +461,7 @@ def check_violations(np_action, fire_distance, generators_current_output, bus_th
     return action
 
 
-def explore_network(tf_action, noise_range = 0.15):
+def explore_network(tf_action, noise_range = 0.25):
     # bus status
     # bus_status = np.squeeze(np.array(tf_action[0]))
     # for i in range(bus_status.size):
@@ -480,11 +480,12 @@ def explore_network(tf_action, noise_range = 0.15):
     selected_generators = generators[selected_indices]
 
     # amount of power for ramping up/down
-    # print("tf ramp value: ", tf_action[0])
+    print("tf ramp value: ", tf_action[0])
     ramp_value = np.array(tf.squeeze(tf_action[0]))
     for i, x in enumerate(ramp_value):
-        total = ramp_value[i] + random.uniform(-1 * noise_range, noise_range)
-        ramp_value[i] = total if -1 <= total and total <= 1 else ramp_value[i]
+        ramp_value[i] = ramp_value[i] + random.uniform(-2 * abs(ramp_value[i]), 2 * abs(ramp_value[i]))
+    # ramp_value = ramp_value + noise_generator()      # random.uniform(-1*noise_range, noise_range)
+    ramp_value = np.clip(ramp_value, -1, +1)
     print("ramp: ", ramp_value)
 
     action = {
@@ -628,9 +629,9 @@ if __name__ == "__main__":
     load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
+
     total_episode = 100001
     max_steps_per_episode = 300
-    train_agent_per_episode = 300
     buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, 200000, 256)
 
     with open(f'fire_power_reward_list_v{save_model_version}.csv', 'w') as fd:

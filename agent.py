@@ -184,72 +184,72 @@ class ReplayBuffer:
 
 class Agent:
     def __init__(self, state_spaces, action_spaces):
-        self.gamma = 0.0      # discount factor
-        self.tau = 0.05       # used to update target network
+        self._gamma = 0.0      # discount factor
+        self._tau = 0.05       # used to update target network
         actor_lr = 0.001
         critic_lr = 0.002
-        self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
-        self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
+        self._actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
+        self._critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
 
         self._state_spaces =  copy.deepcopy(state_spaces)
         self._action_spaces =  copy.deepcopy(action_spaces)
 
-        self.actor = self._actor_model()
-        self.target_actor = self._actor_model()
-        self.target_actor.set_weights(self.actor.get_weights())
+        self._actor = self._actor_model()
+        self._target_actor = self._actor_model()
+        self._target_actor.set_weights(self._actor.get_weights())
 
-        self.critic = self._critic_model()
-        self.target_critic = self._critic_model()
-        self.target_critic.set_weights(self.critic.get_weights())
-
-    def load_weight(self, version, episode_num):
-        self.actor.load_weights(f"saved_model/agent_actor{version}_{episode_num}.h5")
-        self.target_actor.load_weights(f"saved_model/agent_target_actor{version}_{episode_num}.h5")
-        self.critic.load_weights(f"saved_model/agent_critic{version}_{episode_num}.h5")
-        self.target_critic.load_weights(f"saved_model/agent_target_critic{version}_{episode_num}.h5")
-        print("weights are loaded successfully!")
+        self._critic = self._critic_model()
+        self._target_critic = self._critic_model()
+        self._target_critic.set_weights(self._critic.get_weights())
 
     def save_weight(self, version, episode_num):
-        self.actor.save_weights(f"saved_model/agent_actor{version}_{episode_num}.h5")
-        self.critic.save_weights(f"saved_model/agent_critic{version}_{episode_num}.h5")
-        self.target_actor.save_weights(f"saved_model/agent_target_actor{version}_{episode_num}.h5")
-        self.target_critic.save_weights(f"saved_model/agent_target_critic{version}_{episode_num}.h5")
+        self._actor.save_weights(f"saved_model/agent_actor{version}_{episode_num}.h5")
+        self._critic.save_weights(f"saved_model/agent_critic{version}_{episode_num}.h5")
+        self._target_actor.save_weights(f"saved_model/agent_target_actor{version}_{episode_num}.h5")
+        self._target_critic.save_weights(f"saved_model/agent_target_critic{version}_{episode_num}.h5")
+
+    def load_weight(self, version, episode_num):
+        self._actor.load_weights(f"saved_model/agent_actor{version}_{episode_num}.h5")
+        self._target_actor.load_weights(f"saved_model/agent_target_actor{version}_{episode_num}.h5")
+        self._critic.load_weights(f"saved_model/agent_critic{version}_{episode_num}.h5")
+        self._target_critic.load_weights(f"saved_model/agent_target_critic{version}_{episode_num}.h5")
+        print("weights are loaded successfully!")
 
     def train(self, state_batch, action_batch, reward_batch, next_state_batch):
         # update critic network
         with tf.GradientTape() as tape:
-            target_actions = self.target_actor(next_state_batch)
-            y = reward_batch + self.gamma * self.target_critic([next_state_batch, target_actions])
-            critic_value = self.critic([state_batch, action_batch])
+            target_actions = self._target_actor(next_state_batch)
+            y = reward_batch + self._gamma * self._target_critic([next_state_batch, target_actions])
+            critic_value = self._critic([state_batch, action_batch])
             critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
-        critic_grad = tape.gradient(critic_loss, self.critic.trainable_variables)
-        self.critic_optimizer.apply_gradients(zip(critic_grad, self.critic.trainable_variables))
+        critic_grad = tape.gradient(critic_loss, self._critic.trainable_variables)
+        self._critic_optimizer.apply_gradients(zip(critic_grad, self._critic.trainable_variables))
 
         # update actor network
         with tf.GradientTape() as tape:
-            actions = self.actor(state_batch)
-            critic_value1 = self.critic([state_batch, actions])
+            actions = self._actor(state_batch)
+            critic_value1 = self._critic([state_batch, actions])
             actor_loss = -1 * tf.math.reduce_mean(critic_value1)
-        actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
-        self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
+        actor_grad = tape.gradient(actor_loss, self._actor.trainable_variables)
+        self._actor_optimizer.apply_gradients(zip(actor_grad, self._actor.trainable_variables))
 
-        self.update_target()
+        self._update_target()
         return critic_loss, tf.math.reduce_mean(reward_batch), tf.math.reduce_mean(critic_value)
 
-    def update_target(self):
+    def _update_target(self):
         # update target critic network
         new_weights = []
-        target_critic_weights = self.target_critic.weights
-        for i, critic_weight in enumerate(self.critic.weights):
-            new_weights.append(self.tau * critic_weight + (1 - self.tau) * target_critic_weights[i])
-        self.target_critic.set_weights(new_weights)
+        target_critic_weights = self._target_critic.weights
+        for i, critic_weight in enumerate(self._critic.weights):
+            new_weights.append(self._tau * critic_weight + (1 - self._tau) * target_critic_weights[i])
+        self._target_critic.set_weights(new_weights)
 
         # update target actor network
         new_weights = []
-        target_actor_weights = self.target_actor.weights
-        for i, actor_weight in enumerate(self.actor.weights):
-            new_weights.append(self.tau * actor_weight + (1 - self.tau) * target_actor_weights[i])
-        self.target_actor.set_weights(new_weights)
+        target_actor_weights = self._target_actor.weights
+        for i, actor_weight in enumerate(self._actor.weights):
+            new_weights.append(self._tau * actor_weight + (1 - self._tau) * target_actor_weights[i])
+        self._target_actor.set_weights(new_weights)
 
     def _actor_model(self):
         # bus -> MultiBinary(24)
@@ -696,7 +696,7 @@ if __name__ == "__main__":
 
         for step in range(max_steps_per_episode):
             tf_state = get_tf_state(state)
-            tf_action = agent.actor(tf_state)
+            tf_action = agent._actor(tf_state)
             print("tf ramp value: ", tf_action[0])
             # ramp_value = np.array(tf.squeeze(tf_action[0]))
             ramp_value = np.zeros(11)
@@ -721,7 +721,7 @@ if __name__ == "__main__":
 
             state = next_state
 
-            if (buffer.current_record_size() > 50):
+            if (buffer.current_record_size() > 0):
                 # if step % 5 == 0:
                     state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
                     critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)   # magnitude of gradient

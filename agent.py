@@ -2,7 +2,6 @@ import os
 import csv
 import gym
 import random
-import math
 import copy
 import time
 import datetime
@@ -197,37 +196,37 @@ class Agent:
 
 
 class ReplayBuffer:
-    def __init__(self, state_spaces, action_spaces, load_replay_buffer, buffer_capacity=200000, batch_size=64):
-        self.counter = 0
-        self.capacity = buffer_capacity
-        self.batch_size = batch_size
+    def __init__(self, state_spaces, action_spaces, load_replay_buffer=False, buffer_capacity=200000, batch_size=256):
+        self._counter = 0
+        self._capacity = buffer_capacity
+        self._batch_size = batch_size
 
         if load_replay_buffer == False:
-            self.initialize_buffer(state_spaces, action_spaces)
+            self._initialize_buffer(state_spaces, action_spaces)
         else:
-            self.load_buffer()
+            self._load_buffer()
 
 
-    def initialize_buffer(self, state_spaces, action_spaces):
-        self.st_bus = np.zeros((self.capacity, state_spaces[0]))
-        self.st_branch = np.zeros((self.capacity, state_spaces[1]))
-        self.st_fire_distance = np.zeros((self.capacity, state_spaces[2]))
-        self.st_gen_output = np.zeros((self.capacity, state_spaces[3]))
-        self.st_load_demand = np.zeros((self.capacity, state_spaces[4]))
-        self.st_theta = np.zeros((self.capacity, state_spaces[5]))
+    def _initialize_buffer(self, state_spaces, action_spaces):
+        self.st_bus = np.zeros((self._capacity, state_spaces[0]))
+        self.st_branch = np.zeros((self._capacity, state_spaces[1]))
+        self.st_fire_distance = np.zeros((self._capacity, state_spaces[2]))
+        self.st_gen_output = np.zeros((self._capacity, state_spaces[3]))
+        self.st_load_demand = np.zeros((self._capacity, state_spaces[4]))
+        self.st_theta = np.zeros((self._capacity, state_spaces[5]))
 
         # self.act_bus = np.zeros((self.capacity, action_spaces[0]))
         # self.act_branch = np.zeros((self.capacity, action_spaces[1]))
-        self.act_gen_injection = np.zeros((self.capacity, action_spaces[3]))
+        self.act_gen_injection = np.zeros((self._capacity, action_spaces[3]))
 
-        self.rewards = np.zeros((self.capacity, 1))
+        self.rewards = np.zeros((self._capacity, 1))
 
-        self.next_st_bus = np.zeros((self.capacity, state_spaces[0]))
-        self.next_st_branch = np.zeros((self.capacity, state_spaces[1]))
-        self.next_st_fire_distance = np.zeros((self.capacity, state_spaces[2]))
-        self.next_st_gen_output = np.zeros((self.capacity, state_spaces[3]))
-        self.next_st_load_demand = np.zeros((self.capacity, state_spaces[4]))
-        self.next_st_theta = np.zeros((self.capacity, state_spaces[5]))
+        self.next_st_bus = np.zeros((self._capacity, state_spaces[0]))
+        self.next_st_branch = np.zeros((self._capacity, state_spaces[1]))
+        self.next_st_fire_distance = np.zeros((self._capacity, state_spaces[2]))
+        self.next_st_gen_output = np.zeros((self._capacity, state_spaces[3]))
+        self.next_st_load_demand = np.zeros((self._capacity, state_spaces[4]))
+        self.next_st_theta = np.zeros((self._capacity, state_spaces[5]))
 
         self.np_counter = np.zeros((1))
 
@@ -253,11 +252,11 @@ class ReplayBuffer:
         np.save(f'replay_buffer/next_st_load_demand_v{save_replay_buffer_version}.npy', self.next_st_load_demand)
         np.save(f'replay_buffer/next_st_theta_v{save_replay_buffer_version}.npy', self.next_st_theta)
 
-        self.np_counter[0] = self.counter
+        self.np_counter[0] = self._counter
         np.save(f'replay_buffer/counter_v{save_replay_buffer_version}.npy', self.np_counter)
 
 
-    def load_buffer(self):
+    def _load_buffer(self):
         self.st_bus = np.load(f'replay_buffer/st_bus_v{load_replay_buffer_version}.npy')
         self.st_branch = np.load(f'replay_buffer/st_branch_v{load_replay_buffer_version}.npy')
         self.st_fire_distance = np.load(f'replay_buffer/st_fire_distance_v{load_replay_buffer_version}.npy')
@@ -279,16 +278,16 @@ class ReplayBuffer:
         self.next_st_theta = np.load(f'replay_buffer/next_st_theta_v{load_replay_buffer_version}.npy')
 
         self.np_counter = np.load(f'replay_buffer/counter_v{load_replay_buffer_version}.npy')
-        self.counter = int(self.np_counter[0])
+        self._counter = int(self.np_counter[0])
         print("Replay buffer loaded successfully!")
-        print("Counter set at: ", self.counter)
+        print("Counter set at: ", self._counter)
 
     def get_num_records(self):
-        record_size = min(self.capacity, self.counter)
+        record_size = min(self._capacity, self._counter)
         return record_size
 
     def add_record(self, record):
-        index = self.counter % self.capacity
+        index = self._counter % self._capacity
 
         self.st_bus[index] = np.copy(record[0]["bus_status"])
         self.st_branch[index] = np.copy(record[0]["branch_status"])
@@ -312,11 +311,11 @@ class ReplayBuffer:
         self.next_st_load_demand[index] = np.copy(record[3]["load_demand"])
         self.next_st_theta[index] = np.copy(record[3]["theta"])
 
-        self.counter = self.counter + 1
+        self._counter = self._counter + 1
 
     def get_batch(self):
-        record_size = min(self.capacity, self.counter)
-        batch_indices = np.random.choice(record_size, self.batch_size)
+        record_size = min(self._capacity, self._counter)
+        batch_indices = np.random.choice(record_size, self._batch_size)
 
         st_tf_bus = tf.convert_to_tensor(self.st_bus[batch_indices])
         st_tf_branch = tf.convert_to_tensor(self.st_branch[batch_indices])
@@ -347,8 +346,9 @@ class ReplayBuffer:
 
 
 class DataProcessor:
-    def __init__(self):
-        pass
+    def __init__(self, state_spaces, action_spaces):
+        self._state_spaces = state_spaces
+        self._action_spaces = action_spaces
 
     def _check_network_violations(self, bus_status, branch_status):
         from_buses = simulator_resources.ppc["branch"][:, F_BUS].astype('int')
@@ -401,14 +401,14 @@ class DataProcessor:
 
 
     def check_violations(self, np_action, fire_distance, generators_current_output, bus_threshold=0.1, branch_threshold=0.1):
-        bus_status = np.ones(num_bus)
-        for i in range(num_bus):
+        bus_status = np.ones(self._state_spaces[0])
+        for i in range(self._state_spaces[0]):
             if fire_distance[i] < 2.0:
                 bus_status[i] = 0
 
-        branch_status = np.ones(num_branch)
-        for i in range(num_branch):
-            if fire_distance[num_bus+i] < 2.0:
+        branch_status = np.ones(self._state_spaces[1])
+        for i in range(self._state_spaces[1]):
+            if fire_distance[self._state_spaces[0] + i] < 2.0:
                 branch_status[i] = 0
 
         branch_status = self._check_network_violations(bus_status, branch_status)
@@ -420,9 +420,7 @@ class DataProcessor:
         ramp = self._check_bus_generator_violation(bus_status, ramp)
         # print("ramp: ", ramp)
 
-        # bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
-        # branch_status = np.ones(34, int)       # overwrite by dummy branch status (need to remove)
-        # generators_ramp = np.zeros(10, int)      # overwrite by dummy value (need to remove)
+        # generators_ramp = np.zeros(11, int)      # overwrite by dummy value (need to remove)
 
         action = {
             "bus_status": bus_status,
@@ -607,7 +605,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
-
     simulator_resources = SimulatorResources(power_file_path = args.path_power, geo_file_path=args.path_geo)
     generators = Generators(ppc = simulator_resources.ppc, ramp_frequency_in_hour = 6)
 
@@ -617,9 +614,7 @@ if __name__ == "__main__":
     action_spaces = get_action_spaces(env.action_space)
 
     agent = Agent(state_spaces, action_spaces)
-
-    num_bus = state_spaces[0]
-    num_branch = state_spaces[1]
+    data_processor = DataProcessor(state_spaces, action_spaces)
 
     # save trained model to reuse
     save_model = False
@@ -643,8 +638,6 @@ if __name__ == "__main__":
     with open(f'fire_power_reward_list_v{save_model_version}.csv', 'w') as fd:
         writer = csv.writer(fd)
         writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
-
-    data_processor = DataProcessor()
 
     num_train = 0
     episodic_rewards = []

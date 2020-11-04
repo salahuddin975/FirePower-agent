@@ -3,6 +3,8 @@ import csv
 import gym
 import random
 import math
+import copy
+import time
 import datetime
 import argparse
 import numpy as np
@@ -33,12 +35,6 @@ critic_summary_writer = tf.summary.create_file_writer(citic_log_dir)
 class ReplayBuffer:
     def __init__(self, state_spaces, action_spaces, load_replay_buffer, buffer_capacity=200000, batch_size=64):
         self.counter = 0
-        self.gamma = 0.9      # discount factor
-        self.tau = 0.05       # used to update target network
-        actor_lr = 0.001
-        critic_lr = 0.002
-        self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
-        self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
         self.capacity = buffer_capacity
         self.batch_size = batch_size
 
@@ -123,11 +119,9 @@ class ReplayBuffer:
         print("Replay buffer loaded successfully!")
         print("Counter set at: ", self.counter)
 
-
     def current_record_size(self):
         record_size = min(self.capacity, self.counter)
         return record_size
-
 
     def add_record(self, record):
         index = self.counter % self.capacity
@@ -135,6 +129,7 @@ class ReplayBuffer:
         self.st_bus[index] = np.copy(record[0]["bus_status"])
         self.st_branch[index] = np.copy(record[0]["branch_status"])
         self.st_fire_distance[index] = np.copy(record[0]["fire_distance"])
+        self.st_fire_distance[index] = self.st_fire_distance[index] / 100
         self.st_gen_output[index] = np.copy(record[0]["generator_injection"])
         self.st_load_demand[index] = np.copy(record[0]["load_demand"])
         self.st_theta[index] = np.copy(record[0]["theta"])
@@ -148,14 +143,14 @@ class ReplayBuffer:
         self.next_st_bus[index] = np.copy(record[3]["bus_status"])
         self.next_st_branch[index] = np.copy(record[3]["branch_status"])
         self.next_st_fire_distance[index] = np.copy(record[3]["fire_distance"])
+        self.next_st_fire_distance[index] = self.next_st_fire_distance[index] / 100
         self.next_st_gen_output[index] = np.copy(record[3]["generator_injection"])
         self.next_st_load_demand[index] = np.copy(record[3]["load_demand"])
         self.next_st_theta[index] = np.copy(record[3]["theta"])
 
         self.counter = self.counter + 1
 
-
-    def learn(self):
+    def get_batch(self):
         record_size = min(self.capacity, self.counter)
         batch_indices = np.random.choice(record_size, self.batch_size)
 
@@ -179,139 +174,176 @@ class ReplayBuffer:
         next_st_tf_load_demand = tf.convert_to_tensor(self.next_st_load_demand[batch_indices])
         next_st_tf_theta = tf.convert_to_tensor(self.next_st_theta[batch_indices])
 
+        state_batch = [st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta]
+        action_batch = [act_tf_gen_injection]
+        next_state_batch = [next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance, next_st_tf_gen_output,
+                                    next_st_tf_load_demand, next_st_tf_theta]
+
+        return state_batch, action_batch, next_state_batch
+
+
+class Agent:
+    def __init__(self, state_spaces, action_spaces):
+        self.gamma = 0.90      # discount factor
+        self.tau = 0.05       # used to update target network
+        actor_lr = 0.001
+        critic_lr = 0.002
+        self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
+        self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
+
+        self._state_spaces =  copy.deepcopy(state_spaces)
+        self._action_spaces =  copy.deepcopy(action_spaces)
+
+        self.actor = self._actor_model()
+        self.target_actor = self._actor_model()
+        self.target_actor.set_weights(self.actor.get_weights())
+
+        self.critic = self._critic_model()
+        self.target_critic = self._critic_model()
+        self.target_critic.set_weights(self.critic.get_weights())
+
+    def load_weight(self, version, episode_num):
+        self.actor.load_weights(f"saved_model/agent_actor{version}_{episode_num}.h5")
+        self.target_actor.load_weights(f"saved_model/agent_target_actor{version}_{episode_num}.h5")
+        self.critic.load_weights(f"saved_model/agent_critic{version}_{episode_num}.h5")
+        self.target_critic.load_weights(f"saved_model/agent_target_critic{version}_{episode_num}.h5")
+        print("weights are loaded successfully!")
+
+    def save_weight(self, version, episode_num):
+        self.actor.save_weights(f"saved_model/agent_actor{version}_{episode_num}.h5")
+        self.critic.save_weights(f"saved_model/agent_critic{version}_{episode_num}.h5")
+        self.target_actor.save_weights(f"saved_model/agent_target_actor{version}_{episode_num}.h5")
+        self.target_critic.save_weights(f"saved_model/agent_target_critic{version}_{episode_num}.h5")
+
+    def train(self, state_batch, action_batch, reward_batch, next_state_batch):
         # update critic network
         with tf.GradientTape() as tape:
-            target_actions = target_actor([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance, next_st_tf_gen_output,
-                                    next_st_tf_load_demand, next_st_tf_theta])
-
-            y = reward_batch + self.gamma * target_critic([next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance,
-                                    next_st_tf_gen_output, next_st_tf_load_demand, next_st_tf_theta, target_actions])
-            critic_value = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta,
-                                   act_tf_gen_injection])
+            target_actions = self.target_actor(next_state_batch)
+            y = reward_batch + self.gamma * self.target_critic([next_state_batch, target_actions])
+            critic_value = self.critic([state_batch, action_batch])
             critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
-        critic_grad = tape.gradient(critic_loss, critic.trainable_variables)
-        self.critic_optimizer.apply_gradients(zip(critic_grad, critic.trainable_variables))
+        critic_grad = tape.gradient(critic_loss, self.critic.trainable_variables)
+        self.critic_optimizer.apply_gradients(zip(critic_grad, self.critic.trainable_variables))
 
         # update actor network
         with tf.GradientTape() as tape:
-            actions = actor([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta])
-            # need to check if target action needs to be converted
-            critic_value1 = critic([st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta, actions])
+            actions = self.actor(state_batch)
+            critic_value1 = self.critic([state_batch, actions])
             actor_loss = -1 * tf.math.reduce_mean(critic_value1)
-        actor_grad = tape.gradient(actor_loss, actor.trainable_variables)
-        self.actor_optimizer.apply_gradients(zip(actor_grad, actor.trainable_variables))
+        actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
+        self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
+        self.update_target()
         return critic_loss, tf.math.reduce_mean(reward_batch), tf.math.reduce_mean(critic_value)
-
 
     def update_target(self):
         # update target critic network
         new_weights = []
-        target_critic_weights = target_critic.weights
-        for i, critic_weight in enumerate(critic.weights):
+        target_critic_weights = self.target_critic.weights
+        for i, critic_weight in enumerate(self.critic.weights):
             new_weights.append(self.tau * critic_weight + (1 - self.tau) * target_critic_weights[i])
-        target_critic.set_weights(new_weights)
+        self.target_critic.set_weights(new_weights)
 
         # update target actor network
         new_weights = []
-        target_actor_weights = target_actor.weights
-        for i, actor_weight in enumerate(actor.weights):
+        target_actor_weights = self.target_actor.weights
+        for i, actor_weight in enumerate(self.actor.weights):
             new_weights.append(self.tau * actor_weight + (1 - self.tau) * target_actor_weights[i])
-        target_actor.set_weights(new_weights)
+        self.target_actor.set_weights(new_weights)
+
+    def _actor_model(self):
+        # bus -> MultiBinary(24)
+        bus_input = layers.Input(shape=(self._state_spaces[0],))
+        # bus_input1 = layers.Dense(32, activation="tanh") (bus_input)
+
+        # num_branch -> MultiBinary(34)
+        branch_input = layers.Input(shape=(self._state_spaces[1],))
+        # branch_input1 = layers.Dense(32, activation="tanh") (branch_input)
+
+        # fire_distance -> Box(58, )
+        fire_distance_input = layers.Input(shape=(self._state_spaces[2],))
+        # fire_distance_input1 = layers.Dense(64, activation="tanh") (fire_distance_input)
+
+        # generator_injection -> Box(24, )
+        gen_inj_input = layers.Input(shape=(self._state_spaces[3],))
+        # gen_inj_input1 = layers.Dense(32, activation="tanh") (gen_inj_input)
+
+        # load_demand -> Box(24, )
+        load_demand_input = layers.Input(shape=(self._state_spaces[4], ))
+        # load_demand_input1 = layers.Dense(32, activation="tanh") (load_demand_input)
+
+        # theta -> Box(24, )
+        theta_input = layers.Input(shape=(self._state_spaces[5], ))
+        # theta_input1 = layers.Dense(32, activation="tanh") (theta_input)
+
+        state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input])
+        hidden = layers.Dense(128, activation="tanh") (state)
+        hidden = layers.Dense(64, activation="tanh") (hidden)
+        # hidden = layers.Dense(512, activation="relu") (hidden)
+
+        # bus -> MultiBinary(24)
+        # bus_output = layers.Dense(action_space[0], activation="sigmoid") (hidden)
+        #
+        # # num_branch -> MultiBinary(34)
+        # branch_output = layers.Dense(action_space[1], activation="sigmoid") (hidden)
+
+        # generator_injection (generator output) -> Box(5, )
+        gen_inj_output = layers.Dense(self._action_spaces[3], activation="tanh") (hidden)
+
+        model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input],
+                               [gen_inj_output])
+        return model
 
 
-def get_actor(state_space, action_space):
-    # bus -> MultiBinary(24)
-    bus_input = layers.Input(shape=(state_space[0],))
-    # bus_input1 = layers.Dense(32, activation="tanh") (bus_input)
+    def _critic_model(self):
+        # bus -> MultiBinary(24)
+        st_bus = layers.Input(shape=(self._state_spaces[0],))
+        # st_bus1 = layers.Dense(32, activation="relu") (st_bus)
 
-    # num_branch -> MultiBinary(34)
-    branch_input = layers.Input(shape=(state_space[1],))
-    # branch_input1 = layers.Dense(32, activation="tanh") (branch_input)
+        # num_branch -> MultiBinary(34)
+        st_branch = layers.Input(shape=(self._state_spaces[1],))
+        # st_branch1 = layers.Dense(32, activation="relu") (st_branch)
 
-    # fire_distance -> Box(58, )
-    fire_distance_input = layers.Input(shape=(state_space[2],))
-    # fire_distance_input1 = layers.Dense(64, activation="tanh") (fire_distance_input)
+        # fire_distance -> Box(58, )
+        st_fire_distance = layers.Input(shape=(self._state_spaces[2],))
+        # st_fire_distance1 = layers.Dense(64, activation="relu") (st_fire_distance)
 
-    # generator_injection -> Box(24, )
-    gen_inj_input = layers.Input(shape=(state_space[3],))
-    # gen_inj_input1 = layers.Dense(32, activation="tanh") (gen_inj_input)
+        # generator_injection (output) -> Box(24, )
+        st_gen_output = layers.Input(shape=(self._state_spaces[3],))                     # Generator current total output
+        # st_gen_output1 = layers.Dense(32, activation="relu") (st_gen_output)
 
-    # load_demand -> Box(24, )
-    load_demand_input = layers.Input(shape=(state_space[4], ))
-    # load_demand_input1 = layers.Dense(32, activation="tanh") (load_demand_input)
+        # load_demand -> Box(24, )
+        st_load_demand = layers.Input(shape=(self._state_spaces[4], ))
+        # st_load_demand1 = layers.Dense(32, activation="relu") (st_load_demand)
 
-    # theta -> Box(24, )
-    theta_input = layers.Input(shape=(state_space[5], ))
-    # theta_input1 = layers.Dense(32, activation="tanh") (theta_input)
+        # theta -> Box(24, )
+        st_theta = layers.Input(shape=(self._state_spaces[5], ))
+        # st_theta1 = layers.Dense(30, activation="relu") (st_theta)
 
-    state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input])
-    hidden = layers.Dense(256, activation="tanh") (state)
-    hidden = layers.Dense(64, activation="tanh") (hidden)
-    # hidden = layers.Dense(512, activation="relu") (hidden)
+        # bus -> MultiBinary(24)
+        # act_bus = layers.Input(shape=(action_spaces[0],))
+        # act_bus1 = layers.Dense(30, activation="relu") (act_bus)
+        #
+        # # num_branch -> MultiBinary(34)
+        # act_branch = layers.Input(shape=(action_spaces[1],))
+        # act_branch1 = layers.Dense(30, activation="relu") (act_branch)
 
-    # bus -> MultiBinary(24)
-    # bus_output = layers.Dense(action_space[0], activation="sigmoid") (hidden)
-    #
-    # # num_branch -> MultiBinary(34)
-    # branch_output = layers.Dense(action_space[1], activation="sigmoid") (hidden)
+        # generator_injection -> Box(5, )
+        act_gen_injection = layers.Input(shape=(self._action_spaces[3],))
+        # act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
 
-    # generator_injection (generator output) -> Box(5, )
-    gen_inj_output = layers.Dense(action_space[3], activation="tanh") (hidden)
+        # state = layers.Concatenate() ([st_bus, act_gen_injection])
+        state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, act_gen_injection])
+        # action = layers.Concatenate() ([act_gen_injection1])
+        # hidden = layers.Concatenate() ([state, act_gen_injection1])
 
-    model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input],
-                           [gen_inj_output])
-    return model
+        hidden = layers.Dense(128, activation="relu") (state)
+        hidden = layers.Dense(64, activation="relu") (hidden)
+        reward = layers.Dense(1, activation="linear") (hidden)
 
-
-def get_critic(state_spaces, action_spaces):
-    # bus -> MultiBinary(24)
-    st_bus = layers.Input(shape=(state_spaces[0],))
-    # st_bus1 = layers.Dense(32, activation="relu") (st_bus)
-
-    # num_branch -> MultiBinary(34)
-    st_branch = layers.Input(shape=(state_spaces[1],))
-    # st_branch1 = layers.Dense(32, activation="relu") (st_branch)
-
-    # fire_distance -> Box(58, )
-    st_fire_distance = layers.Input(shape=(state_spaces[2],))
-    # st_fire_distance1 = layers.Dense(64, activation="relu") (st_fire_distance)
-
-    # generator_injection (output) -> Box(24, )
-    st_gen_output = layers.Input(shape=(state_spaces[3],))                     # Generator current total output
-    # st_gen_output1 = layers.Dense(32, activation="relu") (st_gen_output)
-
-    # load_demand -> Box(24, )
-    st_load_demand = layers.Input(shape=(state_spaces[4], ))
-    # st_load_demand1 = layers.Dense(32, activation="relu") (st_load_demand)
-
-    # theta -> Box(24, )
-    st_theta = layers.Input(shape=(state_spaces[5], ))
-    # st_theta1 = layers.Dense(30, activation="relu") (st_theta)
-
-    # bus -> MultiBinary(24)
-    # act_bus = layers.Input(shape=(action_spaces[0],))
-    # act_bus1 = layers.Dense(30, activation="relu") (act_bus)
-    #
-    # # num_branch -> MultiBinary(34)
-    # act_branch = layers.Input(shape=(action_spaces[1],))
-    # act_branch1 = layers.Dense(30, activation="relu") (act_branch)
-
-    # generator_injection -> Box(5, )
-    act_gen_injection = layers.Input(shape=(action_spaces[3],))
-    # act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
-
-    state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, act_gen_injection])
-    # action = layers.Concatenate() ([act_gen_injection1])
-    # hidden = layers.Concatenate() ([state, act_gen_injection1])
-
-    hidden = layers.Dense(256, activation="relu") (state)
-    hidden = layers.Dense(64, activation="relu") (hidden)
-    reward = layers.Dense(1, activation="linear") (hidden)
-
-    model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
-                             act_gen_injection], reward)
-    return model
+        model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
+                                act_gen_injection], reward)
+        return model
 
 
 def  get_tf_critic_input(state, action):
@@ -344,8 +376,8 @@ def get_tf_state(state):
 
 
 def check_network_violations(bus_status, branch_status):
-    from_buses = ppc["branch"][:, F_BUS].astype('int')
-    to_buses = ppc["branch"][:, T_BUS].astype('int')
+    from_buses = simulator_resources.ppc["branch"][:, F_BUS].astype('int')
+    to_buses = simulator_resources.ppc["branch"][:, T_BUS].astype('int')
 
     for bus in range(bus_status.size):
         is_active = bus_status[bus]
@@ -362,17 +394,17 @@ def get_selected_generators_with_ramp(ramp_ratio, generators_current_output):
 
     selected_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]       # selected_indices.astype(int)
     # print("selected indices: ", selected_indices, "; generators_size: ", generators.size)
-    selected_generators = generators[selected_indices]
+    selected_generators = np.copy(generators.get_generators()[selected_indices])
     # print("selected generators: ", selected_generators)
 
-    gene_current_output = np.zeros(generators.size)
-    for i in range(generators.size):
-        gene_current_output[i] = generators_current_output[generators[i]]
+    gene_current_output = np.zeros(generators.get_size())
+    for i in range(generators.get_size()):
+        gene_current_output[i] = generators_current_output[generators.get_generators()[i]]
     # print("all generators current output: ", gene_current_output)
 
     selected_generators_current_output = gene_current_output[selected_indices]
-    selected_generators_max_output = generators_max_output[selected_indices]
-    selected_generators_max_ramp = generators_max_ramp[selected_indices]
+    selected_generators_max_output = generators.get_max_outputs()[selected_indices]
+    selected_generators_max_ramp = generators.get_max_ramps()[selected_indices]
     selected_generators_initial_ramp = selected_generators_max_ramp * ramp_ratio
     # print("selected generators max ramp: ", selected_generators_max_ramp)
     # print("selected generators initial ramp: ", selected_generators_initial_ramp)
@@ -444,7 +476,7 @@ def check_violations(np_action, fire_distance, generators_current_output, bus_th
     selected_generators, generators_ramp = get_selected_generators_with_ramp(ramp_value, generators_current_output)
     # print("selected generators: ", selected_generators)
     generators_ramp = check_bus_generator_violation(bus_status, selected_generators, generators_ramp)
-    print("generators ramp: ", generators_ramp)
+    # print("generators ramp: ", generators_ramp)
 
     # bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
     # branch_status = np.ones(34, int)       # overwrite by dummy branch status (need to remove)
@@ -461,7 +493,7 @@ def check_violations(np_action, fire_distance, generators_current_output, bus_th
     return action
 
 
-def explore_network(tf_action, noise_range = 0.25):
+def explore_network(ramp_value, noise_range = 1.0):
     # bus status
     # bus_status = np.squeeze(np.array(tf_action[0]))
     # for i in range(bus_status.size):
@@ -477,14 +509,13 @@ def explore_network(tf_action, noise_range = 0.25):
     # print ("branch status: ", branch_status)
 
     selected_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    selected_generators = generators[selected_indices]
+    selected_generators = np.copy(generators.get_generators()[selected_indices])
 
     # amount of power for ramping up/down
-    print("tf ramp value: ", tf_action[0])
-    ramp_value = np.array(tf.squeeze(tf_action[0]))
     for i, x in enumerate(ramp_value):
-        ramp_value[i] = ramp_value[i] + random.uniform(-2 * abs(ramp_value[i]), 2 * abs(ramp_value[i]))
-    # ramp_value = ramp_value + noise_generator()      # random.uniform(-1*noise_range, noise_range)
+        ramp_value[i] = ramp_value[i] + random.uniform(-noise_range, noise_range)
+        # ramp_value[i] = ramp_value[i] + random.gauss(0.0, 0.5)
+        # ramp_value[i] = ramp_value[i] + random.uniform(-(ramp_value[i] * 2), (ramp_value[i] * 2))
     ramp_value = np.clip(ramp_value, -1, +1)
     print("ramp: ", ramp_value)
 
@@ -497,58 +528,85 @@ def explore_network(tf_action, noise_range = 0.25):
 
 
 
-def merge_generators():
-    ppc_gen_trim = []
-    temp = ppc["gen"][0, :]
-    ptr = 0
-    ptr1 = 1
-    while(ptr1 < ppc["gen"].shape[0]):
-        if ppc["gen"][ptr, GEN_BUS] == ppc["gen"][ptr1, GEN_BUS]:
-            temp[PG:QMIN+1] += ppc["gen"][ptr1, PG:QMIN+1]
-            temp[PMAX:APF+1] += ppc["gen"][ptr1, PMAX:APF+1]
-        else:
-            ppc_gen_trim.append(temp)
-            temp = ppc["gen"][ptr1, :]
-            ptr = ptr1
-        ptr1 += 1
-    ppc_gen_trim.append(temp)
-    ppc["gen"] = np.asarray(ppc_gen_trim)
+class Generators:
+    def __init__(self, ppc, ramp_frequency_in_hour = 6):
+        self.generators = np.copy(ppc["gen"][:, GEN_BUS].astype("int"))
+        self.num_generators = self.generators.size
+        self.generators_min_output = np.zeros(self.generators.size)
+        self.generators_max_output = np.copy(ppc["gen"][:, PMAX] / ppc["baseMVA"])
+        self.generators_max_ramp = np.copy((ppc["gen"][:, RAMP_10] / ppc["baseMVA"]) * (1 / ramp_frequency_in_hour))
+
+    def get_generators(self):
+        return self.generators
+
+    def get_size(self):
+        return self.num_generators
+
+    def get_min_outputs(self):
+        return self.generators_min_output
+
+    def get_max_outputs(self):
+        return self.generators_max_output
+
+    def set_max_outputs(self, max_output):
+        self.generators_max_output = np.copy(max_output)
+
+    def get_max_ramps(self):
+        return  self.generators_max_ramp
+
+    def print_info(self):
+        print ("generators: ", self.generators)
+        print ("generators max output: ", self.generators_max_output)
+        print ("generators max ramp: ", self.generators_max_ramp)
 
 
-def merge_branches():
-    ppc_branch_trim = []
-    temp = ppc["branch"][0, :]
-    ptr = 0
-    ptr1 = 1
-    while(ptr1 < ppc["branch"].shape[0]):
-        if np.all(ppc["branch"][ptr, F_BUS:T_BUS+1] == ppc["branch"][ptr1, GEN_BUS:T_BUS+1]):
-            temp[BR_R: RATE_C+1] += ppc["branch"][ptr1, BR_R: RATE_C+1]
-        else:
-            ppc_branch_trim.append(temp)
-            temp = ppc["branch"][ptr1, :]
-            ptr = ptr1
-        ptr1 += 1
-    ppc_branch_trim.append(temp)
-    ppc["branch"] = np.asarray(ppc_branch_trim)
+class SimulatorResources():
+    def __init__(self, power_file_path, geo_file_path):
+        self._ppc = loadcase(power_file_path)
+        self._merge_generators()
+        self._merge_branches()
+        self.ppc = ext2int(self._ppc)
+
+    def _merge_generators(self):
+        ppc_gen_trim = []
+        temp = self._ppc["gen"][0, :]
+        ptr = 0
+        ptr1 = 1
+        while(ptr1 < self._ppc["gen"].shape[0]):
+            if self._ppc["gen"][ptr, GEN_BUS] == self._ppc["gen"][ptr1, GEN_BUS]:
+                temp[PG:QMIN+1] += self._ppc["gen"][ptr1, PG:QMIN+1]
+                temp[PMAX:APF+1] += self._ppc["gen"][ptr1, PMAX:APF+1]
+            else:
+                ppc_gen_trim.append(temp)
+                temp = self._ppc["gen"][ptr1, :]
+                ptr = ptr1
+            ptr1 += 1
+        ppc_gen_trim.append(temp)
+        self._ppc["gen"] = np.asarray(ppc_gen_trim)
+
+    def _merge_branches(self):
+        ppc_branch_trim = []
+        temp = self._ppc["branch"][0, :]
+        ptr = 0
+        ptr1 = 1
+        while(ptr1 < self._ppc["branch"].shape[0]):
+            if np.all(self._ppc["branch"][ptr, F_BUS:T_BUS+1] == self._ppc["branch"][ptr1, GEN_BUS:T_BUS+1]):
+                temp[BR_R: RATE_C+1] += self._ppc["branch"][ptr1, BR_R: RATE_C+1]
+            else:
+                ppc_branch_trim.append(temp)
+                temp = self._ppc["branch"][ptr1, :]
+                ptr = ptr1
+            ptr1 += 1
+        ppc_branch_trim.append(temp)
+        self._ppc["branch"] = np.asarray(ppc_branch_trim)
+
+        def get_ppc(self):
+            return self.ppc
 
 
-def get_generators_info(ramp_frequency_in_hour = 6):
-    # generators information from config file
-    generators = ppc["gen"][:, GEN_BUS].astype("int")
-    generators_min_output = np.zeros(generators.size)
-    generators_max_output = ppc["gen"][:, PMAX]/ppc["baseMVA"]
-    generators_max_ramp = (ppc["gen"][:, RAMP_10]/ppc["baseMVA"]) * (1/ramp_frequency_in_hour)
 
-    # print ("generators: ", generators)
-    # print ("generators max output: ", generators_max_output)
-    # print ("generators max ramp: ", generators_max_ramp)
-    #
-    return generators, generators_min_output, generators_max_output, generators_max_ramp
-
-
-def get_state_spaces(env):
-    observation_space = env.observation_space
-    print("observation space: ", observation_space)
+def get_state_spaces(observation_space):
+    # print("observation space: ", observation_space)
 
     num_st_bus = observation_space["bus_status"].shape[0]
     num_st_branch = observation_space["branch_status"].shape[0]
@@ -564,8 +622,7 @@ def get_state_spaces(env):
     return state_spaces
 
 
-def get_action_spaces(env):
-    action_space = env.action_space
+def get_action_spaces(action_space):
     num_bus = action_space["bus_status"].shape[0]
     num_branch = action_space["branch_status"].shape[0]
     num_generator_selector = action_space["generator_selector"].shape[0]
@@ -589,50 +646,38 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
-    ppc = loadcase(args.path_power)
-    merge_generators()
-    merge_branches()
-    ppc = ext2int(ppc)
-    generators, generators_min_output, generators_max_output, generators_max_ramp = get_generators_info(ramp_frequency_in_hour=6)
-    num_generators = generators.size
+
+    simulator_resources = SimulatorResources(power_file_path = args.path_power, geo_file_path=args.path_geo)
+    generators = Generators(ppc = simulator_resources.ppc, ramp_frequency_in_hour = 6)
+
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=11)
 
-    state_spaces = get_state_spaces(env)
-    action_spaces = get_action_spaces(env)
+    state_spaces = get_state_spaces(env.observation_space)
+    action_spaces = get_action_spaces(env.action_space)
+
+    agent = Agent(state_spaces, action_spaces)
 
     num_bus = state_spaces[0]
     num_branch = state_spaces[1]
 
-    actor = get_actor(state_spaces, action_spaces)
-    target_actor = get_actor(state_spaces, action_spaces)
-
-    critic = get_critic(state_spaces, action_spaces)
-    target_critic = get_critic(state_spaces, action_spaces)
-
     # save trained model to reuse
-    save_model = True
+    save_model = False
     load_model = False
     save_model_version = 0
     load_model_version = 0
-    load_episode_num = 20
-    if load_model == False:
-        target_actor.set_weights(actor.get_weights())
-        target_critic.set_weights(critic.get_weights())
-    else:
-        actor.load_weights(f"saved_model/agent_actor{load_model_version}_{load_episode_num}.h5")
-        target_actor.load_weights(f"saved_model/agent_target_actor{load_model_version}_{load_episode_num}.h5")
-        critic.load_weights(f"saved_model/agent_critic{load_model_version}_{load_episode_num}.h5")
-        target_critic.load_weights(f"saved_model/agent_target_critic{load_model_version}_{load_episode_num}.h5")
-        print("weights are loaded successfully!")
+    load_episode_num = 0
 
-    save_replay_buffer = True
+    if load_model:
+        agent.load_weight(version=load_model_version, episode_num=load_episode_num)
+
+    save_replay_buffer = False
     load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
 
     total_episode = 100001
     max_steps_per_episode = 300
-    buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, 200000, 256)
+    buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, 200000, 1024)
 
     with open(f'fire_power_reward_list_v{save_model_version}.csv', 'w') as fd:
         writer = csv.writer(fd)
@@ -644,24 +689,30 @@ if __name__ == "__main__":
 
     for episode in range(total_episode):
         state = env.reset()
+
         episodic_reward = 0
         max_reached_step = 0
-        generators_max_output = state["generator_injection"][generators]
+        generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
             tf_state = get_tf_state(state)
-            tf_action = actor(tf_state)
-
-            net_action = explore_network(tf_action)
+            tf_action = agent.actor(tf_state)
+            print("tf ramp value: ", tf_action[0])
+            # ramp_value = np.array(tf.squeeze(tf_action[0]))
+            ramp_value = np.zeros(11)
+            net_action = explore_network(ramp_value)
             env_action = check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
-            next_state, reward, done, _ = env.step(env_action)
-            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+            next_state, reward, done, _ =  env.step(env_action)
+            # print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
-            # reward = reward - np.sum(np.square(net_action["generator_injection"])) * 200
+            penalty = -1 * np.sum(np.abs(net_action["generator_injection"])) * 100  # -1000 * net_action["generator_injection"][0] *  net_action["generator_injection"][0]
+            reward1 = [penalty, reward[1]]
+            buffer.add_record((state, net_action, reward1, next_state))
+
+            # next_state["fire_distance"] = next_state["fire_distance"] /100
 
             episodic_reward += reward[0]
-            buffer.add_record((state, net_action, reward, next_state))
 
             if done or (step == max_steps_per_episode-1):
                 print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_reward}")
@@ -670,10 +721,10 @@ if __name__ == "__main__":
 
             state = next_state
 
-            if (buffer.current_record_size() > 300):
+            if (buffer.current_record_size() > 50):
                 # if step % 5 == 0:
-                    critic_loss, reward_value, critic_value = buffer.learn()   # magnitude of gradient
-                    buffer.update_target()
+                    state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
+                    critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)   # magnitude of gradient
 
                     num_train += 1
                     with critic_summary_writer.as_default():
@@ -696,11 +747,8 @@ if __name__ == "__main__":
             writer.writerow([str(save_model_version), str(episode), str(max_reached_step), str(episodic_reward)])
 
         # save model weights
-        if (episode % 20 == 0) and save_model:
-            actor.save_weights(f"saved_model/agent_actor{save_model_version}_{episode}.h5")
-            critic.save_weights(f"saved_model/agent_critic{save_model_version}_{episode}.h5")
-            target_actor.save_weights(f"saved_model/agent_target_actor{save_model_version}_{episode}.h5")
-            target_critic.save_weights(f"saved_model/agent_target_critic{save_model_version}_{episode}.h5")
+        if (episode % 10 == 0) and save_model:
+            agent.save_weight(version=save_model_version, episode_num=episode)
 
         # save logs
         if (episode % 5 == 0) and save_model:
@@ -708,6 +756,7 @@ if __name__ == "__main__":
             log_file.write(f"Episode: V{save_model_version}_{episode}, Reward: {episodic_reward}, Avg reward: {avg_reward}\n")
             log_file.close()
 
-        if (episode % 20 == 0) and save_replay_buffer:
+        # save replay buffer
+        if (episode % 10 == 0) and save_replay_buffer:
             print(f"Saving replay buffer at: {episode}")
             buffer.save_buffer()

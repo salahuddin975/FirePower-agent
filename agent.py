@@ -432,7 +432,7 @@ class DataProcessor:
         return action
 
 
-    def explore_network(self, ramp_value, noise_range = 1.0):
+    def explore_network(self, nn_action, explore_network = True, noise_range = 1.0):
         # bus status
         # bus_status = np.squeeze(np.array(tf_action[0]))
         # for i in range(bus_status.size):
@@ -446,13 +446,15 @@ class DataProcessor:
         # print ("branch status: ", branch_status)
 
         # amount of power for ramping up/down
-        for i in range(ramp_value.size):
-            ramp_value[i] = ramp_value[i] + random.uniform(-noise_range, noise_range)
-        ramp_value = np.clip(ramp_value, -1, +1)
-        print("ramp: ", ramp_value)
+        nn_ramp = np.array(tf.squeeze(nn_action[0]))
+        for i in range(nn_ramp.size):
+            if explore_network:
+                nn_ramp[i] = nn_ramp[i] + random.uniform(-noise_range, noise_range)
+        nn_ramp = np.clip(nn_ramp, -1, +1)
+        print("ramp: ", nn_ramp)
 
         action = {
-            "generator_injection": ramp_value,
+            "generator_injection": nn_ramp,
         }
 
         return action
@@ -652,11 +654,10 @@ if __name__ == "__main__":
 
         for step in range(max_steps_per_episode):
             tf_state = data_processor.get_tf_state(state)
-            tf_action = agent._actor(tf_state)
-            print("tf ramp value: ", tf_action[0])
-            # ramp_value = np.array(tf.squeeze(tf_action[0]))
-            ramp_value = np.zeros(11)
-            net_action = data_processor.explore_network(ramp_value)
+            nn_action = agent._actor(tf_state)
+            print("NN ramp: ", nn_action[0])
+
+            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=1.0)
             env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
             next_state, reward, done, _ =  env.step(env_action)

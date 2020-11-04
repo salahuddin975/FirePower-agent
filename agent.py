@@ -179,12 +179,12 @@ class ReplayBuffer:
         next_state_batch = [next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance, next_st_tf_gen_output,
                                     next_st_tf_load_demand, next_st_tf_theta]
 
-        return state_batch, action_batch, next_state_batch
+        return state_batch, action_batch, reward_batch, next_state_batch
 
 
 class Agent:
     def __init__(self, state_spaces, action_spaces):
-        self.gamma = 0.90      # discount factor
+        self.gamma = 0.0      # discount factor
         self.tau = 0.05       # used to update target network
         actor_lr = 0.001
         critic_lr = 0.002

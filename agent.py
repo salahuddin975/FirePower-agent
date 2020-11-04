@@ -549,7 +549,7 @@ class Generators:
         return self.generators_max_output
 
     def set_max_outputs(self, max_output):
-        self.generators_max_output = np.copy(max_output)
+        self.generators_max_output = np.copy(max_output[self.generators])
 
     def get_max_ramps(self):
         return  self.generators_max_ramp

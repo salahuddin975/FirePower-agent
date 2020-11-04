@@ -32,156 +32,6 @@ actor_summary_writer = tf.summary.create_file_writer(actor_log_dir)
 critic_summary_writer = tf.summary.create_file_writer(citic_log_dir)
 
 
-class ReplayBuffer:
-    def __init__(self, state_spaces, action_spaces, load_replay_buffer, buffer_capacity=200000, batch_size=64):
-        self.counter = 0
-        self.capacity = buffer_capacity
-        self.batch_size = batch_size
-
-        if load_replay_buffer == False:
-            self.initialize_buffer(state_spaces, action_spaces)
-        else:
-            self.load_buffer()
-
-
-    def initialize_buffer(self, state_spaces, action_spaces):
-        self.st_bus = np.zeros((self.capacity, state_spaces[0]))
-        self.st_branch = np.zeros((self.capacity, state_spaces[1]))
-        self.st_fire_distance = np.zeros((self.capacity, state_spaces[2]))
-        self.st_gen_output = np.zeros((self.capacity, state_spaces[3]))
-        self.st_load_demand = np.zeros((self.capacity, state_spaces[4]))
-        self.st_theta = np.zeros((self.capacity, state_spaces[5]))
-
-        # self.act_bus = np.zeros((self.capacity, action_spaces[0]))
-        # self.act_branch = np.zeros((self.capacity, action_spaces[1]))
-        self.act_gen_injection = np.zeros((self.capacity, action_spaces[3]))
-
-        self.rewards = np.zeros((self.capacity, 1))
-
-        self.next_st_bus = np.zeros((self.capacity, state_spaces[0]))
-        self.next_st_branch = np.zeros((self.capacity, state_spaces[1]))
-        self.next_st_fire_distance = np.zeros((self.capacity, state_spaces[2]))
-        self.next_st_gen_output = np.zeros((self.capacity, state_spaces[3]))
-        self.next_st_load_demand = np.zeros((self.capacity, state_spaces[4]))
-        self.next_st_theta = np.zeros((self.capacity, state_spaces[5]))
-
-        self.np_counter = np.zeros((1))
-
-
-    def save_buffer(self):
-        np.save(f'replay_buffer/st_bus_v{save_replay_buffer_version}.npy', self.st_bus)
-        np.save(f'replay_buffer/st_branch_v{save_replay_buffer_version}.npy', self.st_branch)
-        np.save(f'replay_buffer/st_fire_distance_v{save_replay_buffer_version}.npy', self.st_fire_distance)
-        np.save(f'replay_buffer/st_gen_output_v{save_replay_buffer_version}.npy', self.st_gen_output)
-        np.save(f'replay_buffer/st_load_demand_v{save_replay_buffer_version}.npy', self.st_load_demand)
-        np.save(f'replay_buffer/st_theta_v{save_replay_buffer_version}.npy', self.st_theta)
-
-        # np.save(f'replay_buffer/act_bus_v{save_replay_buffer_version}.npy', self.act_bus)
-        # np.save(f'replay_buffer/act_branch_v{save_replay_buffer_version}.npy', self.act_branch)
-        np.save(f'replay_buffer/act_gen_injection_v{save_replay_buffer_version}.npy', self.act_gen_injection)
-
-        np.save(f'replay_buffer/rewards_v{save_replay_buffer_version}.npy', self.rewards)
-
-        np.save(f'replay_buffer/next_st_bus_v{save_replay_buffer_version}.npy', self.next_st_bus)
-        np.save(f'replay_buffer/next_st_branch_v{save_replay_buffer_version}.npy', self.next_st_branch)
-        np.save(f'replay_buffer/next_st_fire_distance_v{save_replay_buffer_version}.npy', self.next_st_fire_distance)
-        np.save(f'replay_buffer/next_st_gen_output_v{save_replay_buffer_version}.npy', self.next_st_gen_output)
-        np.save(f'replay_buffer/next_st_load_demand_v{save_replay_buffer_version}.npy', self.next_st_load_demand)
-        np.save(f'replay_buffer/next_st_theta_v{save_replay_buffer_version}.npy', self.next_st_theta)
-
-        self.np_counter[0] = self.counter
-        np.save(f'replay_buffer/counter_v{save_replay_buffer_version}.npy', self.np_counter)
-
-
-    def load_buffer(self):
-        self.st_bus = np.load(f'replay_buffer/st_bus_v{load_replay_buffer_version}.npy')
-        self.st_branch = np.load(f'replay_buffer/st_branch_v{load_replay_buffer_version}.npy')
-        self.st_fire_distance = np.load(f'replay_buffer/st_fire_distance_v{load_replay_buffer_version}.npy')
-        self.st_gen_output = np.load(f'replay_buffer/st_gen_output_v{load_replay_buffer_version}.npy')
-        self.st_load_demand = np.load(f'replay_buffer/st_load_demand_v{load_replay_buffer_version}.npy')
-        self.st_theta = np.load(f'replay_buffer/st_theta_v{load_replay_buffer_version}.npy')
-
-        # self.act_bus = np.load(f'replay_buffer/act_bus_v{load_replay_buffer_version}.npy')
-        # self.act_branch = np.load(f'replay_buffer/act_branch_v{load_replay_buffer_version}.npy')
-        self.act_gen_injection = np.load(f'replay_buffer/act_gen_injection_v{load_replay_buffer_version}.npy')
-
-        self.rewards = np.load(f'replay_buffer/rewards_v{load_replay_buffer_version}.npy')
-
-        self.next_st_bus = np.load(f'replay_buffer/next_st_bus_v{load_replay_buffer_version}.npy')
-        self.next_st_branch = np.load(f'replay_buffer/next_st_branch_v{load_replay_buffer_version}.npy')
-        self.next_st_fire_distance = np.load(f'replay_buffer/next_st_fire_distance_v{load_replay_buffer_version}.npy')
-        self.next_st_gen_output = np.load(f'replay_buffer/next_st_gen_output_v{load_replay_buffer_version}.npy')
-        self.next_st_load_demand = np.load(f'replay_buffer/next_st_load_demand_v{load_replay_buffer_version}.npy')
-        self.next_st_theta = np.load(f'replay_buffer/next_st_theta_v{load_replay_buffer_version}.npy')
-
-        self.np_counter = np.load(f'replay_buffer/counter_v{load_replay_buffer_version}.npy')
-        self.counter = int(self.np_counter[0])
-        print("Replay buffer loaded successfully!")
-        print("Counter set at: ", self.counter)
-
-    def current_record_size(self):
-        record_size = min(self.capacity, self.counter)
-        return record_size
-
-    def add_record(self, record):
-        index = self.counter % self.capacity
-
-        self.st_bus[index] = np.copy(record[0]["bus_status"])
-        self.st_branch[index] = np.copy(record[0]["branch_status"])
-        self.st_fire_distance[index] = np.copy(record[0]["fire_distance"])
-        self.st_fire_distance[index] = self.st_fire_distance[index] / 100
-        self.st_gen_output[index] = np.copy(record[0]["generator_injection"])
-        self.st_load_demand[index] = np.copy(record[0]["load_demand"])
-        self.st_theta[index] = np.copy(record[0]["theta"])
-
-        # self.act_bus[index] = np.copy(record[1]["bus_status"])
-        # self.act_branch[index] = np.copy(record[1]["branch_status"])
-        self.act_gen_injection[index] = np.copy(record[1]["generator_injection"])
-
-        self.rewards[index] = record[2][0]
-
-        self.next_st_bus[index] = np.copy(record[3]["bus_status"])
-        self.next_st_branch[index] = np.copy(record[3]["branch_status"])
-        self.next_st_fire_distance[index] = np.copy(record[3]["fire_distance"])
-        self.next_st_fire_distance[index] = self.next_st_fire_distance[index] / 100
-        self.next_st_gen_output[index] = np.copy(record[3]["generator_injection"])
-        self.next_st_load_demand[index] = np.copy(record[3]["load_demand"])
-        self.next_st_theta[index] = np.copy(record[3]["theta"])
-
-        self.counter = self.counter + 1
-
-    def get_batch(self):
-        record_size = min(self.capacity, self.counter)
-        batch_indices = np.random.choice(record_size, self.batch_size)
-
-        st_tf_bus = tf.convert_to_tensor(self.st_bus[batch_indices])
-        st_tf_branch = tf.convert_to_tensor(self.st_branch[batch_indices])
-        st_tf_fire_distance = tf.convert_to_tensor(self.st_fire_distance[batch_indices])
-        st_tf_gen_output = tf.convert_to_tensor(self.st_gen_output[batch_indices])
-        st_tf_load_demand = tf.convert_to_tensor(self.st_load_demand[batch_indices])
-        st_tf_theta = tf.convert_to_tensor(self.st_theta[batch_indices])
-
-        # act_tf_bus = tf.convert_to_tensor(self.act_bus[batch_indices])
-        # act_tf_branch = tf.convert_to_tensor(self.act_branch[batch_indices])
-        act_tf_gen_injection = tf.convert_to_tensor(self.act_gen_injection[batch_indices])
-
-        reward_batch = tf.convert_to_tensor(self.rewards[batch_indices], dtype=tf.float32)
-
-        next_st_tf_bus = tf.convert_to_tensor(self.next_st_bus[batch_indices])
-        next_st_tf_branch = tf.convert_to_tensor(self.next_st_branch[batch_indices])
-        next_st_tf_fire_distance = tf.convert_to_tensor(self.next_st_fire_distance[batch_indices])
-        next_st_tf_gen_output = tf.convert_to_tensor(self.next_st_gen_output[batch_indices])
-        next_st_tf_load_demand = tf.convert_to_tensor(self.next_st_load_demand[batch_indices])
-        next_st_tf_theta = tf.convert_to_tensor(self.next_st_theta[batch_indices])
-
-        state_batch = [st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta]
-        action_batch = [act_tf_gen_injection]
-        next_state_batch = [next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance, next_st_tf_gen_output,
-                                    next_st_tf_load_demand, next_st_tf_theta]
-
-        return state_batch, action_batch, reward_batch, next_state_batch
-
-
 class Agent:
     def __init__(self, state_spaces, action_spaces):
         self._gamma = 0.0      # discount factor
@@ -346,186 +196,297 @@ class Agent:
         return model
 
 
-def  get_tf_critic_input(state, action):
-    st_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
-    st_branch_status = tf.expand_dims(tf.convert_to_tensor(state["branch_status"]), 0)
-    st_fire_state = tf.expand_dims(tf.convert_to_tensor(state["fire_state"]), 0)
-    st_generator_output = tf.expand_dims(tf.convert_to_tensor(state["generator_injection"]), 0)
-    st_load_demand = tf.expand_dims(tf.convert_to_tensor(state["load_demand"]), 0)
-    st_theta = tf.expand_dims(tf.convert_to_tensor(state["theta"]), 0)
+class ReplayBuffer:
+    def __init__(self, state_spaces, action_spaces, load_replay_buffer, buffer_capacity=200000, batch_size=64):
+        self.counter = 0
+        self.capacity = buffer_capacity
+        self.batch_size = batch_size
 
-    act_bus_status = tf.expand_dims(tf.convert_to_tensor(action["bus_status"]), 0)
-    act_branch_status = tf.expand_dims(tf.convert_to_tensor(action["branch_status"]), 0)
-    act_generator_selector = tf.expand_dims(tf.convert_to_tensor(action["generator_selector"]), 0)
-    act_generator_injection = tf.expand_dims(tf.convert_to_tensor(action["generator_injection"]), 0)
-
-    return [st_bus_status, st_branch_status, st_fire_state, st_generator_output, st_load_demand, st_theta,
-            act_bus_status, act_branch_status, act_generator_selector, act_generator_injection]
-
-
-def get_tf_state(state):
-    tf_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
-    tf_branch_status = tf.expand_dims(tf.convert_to_tensor(state["branch_status"]), 0)
-    # tf_fire_state = tf.expand_dims(tf.convert_to_tensor(state["fire_state"]), 0)
-    tf_fire_distance = tf.expand_dims(tf.convert_to_tensor(state["fire_distance"]), 0)
-    tf_generator_injection = tf.expand_dims(tf.convert_to_tensor(state["generator_injection"]), 0)
-    tf_load_demand = tf.expand_dims(tf.convert_to_tensor(state["load_demand"]), 0)
-    tf_theta = tf.expand_dims(tf.convert_to_tensor(state["theta"]), 0)
-
-    return [tf_bus_status, tf_branch_status, tf_fire_distance, tf_generator_injection, tf_load_demand, tf_theta]
-
-
-def check_network_violations(bus_status, branch_status):
-    from_buses = simulator_resources.ppc["branch"][:, F_BUS].astype('int')
-    to_buses = simulator_resources.ppc["branch"][:, T_BUS].astype('int')
-
-    for bus in range(bus_status.size):
-        is_active = bus_status[bus]
-        for branch in range(branch_status.size):
-            if bus in [from_buses[branch], to_buses[branch]]:
-                if is_active == 0:
-                    branch_status[branch] = 0
-
-    return branch_status
-
-
-def get_selected_generators_with_ramp(ramp_ratio, generators_current_output):
-    # print("generators current output: ", generators_current_output)
-
-    selected_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]       # selected_indices.astype(int)
-    # print("selected indices: ", selected_indices, "; generators_size: ", generators.size)
-    selected_generators = np.copy(generators.get_generators()[selected_indices])
-    # print("selected generators: ", selected_generators)
-
-    gene_current_output = np.zeros(generators.get_size())
-    for i in range(generators.get_size()):
-        gene_current_output[i] = generators_current_output[generators.get_generators()[i]]
-    # print("all generators current output: ", gene_current_output)
-
-    selected_generators_current_output = gene_current_output[selected_indices]
-    selected_generators_max_output = generators.get_max_outputs()[selected_indices]
-    selected_generators_max_ramp = generators.get_max_ramps()[selected_indices]
-    selected_generators_initial_ramp = selected_generators_max_ramp * ramp_ratio
-    # print("selected generators max ramp: ", selected_generators_max_ramp)
-    # print("selected generators initial ramp: ", selected_generators_initial_ramp)
-
-    decimal = 10000
-    selected_generators_ramp = np.zeros(selected_generators.size)
-    for i in range(selected_generators.size):
-        index = selected_generators[i]
-        # print("index: ", index, "; ramp: ", selected_generators_ramp[i], "; cur: ", generators_current_output[index],
-        #       "; total: ",selected_generators_ramp[i] + generators_current_output[index], "; max_output: ", selected_generators_max_output[i])
-        if selected_generators_initial_ramp[i] == 0:
-            selected_generators_ramp[i] = 0
-        elif selected_generators_initial_ramp[i] > 0:
-            if generators_current_output[index] == selected_generators_max_output[i]:
-                selected_generators_ramp[i] = 0
-            elif selected_generators_max_output[i] >= (selected_generators_initial_ramp[i] + generators_current_output[index]):
-                selected_generators_ramp[i] = math.floor(selected_generators_initial_ramp[i] * decimal) / decimal
-                generators_current_output[index] = generators_current_output[index] + selected_generators_ramp[i]
-            else:
-                selected_generators_ramp[i] = math.floor((selected_generators_max_output[i] - generators_current_output[index]) * decimal) / decimal
-                generators_current_output[index] = selected_generators_max_output[i]
-                # print("ramp: ", selected_generators_set_ramp[i], "; curr: ", generators_current_output[index])
+        if load_replay_buffer == False:
+            self.initialize_buffer(state_spaces, action_spaces)
         else:
-            if generators_current_output[index] == 0:
-                selected_generators_ramp[i] = 0
-            elif 0 < (selected_generators_initial_ramp[i] + generators_current_output[index]):
-                selected_generators_ramp[i] = math.ceil(selected_generators_initial_ramp[i] * decimal)/decimal
-                generators_current_output[index] = generators_current_output[index] + selected_generators_ramp[i]
+            self.load_buffer()
+
+
+    def initialize_buffer(self, state_spaces, action_spaces):
+        self.st_bus = np.zeros((self.capacity, state_spaces[0]))
+        self.st_branch = np.zeros((self.capacity, state_spaces[1]))
+        self.st_fire_distance = np.zeros((self.capacity, state_spaces[2]))
+        self.st_gen_output = np.zeros((self.capacity, state_spaces[3]))
+        self.st_load_demand = np.zeros((self.capacity, state_spaces[4]))
+        self.st_theta = np.zeros((self.capacity, state_spaces[5]))
+
+        # self.act_bus = np.zeros((self.capacity, action_spaces[0]))
+        # self.act_branch = np.zeros((self.capacity, action_spaces[1]))
+        self.act_gen_injection = np.zeros((self.capacity, action_spaces[3]))
+
+        self.rewards = np.zeros((self.capacity, 1))
+
+        self.next_st_bus = np.zeros((self.capacity, state_spaces[0]))
+        self.next_st_branch = np.zeros((self.capacity, state_spaces[1]))
+        self.next_st_fire_distance = np.zeros((self.capacity, state_spaces[2]))
+        self.next_st_gen_output = np.zeros((self.capacity, state_spaces[3]))
+        self.next_st_load_demand = np.zeros((self.capacity, state_spaces[4]))
+        self.next_st_theta = np.zeros((self.capacity, state_spaces[5]))
+
+        self.np_counter = np.zeros((1))
+
+
+    def save_buffer(self):
+        np.save(f'replay_buffer/st_bus_v{save_replay_buffer_version}.npy', self.st_bus)
+        np.save(f'replay_buffer/st_branch_v{save_replay_buffer_version}.npy', self.st_branch)
+        np.save(f'replay_buffer/st_fire_distance_v{save_replay_buffer_version}.npy', self.st_fire_distance)
+        np.save(f'replay_buffer/st_gen_output_v{save_replay_buffer_version}.npy', self.st_gen_output)
+        np.save(f'replay_buffer/st_load_demand_v{save_replay_buffer_version}.npy', self.st_load_demand)
+        np.save(f'replay_buffer/st_theta_v{save_replay_buffer_version}.npy', self.st_theta)
+
+        # np.save(f'replay_buffer/act_bus_v{save_replay_buffer_version}.npy', self.act_bus)
+        # np.save(f'replay_buffer/act_branch_v{save_replay_buffer_version}.npy', self.act_branch)
+        np.save(f'replay_buffer/act_gen_injection_v{save_replay_buffer_version}.npy', self.act_gen_injection)
+
+        np.save(f'replay_buffer/rewards_v{save_replay_buffer_version}.npy', self.rewards)
+
+        np.save(f'replay_buffer/next_st_bus_v{save_replay_buffer_version}.npy', self.next_st_bus)
+        np.save(f'replay_buffer/next_st_branch_v{save_replay_buffer_version}.npy', self.next_st_branch)
+        np.save(f'replay_buffer/next_st_fire_distance_v{save_replay_buffer_version}.npy', self.next_st_fire_distance)
+        np.save(f'replay_buffer/next_st_gen_output_v{save_replay_buffer_version}.npy', self.next_st_gen_output)
+        np.save(f'replay_buffer/next_st_load_demand_v{save_replay_buffer_version}.npy', self.next_st_load_demand)
+        np.save(f'replay_buffer/next_st_theta_v{save_replay_buffer_version}.npy', self.next_st_theta)
+
+        self.np_counter[0] = self.counter
+        np.save(f'replay_buffer/counter_v{save_replay_buffer_version}.npy', self.np_counter)
+
+
+    def load_buffer(self):
+        self.st_bus = np.load(f'replay_buffer/st_bus_v{load_replay_buffer_version}.npy')
+        self.st_branch = np.load(f'replay_buffer/st_branch_v{load_replay_buffer_version}.npy')
+        self.st_fire_distance = np.load(f'replay_buffer/st_fire_distance_v{load_replay_buffer_version}.npy')
+        self.st_gen_output = np.load(f'replay_buffer/st_gen_output_v{load_replay_buffer_version}.npy')
+        self.st_load_demand = np.load(f'replay_buffer/st_load_demand_v{load_replay_buffer_version}.npy')
+        self.st_theta = np.load(f'replay_buffer/st_theta_v{load_replay_buffer_version}.npy')
+
+        # self.act_bus = np.load(f'replay_buffer/act_bus_v{load_replay_buffer_version}.npy')
+        # self.act_branch = np.load(f'replay_buffer/act_branch_v{load_replay_buffer_version}.npy')
+        self.act_gen_injection = np.load(f'replay_buffer/act_gen_injection_v{load_replay_buffer_version}.npy')
+
+        self.rewards = np.load(f'replay_buffer/rewards_v{load_replay_buffer_version}.npy')
+
+        self.next_st_bus = np.load(f'replay_buffer/next_st_bus_v{load_replay_buffer_version}.npy')
+        self.next_st_branch = np.load(f'replay_buffer/next_st_branch_v{load_replay_buffer_version}.npy')
+        self.next_st_fire_distance = np.load(f'replay_buffer/next_st_fire_distance_v{load_replay_buffer_version}.npy')
+        self.next_st_gen_output = np.load(f'replay_buffer/next_st_gen_output_v{load_replay_buffer_version}.npy')
+        self.next_st_load_demand = np.load(f'replay_buffer/next_st_load_demand_v{load_replay_buffer_version}.npy')
+        self.next_st_theta = np.load(f'replay_buffer/next_st_theta_v{load_replay_buffer_version}.npy')
+
+        self.np_counter = np.load(f'replay_buffer/counter_v{load_replay_buffer_version}.npy')
+        self.counter = int(self.np_counter[0])
+        print("Replay buffer loaded successfully!")
+        print("Counter set at: ", self.counter)
+
+    def get_num_records(self):
+        record_size = min(self.capacity, self.counter)
+        return record_size
+
+    def add_record(self, record):
+        index = self.counter % self.capacity
+
+        self.st_bus[index] = np.copy(record[0]["bus_status"])
+        self.st_branch[index] = np.copy(record[0]["branch_status"])
+        self.st_fire_distance[index] = np.copy(record[0]["fire_distance"])
+        self.st_fire_distance[index] = self.st_fire_distance[index] / 100
+        self.st_gen_output[index] = np.copy(record[0]["generator_injection"])
+        self.st_load_demand[index] = np.copy(record[0]["load_demand"])
+        self.st_theta[index] = np.copy(record[0]["theta"])
+
+        # self.act_bus[index] = np.copy(record[1]["bus_status"])
+        # self.act_branch[index] = np.copy(record[1]["branch_status"])
+        self.act_gen_injection[index] = np.copy(record[1]["generator_injection"])
+
+        self.rewards[index] = record[2][0]
+
+        self.next_st_bus[index] = np.copy(record[3]["bus_status"])
+        self.next_st_branch[index] = np.copy(record[3]["branch_status"])
+        self.next_st_fire_distance[index] = np.copy(record[3]["fire_distance"])
+        self.next_st_fire_distance[index] = self.next_st_fire_distance[index] / 100
+        self.next_st_gen_output[index] = np.copy(record[3]["generator_injection"])
+        self.next_st_load_demand[index] = np.copy(record[3]["load_demand"])
+        self.next_st_theta[index] = np.copy(record[3]["theta"])
+
+        self.counter = self.counter + 1
+
+    def get_batch(self):
+        record_size = min(self.capacity, self.counter)
+        batch_indices = np.random.choice(record_size, self.batch_size)
+
+        st_tf_bus = tf.convert_to_tensor(self.st_bus[batch_indices])
+        st_tf_branch = tf.convert_to_tensor(self.st_branch[batch_indices])
+        st_tf_fire_distance = tf.convert_to_tensor(self.st_fire_distance[batch_indices])
+        st_tf_gen_output = tf.convert_to_tensor(self.st_gen_output[batch_indices])
+        st_tf_load_demand = tf.convert_to_tensor(self.st_load_demand[batch_indices])
+        st_tf_theta = tf.convert_to_tensor(self.st_theta[batch_indices])
+
+        # act_tf_bus = tf.convert_to_tensor(self.act_bus[batch_indices])
+        # act_tf_branch = tf.convert_to_tensor(self.act_branch[batch_indices])
+        act_tf_gen_injection = tf.convert_to_tensor(self.act_gen_injection[batch_indices])
+
+        reward_batch = tf.convert_to_tensor(self.rewards[batch_indices], dtype=tf.float32)
+
+        next_st_tf_bus = tf.convert_to_tensor(self.next_st_bus[batch_indices])
+        next_st_tf_branch = tf.convert_to_tensor(self.next_st_branch[batch_indices])
+        next_st_tf_fire_distance = tf.convert_to_tensor(self.next_st_fire_distance[batch_indices])
+        next_st_tf_gen_output = tf.convert_to_tensor(self.next_st_gen_output[batch_indices])
+        next_st_tf_load_demand = tf.convert_to_tensor(self.next_st_load_demand[batch_indices])
+        next_st_tf_theta = tf.convert_to_tensor(self.next_st_theta[batch_indices])
+
+        state_batch = [st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta]
+        action_batch = [act_tf_gen_injection]
+        next_state_batch = [next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance, next_st_tf_gen_output,
+                                    next_st_tf_load_demand, next_st_tf_theta]
+
+        return state_batch, action_batch, reward_batch, next_state_batch
+
+
+class DataProcessor:
+    def __init__(self):
+        pass
+
+    def _check_network_violations(self, bus_status, branch_status):
+        from_buses = simulator_resources.ppc["branch"][:, F_BUS].astype('int')
+        to_buses = simulator_resources.ppc["branch"][:, T_BUS].astype('int')
+
+        for bus in range(bus_status.size):
+            is_active = bus_status[bus]
+            for branch in range(branch_status.size):
+                if bus in [from_buses[branch], to_buses[branch]]:
+                    if is_active == 0:
+                        branch_status[branch] = 0
+
+        return branch_status
+
+    def _clip_ramp_values(self, nn_ramp, generators_output):
+        # print("generators current output: ", generators_output)
+
+        generators_current_output = np.zeros(generators.get_size())
+        for i in range(generators.get_size()):
+            generators_current_output[i] = generators_output[generators.get_generators()[i]]
+        # print("generators current output: ", generators_current_output)
+
+        generators_max_output = generators.get_max_outputs()
+        generators_max_ramp = generators.get_max_ramps()
+        ramp = generators_max_ramp * nn_ramp
+        # print("generators initial ramp: ", ramp)
+
+        for i in range(ramp.size):
+            if ramp[i] > 0:
+                ramp[i] = ramp[i] if ramp[i] < generators_max_ramp[i] else generators_max_ramp[i]
+                ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] < generators_max_output[i] else generators_max_output[i] - generators_current_output[i]
             else:
-                selected_generators_ramp[i] = math.ceil((0 - generators_current_output[index]) * decimal)/decimal
-                generators_current_output[index] = 0.0
+                ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[i] else -generators_max_ramp[i]
+                ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] > 0 else 0 - generators_current_output[i]
 
-        # print("updated output: ", generators_current_output)
+        # print("generators set ramp: ", ramp)
+        return ramp
 
-    # print("selected generators current output: ", selected_generators_current_output)
-    # print("selected generators max output: ", selected_generators_max_output)
-    # print("generators set ramp: ", selected_generators_ramp)
+    def _check_bus_generator_violation(self, bus_status, generators_ramp):
+        selected_generators = generators.get_generators()
 
-    return selected_generators, selected_generators_ramp
+        for bus in range(bus_status.size):
+            flag = bus_status[bus]
+            for j in range(selected_generators.size):
+                gen_bus = selected_generators[j]
+                if bus == gen_bus and flag == False:
+                    generators_ramp[j] = False
 
-
-def check_bus_generator_violation(bus_status, selected_generators, generators_ramp):
-    for bus in range(bus_status.size):
-        flag = bus_status[bus]
-        for j in range(selected_generators.size):
-            gen_bus = selected_generators[j]
-            if bus == gen_bus and flag == False:
-                generators_ramp[j] = False
-
-    return generators_ramp
+        return generators_ramp
 
 
-def check_violations(np_action, fire_distance, generators_current_output, bus_threshold=0.1, branch_threshold=0.1):
-    bus_status = np.ones(num_bus)
-    for i in range(num_bus):
-        if fire_distance[i] < 2.0:
-            bus_status[i] = 0
+    def check_violations(self, np_action, fire_distance, generators_current_output, bus_threshold=0.1, branch_threshold=0.1):
+        bus_status = np.ones(num_bus)
+        for i in range(num_bus):
+            if fire_distance[i] < 2.0:
+                bus_status[i] = 0
 
-    branch_status = np.ones(num_branch)
-    for i in range(num_branch):
-        if fire_distance[num_bus+i] < 2.0:
-            branch_status[i] = 0
+        branch_status = np.ones(num_branch)
+        for i in range(num_branch):
+            if fire_distance[num_bus+i] < 2.0:
+                branch_status[i] = 0
 
-    branch_status = check_network_violations(bus_status, branch_status)
-    # print("bus status: ", bus_status)
-    # print("branch status: ", branch_status)
+        branch_status = self._check_network_violations(bus_status, branch_status)
+        # print("bus status: ", bus_status)
+        # print("branch status: ", branch_status)
 
-    ramp_value = np_action["generator_injection"]
-    selected_generators, generators_ramp = get_selected_generators_with_ramp(ramp_value, generators_current_output)
-    # print("selected generators: ", selected_generators)
-    generators_ramp = check_bus_generator_violation(bus_status, selected_generators, generators_ramp)
-    # print("generators ramp: ", generators_ramp)
+        nn_ramp = np_action["generator_injection"]
+        ramp = self._clip_ramp_values(nn_ramp, generators_current_output)
+        ramp = self._check_bus_generator_violation(bus_status, ramp)
+        # print("ramp: ", ramp)
 
-    # bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
-    # branch_status = np.ones(34, int)       # overwrite by dummy branch status (need to remove)
-    # selected_generators = np.array([24]*10)       # overwrite by dummy value (need to remove)
-    # generators_ramp = np.zeros(10, int)      # overwrite by dummy value (need to remove)
+        # bus_status = np.ones(24, int)          # overwrite by dummy bus status (need to remove)
+        # branch_status = np.ones(34, int)       # overwrite by dummy branch status (need to remove)
+        # generators_ramp = np.zeros(10, int)      # overwrite by dummy value (need to remove)
 
-    action = {
-        "bus_status": bus_status,
-        "branch_status": branch_status,
-        "generator_selector": selected_generators,
-        "generator_injection": generators_ramp,
-    }
+        action = {
+            "bus_status": bus_status,
+            "branch_status": branch_status,
+            "generator_selector": generators.get_generators(),
+            "generator_injection": ramp,
+        }
 
-    return action
+        return action
 
 
-def explore_network(ramp_value, noise_range = 1.0):
-    # bus status
-    # bus_status = np.squeeze(np.array(tf_action[0]))
-    # for i in range(bus_status.size):
-    #     total = bus_status[i] + random.uniform(-1 * noise_range, noise_range)
-    #     bus_status[i] = total if 0 <= total and total >= 1 else bus_status[i]
-    # print ("bus status: ", bus_status)
+    def explore_network(self, ramp_value, noise_range = 1.0):
+        # bus status
+        # bus_status = np.squeeze(np.array(tf_action[0]))
+        # for i in range(bus_status.size):
+        #     total = bus_status[i] + random.uniform(-1 * noise_range, noise_range)
+        # print ("bus status: ", bus_status)
 
-    # # branch status
-    # branch_status = np.squeeze(np.array(tf_action[1]))
-    # for i in range(branch_status.size):
-    #     total = branch_status[i] + random.uniform(-1 * noise_range, noise_range)
-    #     branch_status[i] = total if total >= 0 and total <=1 else branch_status[i]
-    # print ("branch status: ", branch_status)
+        # # branch status
+        # branch_status = np.squeeze(np.array(tf_action[1]))
+        # for i in range(branch_status.size):
+        #     total = branch_status[i] + random.uniform(-1 * noise_range, noise_range)
+        # print ("branch status: ", branch_status)
 
-    selected_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    selected_generators = np.copy(generators.get_generators()[selected_indices])
+        # amount of power for ramping up/down
+        for i in range(ramp_value.size):
+            ramp_value[i] = ramp_value[i] + random.uniform(-noise_range, noise_range)
+        ramp_value = np.clip(ramp_value, -1, +1)
+        print("ramp: ", ramp_value)
 
-    # amount of power for ramping up/down
-    for i, x in enumerate(ramp_value):
-        ramp_value[i] = ramp_value[i] + random.uniform(-noise_range, noise_range)
-        # ramp_value[i] = ramp_value[i] + random.gauss(0.0, 0.5)
-        # ramp_value[i] = ramp_value[i] + random.uniform(-(ramp_value[i] * 2), (ramp_value[i] * 2))
-    ramp_value = np.clip(ramp_value, -1, +1)
-    print("ramp: ", ramp_value)
+        action = {
+            "generator_injection": ramp_value,
+        }
 
-    action = {
-        "generator_selector": selected_generators,
-        "generator_injection": ramp_value,
-    }
+        return action
 
-    return action
 
+    def get_tf_state(self, state):
+        tf_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
+        tf_branch_status = tf.expand_dims(tf.convert_to_tensor(state["branch_status"]), 0)
+        # tf_fire_state = tf.expand_dims(tf.convert_to_tensor(state["fire_state"]), 0)
+        tf_fire_distance = tf.expand_dims(tf.convert_to_tensor(state["fire_distance"]), 0)
+        tf_generator_injection = tf.expand_dims(tf.convert_to_tensor(state["generator_injection"]), 0)
+        tf_load_demand = tf.expand_dims(tf.convert_to_tensor(state["load_demand"]), 0)
+        tf_theta = tf.expand_dims(tf.convert_to_tensor(state["theta"]), 0)
+
+        return [tf_bus_status, tf_branch_status, tf_fire_distance, tf_generator_injection, tf_load_demand, tf_theta]
+
+
+    def get_tf_critic_input(self, state, action):
+        st_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
+        st_branch_status = tf.expand_dims(tf.convert_to_tensor(state["branch_status"]), 0)
+        st_fire_state = tf.expand_dims(tf.convert_to_tensor(state["fire_state"]), 0)
+        st_generator_output = tf.expand_dims(tf.convert_to_tensor(state["generator_injection"]), 0)
+        st_load_demand = tf.expand_dims(tf.convert_to_tensor(state["load_demand"]), 0)
+        st_theta = tf.expand_dims(tf.convert_to_tensor(state["theta"]), 0)
+
+        act_bus_status = tf.expand_dims(tf.convert_to_tensor(action["bus_status"]), 0)
+        act_branch_status = tf.expand_dims(tf.convert_to_tensor(action["branch_status"]), 0)
+        act_generator_selector = tf.expand_dims(tf.convert_to_tensor(action["generator_selector"]), 0)
+        act_generator_injection = tf.expand_dims(tf.convert_to_tensor(action["generator_injection"]), 0)
+
+        return [st_bus_status, st_branch_status, st_fire_state, st_generator_output, st_load_demand, st_theta,
+                act_bus_status, act_branch_status, act_generator_selector, act_generator_injection]
 
 
 class Generators:
@@ -683,6 +644,8 @@ if __name__ == "__main__":
         writer = csv.writer(fd)
         writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
 
+    data_processor = DataProcessor()
+
     num_train = 0
     episodic_rewards = []
     explore_network_flag = True
@@ -695,43 +658,40 @@ if __name__ == "__main__":
         generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
-            tf_state = get_tf_state(state)
+            tf_state = data_processor.get_tf_state(state)
             tf_action = agent._actor(tf_state)
             print("tf ramp value: ", tf_action[0])
             # ramp_value = np.array(tf.squeeze(tf_action[0]))
             ramp_value = np.zeros(11)
-            net_action = explore_network(ramp_value)
-            env_action = check_violations(net_action, state["fire_distance"], state["generator_injection"])
+            net_action = data_processor.explore_network(ramp_value)
+            env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
             next_state, reward, done, _ =  env.step(env_action)
             # print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
-            penalty = -1 * np.sum(np.abs(net_action["generator_injection"])) * 100  # -1000 * net_action["generator_injection"][0] *  net_action["generator_injection"][0]
+            penalty = -1 * np.sum(np.abs(net_action["generator_injection"][0])) * 100  # -1000 * net_action["generator_injection"][0] *  net_action["generator_injection"][0]
             reward1 = [penalty, reward[1]]
             buffer.add_record((state, net_action, reward1, next_state))
 
-            # next_state["fire_distance"] = next_state["fire_distance"] /100
-
             episodic_reward += reward[0]
+            state = next_state
 
             if done or (step == max_steps_per_episode-1):
                 print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_reward}")
                 max_reached_step = step
                 break
 
-            state = next_state
+            if (buffer.get_num_records() > 0):
+                state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
+                critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)   # magnitude of gradient
 
-            if (buffer.current_record_size() > 0):
-                # if step % 5 == 0:
-                    state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
-                    critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)   # magnitude of gradient
+                num_train += 1
+                with critic_summary_writer.as_default():
+                    tf.summary.scalar('critic_loss', critic_loss, step=num_train)
+                    tf.summary.scalar('reward_value', reward_value, step=num_train)
+                    tf.summary.scalar('critic_value', critic_value, step=num_train)
 
-                    num_train += 1
-                    with critic_summary_writer.as_default():
-                        tf.summary.scalar('critic_loss', critic_loss, step=num_train)
-                        tf.summary.scalar('reward_value', reward_value, step=num_train)
-                        tf.summary.scalar('critic_value', critic_value, step=num_train)
-
+        # explore / Testing
         if episode and (episode % 50 == 0):
             print ("Start testing network at: ", episode)
             explore_network_flag = False
@@ -739,22 +699,20 @@ if __name__ == "__main__":
             print ("Start exploring network at: ", episode)
             explore_network_flag = True
 
-        episodic_rewards.append(episodic_reward)
-        avg_reward = np.mean(episodic_rewards[-25:])        # calculate moving average
-
+        # save update in csv file
         with open(f'fire_power_reward_list_v{save_model_version}.csv', 'a') as fd:
             writer = csv.writer(fd)
             writer.writerow([str(save_model_version), str(episode), str(max_reached_step), str(episodic_reward)])
 
-        # save model weights
-        if (episode % 10 == 0) and save_model:
-            agent.save_weight(version=save_model_version, episode_num=episode)
-
         # save logs
         if (episode % 5 == 0) and save_model:
             log_file = open("saved_model/reward_log.txt", "a")
-            log_file.write(f"Episode: V{save_model_version}_{episode}, Reward: {episodic_reward}, Avg reward: {avg_reward}\n")
+            log_file.write(f"Episode: V{save_model_version}_{episode}, Reward: {episodic_reward}\n")
             log_file.close()
+
+        # save model weights
+        if (episode % 10 == 0) and save_model:
+            agent.save_weight(version=save_model_version, episode_num=episode)
 
         # save replay buffer
         if (episode % 10 == 0) and save_replay_buffer:

@@ -196,7 +196,7 @@ class Agent:
 
 
 class ReplayBuffer:
-    def __init__(self, state_spaces, action_spaces, load_replay_buffer=False, buffer_capacity=200000, batch_size=256):
+    def __init__(self, state_spaces, action_spaces, load_replay_buffer=False, load_replay_buffer_version=0, buffer_capacity=200000, batch_size=256):
         self._counter = 0
         self._capacity = buffer_capacity
         self._batch_size = batch_size
@@ -204,7 +204,7 @@ class ReplayBuffer:
         if load_replay_buffer == False:
             self._initialize_buffer(state_spaces, action_spaces)
         else:
-            self._load_buffer()
+            self._load_buffer(load_replay_buffer_version)
 
 
     def _initialize_buffer(self, state_spaces, action_spaces):
@@ -231,53 +231,53 @@ class ReplayBuffer:
         self.np_counter = np.zeros((1))
 
 
-    def save_buffer(self):
-        np.save(f'replay_buffer/st_bus_v{save_replay_buffer_version}.npy', self.st_bus)
-        np.save(f'replay_buffer/st_branch_v{save_replay_buffer_version}.npy', self.st_branch)
-        np.save(f'replay_buffer/st_fire_distance_v{save_replay_buffer_version}.npy', self.st_fire_distance)
-        np.save(f'replay_buffer/st_gen_output_v{save_replay_buffer_version}.npy', self.st_gen_output)
-        np.save(f'replay_buffer/st_load_demand_v{save_replay_buffer_version}.npy', self.st_load_demand)
-        np.save(f'replay_buffer/st_theta_v{save_replay_buffer_version}.npy', self.st_theta)
+    def save_buffer(self, version):
+        np.save(f'replay_buffer/st_bus_v{version}.npy', self.st_bus)
+        np.save(f'replay_buffer/st_branch_v{version}.npy', self.st_branch)
+        np.save(f'replay_buffer/st_fire_distance_v{version}.npy', self.st_fire_distance)
+        np.save(f'replay_buffer/st_gen_output_v{version}.npy', self.st_gen_output)
+        np.save(f'replay_buffer/st_load_demand_v{version}.npy', self.st_load_demand)
+        np.save(f'replay_buffer/st_theta_v{version}.npy', self.st_theta)
 
         # np.save(f'replay_buffer/act_bus_v{save_replay_buffer_version}.npy', self.act_bus)
         # np.save(f'replay_buffer/act_branch_v{save_replay_buffer_version}.npy', self.act_branch)
-        np.save(f'replay_buffer/act_gen_injection_v{save_replay_buffer_version}.npy', self.act_gen_injection)
+        np.save(f'replay_buffer/act_gen_injection_v{version}.npy', self.act_gen_injection)
 
-        np.save(f'replay_buffer/rewards_v{save_replay_buffer_version}.npy', self.rewards)
+        np.save(f'replay_buffer/rewards_v{version}.npy', self.rewards)
 
-        np.save(f'replay_buffer/next_st_bus_v{save_replay_buffer_version}.npy', self.next_st_bus)
-        np.save(f'replay_buffer/next_st_branch_v{save_replay_buffer_version}.npy', self.next_st_branch)
-        np.save(f'replay_buffer/next_st_fire_distance_v{save_replay_buffer_version}.npy', self.next_st_fire_distance)
-        np.save(f'replay_buffer/next_st_gen_output_v{save_replay_buffer_version}.npy', self.next_st_gen_output)
-        np.save(f'replay_buffer/next_st_load_demand_v{save_replay_buffer_version}.npy', self.next_st_load_demand)
-        np.save(f'replay_buffer/next_st_theta_v{save_replay_buffer_version}.npy', self.next_st_theta)
+        np.save(f'replay_buffer/next_st_bus_v{version}.npy', self.next_st_bus)
+        np.save(f'replay_buffer/next_st_branch_v{version}.npy', self.next_st_branch)
+        np.save(f'replay_buffer/next_st_fire_distance_v{version}.npy', self.next_st_fire_distance)
+        np.save(f'replay_buffer/next_st_gen_output_v{version}.npy', self.next_st_gen_output)
+        np.save(f'replay_buffer/next_st_load_demand_v{version}.npy', self.next_st_load_demand)
+        np.save(f'replay_buffer/next_st_theta_v{version}.npy', self.next_st_theta)
 
         self.np_counter[0] = self._counter
-        np.save(f'replay_buffer/counter_v{save_replay_buffer_version}.npy', self.np_counter)
+        np.save(f'replay_buffer/counter_v{version}.npy', self.np_counter)
 
 
-    def _load_buffer(self):
-        self.st_bus = np.load(f'replay_buffer/st_bus_v{load_replay_buffer_version}.npy')
-        self.st_branch = np.load(f'replay_buffer/st_branch_v{load_replay_buffer_version}.npy')
-        self.st_fire_distance = np.load(f'replay_buffer/st_fire_distance_v{load_replay_buffer_version}.npy')
-        self.st_gen_output = np.load(f'replay_buffer/st_gen_output_v{load_replay_buffer_version}.npy')
-        self.st_load_demand = np.load(f'replay_buffer/st_load_demand_v{load_replay_buffer_version}.npy')
-        self.st_theta = np.load(f'replay_buffer/st_theta_v{load_replay_buffer_version}.npy')
+    def _load_buffer(self, version):
+        self.st_bus = np.load(f'replay_buffer/st_bus_v{version}.npy')
+        self.st_branch = np.load(f'replay_buffer/st_branch_v{version}.npy')
+        self.st_fire_distance = np.load(f'replay_buffer/st_fire_distance_v{version}.npy')
+        self.st_gen_output = np.load(f'replay_buffer/st_gen_output_v{version}.npy')
+        self.st_load_demand = np.load(f'replay_buffer/st_load_demand_v{version}.npy')
+        self.st_theta = np.load(f'replay_buffer/st_theta_v{version}.npy')
 
         # self.act_bus = np.load(f'replay_buffer/act_bus_v{load_replay_buffer_version}.npy')
         # self.act_branch = np.load(f'replay_buffer/act_branch_v{load_replay_buffer_version}.npy')
-        self.act_gen_injection = np.load(f'replay_buffer/act_gen_injection_v{load_replay_buffer_version}.npy')
+        self.act_gen_injection = np.load(f'replay_buffer/act_gen_injection_v{version}.npy')
 
-        self.rewards = np.load(f'replay_buffer/rewards_v{load_replay_buffer_version}.npy')
+        self.rewards = np.load(f'replay_buffer/rewards_v{version}.npy')
 
-        self.next_st_bus = np.load(f'replay_buffer/next_st_bus_v{load_replay_buffer_version}.npy')
-        self.next_st_branch = np.load(f'replay_buffer/next_st_branch_v{load_replay_buffer_version}.npy')
-        self.next_st_fire_distance = np.load(f'replay_buffer/next_st_fire_distance_v{load_replay_buffer_version}.npy')
-        self.next_st_gen_output = np.load(f'replay_buffer/next_st_gen_output_v{load_replay_buffer_version}.npy')
-        self.next_st_load_demand = np.load(f'replay_buffer/next_st_load_demand_v{load_replay_buffer_version}.npy')
-        self.next_st_theta = np.load(f'replay_buffer/next_st_theta_v{load_replay_buffer_version}.npy')
+        self.next_st_bus = np.load(f'replay_buffer/next_st_bus_v{version}.npy')
+        self.next_st_branch = np.load(f'replay_buffer/next_st_branch_v{version}.npy')
+        self.next_st_fire_distance = np.load(f'replay_buffer/next_st_fire_distance_v{version}.npy')
+        self.next_st_gen_output = np.load(f'replay_buffer/next_st_gen_output_v{version}.npy')
+        self.next_st_load_demand = np.load(f'replay_buffer/next_st_load_demand_v{version}.npy')
+        self.next_st_theta = np.load(f'replay_buffer/next_st_theta_v{version}.npy')
 
-        self.np_counter = np.load(f'replay_buffer/counter_v{load_replay_buffer_version}.npy')
+        self.np_counter = np.load(f'replay_buffer/counter_v{version}.npy')
         self._counter = int(self.np_counter[0])
         print("Replay buffer loaded successfully!")
         print("Counter set at: ", self._counter)
@@ -418,7 +418,7 @@ class DataProcessor:
         nn_ramp = np_action["generator_injection"]
         ramp = self._clip_ramp_values(nn_ramp, generators_current_output)
         ramp = self._check_bus_generator_violation(bus_status, ramp)
-        # print("ramp: ", ramp)
+        print("ramp: ", ramp)
 
         # generators_ramp = np.zeros(11, int)      # overwrite by dummy value (need to remove)
 
@@ -451,7 +451,7 @@ class DataProcessor:
             if explore_network:
                 nn_ramp[i] = nn_ramp[i] + random.uniform(-noise_range, noise_range)
         nn_ramp = np.clip(nn_ramp, -1, +1)
-        print("ramp: ", nn_ramp)
+        # print("ramp: ", nn_ramp)
 
         action = {
             "generator_injection": nn_ramp,
@@ -632,10 +632,8 @@ if __name__ == "__main__":
     load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
-
-    total_episode = 100001
-    max_steps_per_episode = 300
-    buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, 200000, 1024)
+    buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version,
+                          buffer_capacity=200000, batch_size=1024)
 
     with open(f'fire_power_reward_list_v{save_model_version}.csv', 'w') as fd:
         writer = csv.writer(fd)
@@ -644,6 +642,8 @@ if __name__ == "__main__":
     num_train = 0
     episodic_rewards = []
     explore_network_flag = True
+    max_steps_per_episode = 300
+    total_episode = 100001
 
     for episode in range(total_episode):
         state = env.reset()
@@ -657,13 +657,13 @@ if __name__ == "__main__":
             nn_action = agent._actor(tf_state)
             print("NN ramp: ", nn_action[0])
 
-            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=1.0)
+            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=1.1)
             env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
             next_state, reward, done, _ =  env.step(env_action)
-            # print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
-            penalty = -1 * np.sum(np.abs(net_action["generator_injection"][0])) * 100  # -1000 * net_action["generator_injection"][0] *  net_action["generator_injection"][0]
+            penalty = reward[0] # - 1 * np.sum(np.abs(net_action["generator_injection"])) * 100  # -1000 * net_action["generator_injection"][0] *  net_action["generator_injection"][0]
             reward1 = [penalty, reward[1]]
             buffer.add_record((state, net_action, reward1, next_state))
 
@@ -675,7 +675,7 @@ if __name__ == "__main__":
                 max_reached_step = step
                 break
 
-            if (buffer.get_num_records() > 0):
+            if (buffer.get_num_records() > 300):
                 state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
                 critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)   # magnitude of gradient
 
@@ -711,4 +711,4 @@ if __name__ == "__main__":
         # save replay buffer
         if (episode % 10 == 0) and save_replay_buffer:
             print(f"Saving replay buffer at: {episode}")
-            buffer.save_buffer()
+            buffer.save_buffer(save_replay_buffer_version)

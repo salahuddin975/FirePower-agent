@@ -626,7 +626,7 @@ if __name__ == "__main__":
     data_processor = DataProcessor(state_spaces, action_spaces)
 
     # save trained model to reuse
-    save_model = False
+    save_model = True
     load_model = False
     save_model_version = 0
     load_model_version = 0
@@ -635,7 +635,7 @@ if __name__ == "__main__":
     if load_model:
         agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
-    save_replay_buffer = False
+    save_replay_buffer = True
     load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
@@ -664,7 +664,7 @@ if __name__ == "__main__":
             nn_action = agent._actor(tf_state)
             # print("NN generator output: ", nn_action[0])
 
-            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=1.1)
+            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=0.1)
             env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
             next_state, reward, done, _ =  env.step(env_action)

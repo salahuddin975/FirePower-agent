@@ -126,8 +126,8 @@ class Agent:
         # theta_input1 = layers.Dense(32, activation="tanh") (theta_input)
 
         state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input])
-        hidden = layers.Dense(128, activation="tanh") (state)
-        hidden = layers.Dense(64, activation="tanh") (hidden)
+        hidden = layers.Dense(128, activation="relu") (state)
+        hidden = layers.Dense(64, activation="relu") (hidden)
         # hidden = layers.Dense(512, activation="relu") (hidden)
 
         # bus -> MultiBinary(24)
@@ -137,7 +137,7 @@ class Agent:
         # branch_output = layers.Dense(action_space[1], activation="sigmoid") (hidden)
 
         # generator_injection (generator output) -> Box(5, )
-        gen_inj_output = layers.Dense(self._action_spaces[3], activation="tanh") (hidden)
+        gen_inj_output = layers.Dense(self._action_spaces[3], activation="sigmoid") (hidden)
 
         model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input],
                                [gen_inj_output])
@@ -363,13 +363,20 @@ class DataProcessor:
 
         return branch_status
 
-    def _clip_ramp_values(self, nn_ramp, generators_output):
+    def _clip_ramp_values(self, nn_output, generators_output):
         # print("generators current output: ", generators_output)
+
+        max_output = generators.get_max_outputs()
+        net_output = nn_output * max_output
+        # print ("network output: ", net_output)
 
         generators_current_output = np.zeros(generators.get_size())
         for i in range(generators.get_size()):
             generators_current_output[i] = generators_output[generators.get_generators()[i]]
         # print("generators current output: ", generators_current_output)
+
+        nn_ramp = net_output - generators_current_output
+        # print("nn ramp: ", nn_ramp)
 
         generators_max_output = generators.get_max_outputs()
         generators_max_ramp = generators.get_max_ramps()
@@ -450,7 +457,7 @@ class DataProcessor:
         for i in range(nn_ramp.size):
             if explore_network:
                 nn_ramp[i] = nn_ramp[i] + random.uniform(-noise_range, noise_range)
-        nn_ramp = np.clip(nn_ramp, -1, +1)
+        nn_ramp = np.clip(nn_ramp, 0, 1)
         # print("ramp: ", nn_ramp)
 
         action = {
@@ -655,7 +662,7 @@ if __name__ == "__main__":
         for step in range(max_steps_per_episode):
             tf_state = data_processor.get_tf_state(state)
             nn_action = agent._actor(tf_state)
-            print("NN ramp: ", nn_action[0])
+            # print("NN generator output: ", nn_action[0])
 
             net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=1.1)
             env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])

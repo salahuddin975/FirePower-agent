@@ -712,10 +712,10 @@ if __name__ == "__main__":
             log_file.close()
 
         # save model weights
-        if (episode % 10 == 0) and save_model:
+        if (episode % 50 == 0) and save_model:
             agent.save_weight(version=save_model_version, episode_num=episode)
 
         # save replay buffer
-        if (episode % 10 == 0) and save_replay_buffer:
+        if (episode % 25 == 0) and save_replay_buffer:
             print(f"Saving replay buffer at: {episode}")
             buffer.save_buffer(save_replay_buffer_version)

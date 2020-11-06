@@ -25,15 +25,15 @@ np.random.seed(seed_value)
 tf.random.set_seed(seed_value)
 
 current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-actor_log_dir = 'logs/' + current_time + '/actor'
+agent_log_dir = 'logs/' + current_time + '/agent'
 citic_log_dir = 'logs/' + current_time + '/critic'
-actor_summary_writer = tf.summary.create_file_writer(actor_log_dir)
+agent_summary_writer = tf.summary.create_file_writer(agent_log_dir)
 critic_summary_writer = tf.summary.create_file_writer(citic_log_dir)
 
 
 class Agent:
     def __init__(self, state_spaces, action_spaces):
-        self._gamma = 0.0      # discount factor
+        self._gamma = 0.9      # discount factor
         self._tau = 0.05       # used to update target network
         actor_lr = 0.001
         critic_lr = 0.002
@@ -126,8 +126,8 @@ class Agent:
         # theta_input1 = layers.Dense(32, activation="tanh") (theta_input)
 
         state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input])
-        hidden = layers.Dense(128, activation="relu") (state)
-        hidden = layers.Dense(64, activation="relu") (hidden)
+        hidden = layers.Dense(128, activation="sigmoid") (state)
+        hidden = layers.Dense(64, activation="sigmoid") (hidden)
         # hidden = layers.Dense(512, activation="relu") (hidden)
 
         # bus -> MultiBinary(24)
@@ -196,7 +196,7 @@ class Agent:
 
 
 class ReplayBuffer:
-    def __init__(self, state_spaces, action_spaces, load_replay_buffer=False, load_replay_buffer_version=0, buffer_capacity=200000, batch_size=256):
+    def __init__(self, state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_dir, load_replay_buffer_version=0, buffer_capacity=200000, batch_size=256):
         self._counter = 0
         self._capacity = buffer_capacity
         self._batch_size = batch_size
@@ -204,7 +204,7 @@ class ReplayBuffer:
         if load_replay_buffer == False:
             self._initialize_buffer(state_spaces, action_spaces)
         else:
-            self._load_buffer(load_replay_buffer_version)
+            self._load_buffer(load_replay_buffer_dir, load_replay_buffer_version)
 
 
     def _initialize_buffer(self, state_spaces, action_spaces):
@@ -256,28 +256,28 @@ class ReplayBuffer:
         np.save(f'replay_buffer/counter_v{version}.npy', self.np_counter)
 
 
-    def _load_buffer(self, version):
-        self.st_bus = np.load(f'replay_buffer/st_bus_v{version}.npy')
-        self.st_branch = np.load(f'replay_buffer/st_branch_v{version}.npy')
-        self.st_fire_distance = np.load(f'replay_buffer/st_fire_distance_v{version}.npy')
-        self.st_gen_output = np.load(f'replay_buffer/st_gen_output_v{version}.npy')
-        self.st_load_demand = np.load(f'replay_buffer/st_load_demand_v{version}.npy')
-        self.st_theta = np.load(f'replay_buffer/st_theta_v{version}.npy')
+    def _load_buffer(self, load_buffer_dir, version):
+        self.st_bus = np.load(f'{load_buffer_dir}/st_bus_v{version}.npy')
+        self.st_branch = np.load(f'{load_buffer_dir}/st_branch_v{version}.npy')
+        self.st_fire_distance = np.load(f'{load_buffer_dir}/st_fire_distance_v{version}.npy')
+        self.st_gen_output = np.load(f'{load_buffer_dir}/st_gen_output_v{version}.npy')
+        self.st_load_demand = np.load(f'{load_buffer_dir}/st_load_demand_v{version}.npy')
+        self.st_theta = np.load(f'{load_buffer_dir}/st_theta_v{version}.npy')
 
         # self.act_bus = np.load(f'replay_buffer/act_bus_v{load_replay_buffer_version}.npy')
         # self.act_branch = np.load(f'replay_buffer/act_branch_v{load_replay_buffer_version}.npy')
-        self.act_gen_injection = np.load(f'replay_buffer/act_gen_injection_v{version}.npy')
+        self.act_gen_injection = np.load(f'{load_buffer_dir}/act_gen_injection_v{version}.npy')
 
-        self.rewards = np.load(f'replay_buffer/rewards_v{version}.npy')
+        self.rewards = np.load(f'{load_buffer_dir}/rewards_v{version}.npy')
 
-        self.next_st_bus = np.load(f'replay_buffer/next_st_bus_v{version}.npy')
-        self.next_st_branch = np.load(f'replay_buffer/next_st_branch_v{version}.npy')
-        self.next_st_fire_distance = np.load(f'replay_buffer/next_st_fire_distance_v{version}.npy')
-        self.next_st_gen_output = np.load(f'replay_buffer/next_st_gen_output_v{version}.npy')
-        self.next_st_load_demand = np.load(f'replay_buffer/next_st_load_demand_v{version}.npy')
-        self.next_st_theta = np.load(f'replay_buffer/next_st_theta_v{version}.npy')
+        self.next_st_bus = np.load(f'{load_buffer_dir}/next_st_bus_v{version}.npy')
+        self.next_st_branch = np.load(f'{load_buffer_dir}/next_st_branch_v{version}.npy')
+        self.next_st_fire_distance = np.load(f'{load_buffer_dir}/next_st_fire_distance_v{version}.npy')
+        self.next_st_gen_output = np.load(f'{load_buffer_dir}/next_st_gen_output_v{version}.npy')
+        self.next_st_load_demand = np.load(f'{load_buffer_dir}/next_st_load_demand_v{version}.npy')
+        self.next_st_theta = np.load(f'{load_buffer_dir}/next_st_theta_v{version}.npy')
 
-        self.np_counter = np.load(f'replay_buffer/counter_v{version}.npy')
+        self.np_counter = np.load(f'{load_buffer_dir}/counter_v{version}.npy')
         self._counter = int(self.np_counter[0])
         print("Replay buffer loaded successfully!")
         print("Counter set at: ", self._counter)
@@ -364,7 +364,8 @@ class DataProcessor:
         return branch_status
 
     def _clip_ramp_values(self, nn_output, generators_output):
-        # print("generators current output: ", generators_output)
+        # print("generators output: ", generators_output)
+        # print("nn ratio output: ", nn_output)
 
         max_output = generators.get_max_outputs()
         net_output = nn_output * max_output
@@ -375,12 +376,11 @@ class DataProcessor:
             generators_current_output[i] = generators_output[generators.get_generators()[i]]
         # print("generators current output: ", generators_current_output)
 
-        nn_ramp = net_output - generators_current_output
         # print("nn ramp: ", nn_ramp)
 
         generators_max_output = generators.get_max_outputs()
         generators_max_ramp = generators.get_max_ramps()
-        ramp = generators_max_ramp * nn_ramp
+        ramp = net_output - generators_current_output
         # print("generators initial ramp: ", ramp)
 
         for i in range(ramp.size):
@@ -626,7 +626,7 @@ if __name__ == "__main__":
     data_processor = DataProcessor(state_spaces, action_spaces)
 
     # save trained model to reuse
-    save_model = True
+    save_model = False
     load_model = False
     save_model_version = 0
     load_model_version = 0
@@ -635,22 +635,25 @@ if __name__ == "__main__":
     if load_model:
         agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
-    save_replay_buffer = True
-    load_replay_buffer = False
+    save_replay_buffer = False
     save_replay_buffer_version = 0
+
+    load_replay_buffer = False
     load_replay_buffer_version = 0
-    buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version,
+    load_replay_buffer_dir = "replay_buffer"
+
+    buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_dir, load_replay_buffer_version,
                           buffer_capacity=200000, batch_size=1024)
 
     with open(f'fire_power_reward_list_v{save_model_version}.csv', 'w') as fd:
         writer = csv.writer(fd)
         writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
 
-    num_train = 0
-    episodic_rewards = []
-    explore_network_flag = True
-    max_steps_per_episode = 300
     total_episode = 100001
+    max_steps_per_episode = 300
+    num_train_per_episode = 1
+    episodic_rewards = []
+    explore_network_flag = False
 
     for episode in range(total_episode):
         state = env.reset()
@@ -664,7 +667,7 @@ if __name__ == "__main__":
             nn_action = agent._actor(tf_state)
             # print("NN generator output: ", nn_action[0])
 
-            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=0.1)
+            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=1.0)
             env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
             next_state, reward, done, _ =  env.step(env_action)
@@ -682,15 +685,19 @@ if __name__ == "__main__":
                 max_reached_step = step
                 break
 
-            if (buffer.get_num_records() > 300):
-                state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
-                critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)   # magnitude of gradient
+        # if (buffer.get_num_records() > 300):
+        print ("Train at: ", episode)
+        for i in range(num_train_per_episode):
+            state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
+            critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)   # magnitude of gradient
 
-                num_train += 1
-                with critic_summary_writer.as_default():
-                    tf.summary.scalar('critic_loss', critic_loss, step=num_train)
-                    tf.summary.scalar('reward_value', reward_value, step=num_train)
-                    tf.summary.scalar('critic_value', critic_value, step=num_train)
+            with critic_summary_writer.as_default():
+                tf.summary.scalar('critic_loss', critic_loss, step=i + episode*num_train_per_episode)
+                tf.summary.scalar('reward_value', reward_value, step=i + episode*num_train_per_episode)
+                tf.summary.scalar('critic_value', critic_value, step=i + episode*num_train_per_episode)
+
+        with agent_summary_writer.as_default():
+            tf.summary.scalar("episodic_reward", episodic_reward, step=episode)
 
         # explore / Testing
         if episode and (episode % 50 == 0):
@@ -698,7 +705,7 @@ if __name__ == "__main__":
             explore_network_flag = False
         if episode and (episode % 50 == 5):
             print ("Start exploring network at: ", episode)
-            explore_network_flag = True
+            explore_network_flag = False
 
         # save update in csv file
         with open(f'fire_power_reward_list_v{save_model_version}.csv', 'a') as fd:
@@ -712,10 +719,10 @@ if __name__ == "__main__":
             log_file.close()
 
         # save model weights
-        if (episode % 50 == 0) and save_model:
+        if (episode % 10 == 0) and save_model:
             agent.save_weight(version=save_model_version, episode_num=episode)
 
         # save replay buffer
-        if (episode % 25 == 0) and save_replay_buffer:
+        if (episode % 10 == 0) and save_replay_buffer:
             print(f"Saving replay buffer at: {episode}")
             buffer.save_buffer(save_replay_buffer_version)

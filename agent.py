@@ -653,7 +653,7 @@ if __name__ == "__main__":
     max_steps_per_episode = 300
     num_train_per_episode = 1
     episodic_rewards = []
-    explore_network_flag = False
+    explore_network_flag = True
 
     for episode in range(total_episode):
         state = env.reset()

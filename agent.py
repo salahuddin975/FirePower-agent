@@ -712,7 +712,7 @@ if __name__ == "__main__":
             explore_network_flag = False
         if episode and (episode % 50 == 5):
             print ("Start exploring network at: ", episode)
-            explore_network_flag = False
+            explore_network_flag = True
 
         # save update in csv file
         with open(f'fire_power_reward_list_v{save_model_version}.csv', 'a') as fd:

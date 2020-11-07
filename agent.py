@@ -33,7 +33,7 @@ critic_summary_writer = tf.summary.create_file_writer(citic_log_dir)
 
 class Agent:
     def __init__(self, state_spaces, action_spaces):
-        self._gamma = 0.9      # discount factor
+        self._gamma = 0.0      # discount factor
         self._tau = 0.05       # used to update target network
         actor_lr = 0.001
         critic_lr = 0.002
@@ -65,19 +65,23 @@ class Agent:
         print("weights are loaded successfully!")
 
     def train(self, state_batch, action_batch, reward_batch, next_state_batch):
+        action_batch1 = [action_batch[0], action_batch[1]]
         # update critic network
         with tf.GradientTape() as tape:
             target_actions = self._target_actor(next_state_batch)
-            y = reward_batch + self._gamma * self._target_critic([next_state_batch, target_actions])
+            action_batch1.append(target_actions)
+            y = reward_batch + self._gamma * self._target_critic([next_state_batch, action_batch1])
             critic_value = self._critic([state_batch, action_batch])
             critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
         critic_grad = tape.gradient(critic_loss, self._critic.trainable_variables)
         self._critic_optimizer.apply_gradients(zip(critic_grad, self._critic.trainable_variables))
 
+        action_batch1.pop()
         # update actor network
         with tf.GradientTape() as tape:
             actions = self._actor(state_batch)
-            critic_value1 = self._critic([state_batch, actions])
+            action_batch1.append(actions)
+            critic_value1 = self._critic([state_batch, action_batch1])
             actor_loss = -1 * tf.math.reduce_mean(critic_value1)
         actor_grad = tape.gradient(actor_loss, self._actor.trainable_variables)
         self._actor_optimizer.apply_gradients(zip(actor_grad, self._actor.trainable_variables))
@@ -170,11 +174,11 @@ class Agent:
         # st_theta1 = layers.Dense(30, activation="relu") (st_theta)
 
         # bus -> MultiBinary(24)
-        # act_bus = layers.Input(shape=(action_spaces[0],))
+        act_bus = layers.Input(shape=(action_spaces[0],))
         # act_bus1 = layers.Dense(30, activation="relu") (act_bus)
         #
         # # num_branch -> MultiBinary(34)
-        # act_branch = layers.Input(shape=(action_spaces[1],))
+        act_branch = layers.Input(shape=(action_spaces[1],))
         # act_branch1 = layers.Dense(30, activation="relu") (act_branch)
 
         # generator_injection -> Box(5, )
@@ -182,7 +186,8 @@ class Agent:
         # act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
 
         # state = layers.Concatenate() ([st_bus, act_gen_injection])
-        state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, act_gen_injection])
+        state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
+                                       act_bus, act_branch, act_gen_injection])
         # action = layers.Concatenate() ([act_gen_injection1])
         # hidden = layers.Concatenate() ([state, act_gen_injection1])
 
@@ -191,7 +196,7 @@ class Agent:
         reward = layers.Dense(1, activation="linear") (hidden)
 
         model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
-                                act_gen_injection], reward)
+                                act_bus, act_branch, act_gen_injection], reward)
         return model
 
 
@@ -215,8 +220,8 @@ class ReplayBuffer:
         self.st_load_demand = np.zeros((self._capacity, state_spaces[4]))
         self.st_theta = np.zeros((self._capacity, state_spaces[5]))
 
-        # self.act_bus = np.zeros((self.capacity, action_spaces[0]))
-        # self.act_branch = np.zeros((self.capacity, action_spaces[1]))
+        self.act_bus = np.zeros((self._capacity, action_spaces[0]))
+        self.act_branch = np.zeros((self._capacity, action_spaces[1]))
         self.act_gen_injection = np.zeros((self._capacity, action_spaces[3]))
 
         self.rewards = np.zeros((self._capacity, 1))
@@ -239,8 +244,8 @@ class ReplayBuffer:
         np.save(f'replay_buffer/st_load_demand_v{version}.npy', self.st_load_demand)
         np.save(f'replay_buffer/st_theta_v{version}.npy', self.st_theta)
 
-        # np.save(f'replay_buffer/act_bus_v{save_replay_buffer_version}.npy', self.act_bus)
-        # np.save(f'replay_buffer/act_branch_v{save_replay_buffer_version}.npy', self.act_branch)
+        np.save(f'replay_buffer/act_bus_v{save_replay_buffer_version}.npy', self.act_bus)
+        np.save(f'replay_buffer/act_branch_v{save_replay_buffer_version}.npy', self.act_branch)
         np.save(f'replay_buffer/act_gen_injection_v{version}.npy', self.act_gen_injection)
 
         np.save(f'replay_buffer/rewards_v{version}.npy', self.rewards)
@@ -264,8 +269,8 @@ class ReplayBuffer:
         self.st_load_demand = np.load(f'{load_buffer_dir}/st_load_demand_v{version}.npy')
         self.st_theta = np.load(f'{load_buffer_dir}/st_theta_v{version}.npy')
 
-        # self.act_bus = np.load(f'replay_buffer/act_bus_v{load_replay_buffer_version}.npy')
-        # self.act_branch = np.load(f'replay_buffer/act_branch_v{load_replay_buffer_version}.npy')
+        self.act_bus = np.load(f'replay_buffer/act_bus_v{load_replay_buffer_version}.npy')
+        self.act_branch = np.load(f'replay_buffer/act_branch_v{load_replay_buffer_version}.npy')
         self.act_gen_injection = np.load(f'{load_buffer_dir}/act_gen_injection_v{version}.npy')
 
         self.rewards = np.load(f'{load_buffer_dir}/rewards_v{version}.npy')
@@ -297,8 +302,10 @@ class ReplayBuffer:
         self.st_load_demand[index] = np.copy(record[0]["load_demand"])
         self.st_theta[index] = np.copy(record[0]["theta"])
 
-        # self.act_bus[index] = np.copy(record[1]["bus_status"])
-        # self.act_branch[index] = np.copy(record[1]["branch_status"])
+        # use data from heuristic
+        self.act_bus[index] = np.copy(record[4]["bus_status"])
+        self.act_branch[index] = np.copy(record[4]["branch_status"])
+        # use data from NN actor
         self.act_gen_injection[index] = np.copy(record[1]["generator_injection"])
 
         self.rewards[index] = record[2][0]
@@ -324,8 +331,8 @@ class ReplayBuffer:
         st_tf_load_demand = tf.convert_to_tensor(self.st_load_demand[batch_indices])
         st_tf_theta = tf.convert_to_tensor(self.st_theta[batch_indices])
 
-        # act_tf_bus = tf.convert_to_tensor(self.act_bus[batch_indices])
-        # act_tf_branch = tf.convert_to_tensor(self.act_branch[batch_indices])
+        act_tf_bus = tf.convert_to_tensor(self.act_bus[batch_indices])
+        act_tf_branch = tf.convert_to_tensor(self.act_branch[batch_indices])
         act_tf_gen_injection = tf.convert_to_tensor(self.act_gen_injection[batch_indices])
 
         reward_batch = tf.convert_to_tensor(self.rewards[batch_indices], dtype=tf.float32)
@@ -338,7 +345,7 @@ class ReplayBuffer:
         next_st_tf_theta = tf.convert_to_tensor(self.next_st_theta[batch_indices])
 
         state_batch = [st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta]
-        action_batch = [act_tf_gen_injection]
+        action_batch = [act_tf_bus, act_tf_branch, act_tf_gen_injection]
         next_state_batch = [next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance, next_st_tf_gen_output,
                                     next_st_tf_load_demand, next_st_tf_theta]
 
@@ -650,7 +657,7 @@ if __name__ == "__main__":
         writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
 
     total_episode = 100001
-    max_steps_per_episode = 300
+    max_steps_per_episode = 150
     num_train_per_episode = 1
     episodic_rewards = []
     explore_network_flag = True
@@ -665,7 +672,7 @@ if __name__ == "__main__":
         for step in range(max_steps_per_episode):
             tf_state = data_processor.get_tf_state(state)
             nn_action = agent._actor(tf_state)
-            # print("NN generator output: ", nn_action[0])
+            print("NN generator output: ", nn_action[0])
 
             net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=1.0)
             env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
@@ -675,7 +682,7 @@ if __name__ == "__main__":
 
             penalty = reward[0] # - 1 * np.sum(np.abs(net_action["generator_injection"])) * 100  # -1000 * net_action["generator_injection"][0] *  net_action["generator_injection"][0]
             reward1 = [penalty, reward[1]]
-            buffer.add_record((state, net_action, reward1, next_state))
+            buffer.add_record((state, net_action, reward1, next_state, env_action))
 
             episodic_reward += reward[0]
             state = next_state
@@ -686,11 +693,11 @@ if __name__ == "__main__":
                 break
 
         # if (buffer.get_num_records() > 300):
-        print ("Train at: ", episode)
-        for i in range(num_train_per_episode):
+        # print ("Train at: ", episode)
+        # for i in range(num_train_per_episode):
             state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
             critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)   # magnitude of gradient
-
+            i = step
             with critic_summary_writer.as_default():
                 tf.summary.scalar('critic_loss', critic_loss, step=i + episode*num_train_per_episode)
                 tf.summary.scalar('reward_value', reward_value, step=i + episode*num_train_per_episode)

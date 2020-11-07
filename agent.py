@@ -33,7 +33,7 @@ critic_summary_writer = tf.summary.create_file_writer(citic_log_dir)
 
 class Agent:
     def __init__(self, state_spaces, action_spaces):
-        self._gamma = 9.0      # discount factor
+        self._gamma = 0.9      # discount factor
         self._tau = 0.05       # used to update target network
         actor_lr = 0.001
         critic_lr = 0.002
@@ -658,7 +658,7 @@ if __name__ == "__main__":
 
     total_episode = 100001
     max_steps_per_episode = 300
-    num_train_per_episode = 1
+    num_train_per_episode = 300
     episodic_rewards = []
     explore_network_flag = True
 
@@ -707,10 +707,10 @@ if __name__ == "__main__":
             tf.summary.scalar("episodic_reward", episodic_reward, step=episode)
 
         # explore / Testing
-        if episode and (episode % 50 == 0):
+        if episode and (episode % 10 == 0):
             print ("Start testing network at: ", episode)
             explore_network_flag = False
-        if episode and (episode % 50 == 5):
+        if episode and (episode % 10 == 2):
             print ("Start exploring network at: ", episode)
             explore_network_flag = True
 

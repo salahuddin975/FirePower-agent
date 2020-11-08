@@ -130,9 +130,9 @@ class Agent:
         # theta_input1 = layers.Dense(32, activation="tanh") (theta_input)
 
         state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input])
-        hidden = layers.Dense(128, activation="sigmoid") (state)
-        hidden = layers.Dense(64, activation="sigmoid") (hidden)
-        # hidden = layers.Dense(512, activation="relu") (hidden)
+        # state = layers.Concatenate() ([bus_input1, branch_input1, fire_distance_input1, gen_inj_input1, load_demand_input1, theta_input1])
+        hidden = layers.Dense(512, activation="tanh") (state)
+        hidden = layers.Dense(128, activation="tanh") (hidden)
 
         # bus -> MultiBinary(24)
         # bus_output = layers.Dense(action_space[0], activation="sigmoid") (hidden)
@@ -188,11 +188,11 @@ class Agent:
         # state = layers.Concatenate() ([st_bus, act_gen_injection])
         state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
                                        act_bus, act_branch, act_gen_injection])
-        # action = layers.Concatenate() ([act_gen_injection1])
-        # hidden = layers.Concatenate() ([state, act_gen_injection1])
+        # state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1,
+        #                                act_bus1, act_branch1, act_gen_injection1])
 
-        hidden = layers.Dense(128, activation="relu") (state)
-        hidden = layers.Dense(64, activation="relu") (hidden)
+        hidden = layers.Dense(512, activation="relu") (state)
+        hidden = layers.Dense(128, activation="relu") (hidden)
         reward = layers.Dense(1, activation="linear") (hidden)
 
         model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
@@ -575,9 +575,11 @@ class SimulatorResources():
         ppc_branch_trim.append(temp)
         self._ppc["branch"] = np.asarray(ppc_branch_trim)
 
-        def get_ppc(self):
-            return self.ppc
+    def get_ppc(self):
+        return self.ppc
 
+    def print_ppc(self):
+        print (self.ppc)
 
 
 def get_state_spaces(observation_space):
@@ -619,7 +621,7 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--seed', help="Seed for random number generator", type=int)
     parser.add_argument('-o', '--path-output', help="Output directory for dumping environment data")
     args = parser.parse_args()
-    print(args)
+    # print(args)
 
     simulator_resources = SimulatorResources(power_file_path = args.path_power, geo_file_path=args.path_geo)
     generators = Generators(ppc = simulator_resources.ppc, ramp_frequency_in_hour = 6)
@@ -674,7 +676,7 @@ if __name__ == "__main__":
             nn_action = agent._actor(tf_state)
             print("NN generator output: ", nn_action[0])
 
-            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=1.0)
+            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=.5)
             env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
             next_state, reward, done, _ =  env.step(env_action)
@@ -726,7 +728,7 @@ if __name__ == "__main__":
             log_file.close()
 
         # save model weights
-        if (episode % 10 == 0) and save_model:
+        if (episode % 50 == 0) and save_model:
             agent.save_weight(version=save_model_version, episode_num=episode)
 
         # save replay buffer

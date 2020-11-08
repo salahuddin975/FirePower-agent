@@ -24,6 +24,7 @@ def case24_ieee_rts():
     U{http://pscal.ece.gatech.edu/testsys/index.html}
     MATPOWER case file data provided by Bruce Wollenberg.
     @return: Power flow data for the IEEE RELIABILITY TEST SYSTEM.
+    Case-format: https://github.com/rwl/PYPOWER/blob/master/pypower/caseformat.py
     """
     ppc = {"version": '2'}
 

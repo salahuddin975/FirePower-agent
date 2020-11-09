@@ -663,6 +663,7 @@ if __name__ == "__main__":
     num_train_per_episode = 300
     episodic_rewards = []
     explore_network_flag = True
+    train_network = True
 
     for episode in range(total_episode):
         state = env.reset()
@@ -694,16 +695,17 @@ if __name__ == "__main__":
                 max_reached_step = step
                 break
 
-        # if (buffer.get_num_records() > 300):
-        # print ("Train at: ", episode)
-        # for i in range(num_train_per_episode):
-            state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
-            critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)   # magnitude of gradient
-            i = step
-            with critic_summary_writer.as_default():
-                tf.summary.scalar('critic_loss', critic_loss, step=i + episode*num_train_per_episode)
-                tf.summary.scalar('reward_value', reward_value, step=i + episode*num_train_per_episode)
-                tf.summary.scalar('critic_value', critic_value, step=i + episode*num_train_per_episode)
+        if train_network:
+            # print ("Train at: ", episode)
+            for i in range(num_train_per_episode):
+                state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
+                critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)   # magnitude of gradient
+
+                # i = step
+                with critic_summary_writer.as_default():
+                    tf.summary.scalar('critic_loss', critic_loss, step=i + episode*num_train_per_episode)
+                    tf.summary.scalar('reward_value', reward_value, step=i + episode*num_train_per_episode)
+                    tf.summary.scalar('critic_value', critic_value, step=i + episode*num_train_per_episode)
 
         with agent_summary_writer.as_default():
             tf.summary.scalar("episodic_reward", episodic_reward, step=episode)

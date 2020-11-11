@@ -386,6 +386,7 @@ class DataProcessor:
         # print("nn ramp: ", nn_ramp)
 
         generators_max_output = generators.get_max_outputs()
+        generators_min_output = generators.get_min_outputs()
         generators_max_ramp = generators.get_max_ramps()
         ramp = net_output - generators_current_output
         # print("generators initial ramp: ", ramp)
@@ -396,7 +397,7 @@ class DataProcessor:
                 ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] < generators_max_output[i] else generators_max_output[i] - generators_current_output[i]
             else:
                 ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[i] else -generators_max_ramp[i]
-                ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] > 0 else 0 - generators_current_output[i]
+                ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] > generators_min_output[i] else generators_min_output[i] - generators_current_output[i]
 
         # print("generators set ramp: ", ramp)
         return ramp
@@ -507,7 +508,7 @@ class Generators:
     def __init__(self, ppc, ramp_frequency_in_hour = 6):
         self.generators = np.copy(ppc["gen"][:, GEN_BUS].astype("int"))
         self.num_generators = self.generators.size
-        self.generators_min_output = np.zeros(self.generators.size)
+        self.generators_min_output = np.copy(ppc["gen"][:, PMIN] / ppc["baseMVA"])
         self.generators_max_output = np.copy(ppc["gen"][:, PMAX] / ppc["baseMVA"])
         self.generators_max_ramp = np.copy((ppc["gen"][:, RAMP_10] / ppc["baseMVA"]) * (1 / ramp_frequency_in_hour))
 
@@ -531,6 +532,7 @@ class Generators:
 
     def print_info(self):
         print ("generators: ", self.generators)
+        print ("generators min output: ", self.generators_min_output)
         print ("generators max output: ", self.generators_max_output)
         print ("generators max ramp: ", self.generators_max_ramp)
 
@@ -625,6 +627,7 @@ if __name__ == "__main__":
 
     simulator_resources = SimulatorResources(power_file_path = args.path_power, geo_file_path=args.path_geo)
     generators = Generators(ppc = simulator_resources.ppc, ramp_frequency_in_hour = 6)
+    # generators.print_info()
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=11)
 
@@ -662,8 +665,8 @@ if __name__ == "__main__":
     max_steps_per_episode = 300
     num_train_per_episode = 300
     episodic_rewards = []
-    explore_network_flag = True
     train_network = True
+    explore_network_flag = True
 
     for episode in range(total_episode):
         state = env.reset()
@@ -695,13 +698,13 @@ if __name__ == "__main__":
                 max_reached_step = step
                 break
 
-        if train_network:
+            if train_network:
             # print ("Train at: ", episode)
-            for i in range(num_train_per_episode):
+            # for i in range(num_train_per_episode):
                 state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
                 critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)   # magnitude of gradient
 
-                # i = step
+                i = step
                 with critic_summary_writer.as_default():
                     tf.summary.scalar('critic_loss', critic_loss, step=i + episode*num_train_per_episode)
                     tf.summary.scalar('reward_value', reward_value, step=i + episode*num_train_per_episode)

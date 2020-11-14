@@ -129,7 +129,11 @@ class Agent:
         theta_input = layers.Input(shape=(self._state_spaces[5], ))
         # theta_input1 = layers.Dense(32, activation="tanh") (theta_input)
 
-        state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input])
+        # line_flow -> Box(34, )
+        line_flow_input = layers.Input(shape=(self._state_spaces[6], ))
+
+
+        state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input])
         # state = layers.Concatenate() ([bus_input1, branch_input1, fire_distance_input1, gen_inj_input1, load_demand_input1, theta_input1])
         hidden = layers.Dense(512, activation="tanh") (state)
         hidden = layers.Dense(128, activation="tanh") (hidden)
@@ -143,7 +147,7 @@ class Agent:
         # generator_injection (generator output) -> Box(5, )
         gen_inj_output = layers.Dense(self._action_spaces[3], activation="sigmoid") (hidden)
 
-        model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input],
+        model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input],
                                [gen_inj_output])
         return model
 
@@ -173,6 +177,9 @@ class Agent:
         st_theta = layers.Input(shape=(self._state_spaces[5], ))
         # st_theta1 = layers.Dense(30, activation="relu") (st_theta)
 
+        # line_flow -> Box(34, )
+        st_line_flow = layers.Input(shape=(self._state_spaces[6], ))
+
         # bus -> MultiBinary(24)
         act_bus = layers.Input(shape=(action_spaces[0],))
         # act_bus1 = layers.Dense(30, activation="relu") (act_bus)
@@ -186,7 +193,7 @@ class Agent:
         # act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
 
         # state = layers.Concatenate() ([st_bus, act_gen_injection])
-        state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
+        state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
                                        act_bus, act_branch, act_gen_injection])
         # state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1,
         #                                act_bus1, act_branch1, act_gen_injection1])
@@ -195,7 +202,7 @@ class Agent:
         hidden = layers.Dense(128, activation="relu") (hidden)
         reward = layers.Dense(1, activation="linear") (hidden)
 
-        model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
+        model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
                                 act_bus, act_branch, act_gen_injection], reward)
         return model
 
@@ -219,6 +226,7 @@ class ReplayBuffer:
         self.st_gen_output = np.zeros((self._capacity, state_spaces[3]))
         self.st_load_demand = np.zeros((self._capacity, state_spaces[4]))
         self.st_theta = np.zeros((self._capacity, state_spaces[5]))
+        self.st_line_flow = np.zeros((self._capacity, state_spaces[6]))
 
         self.act_bus = np.zeros((self._capacity, action_spaces[0]))
         self.act_branch = np.zeros((self._capacity, action_spaces[1]))
@@ -232,6 +240,7 @@ class ReplayBuffer:
         self.next_st_gen_output = np.zeros((self._capacity, state_spaces[3]))
         self.next_st_load_demand = np.zeros((self._capacity, state_spaces[4]))
         self.next_st_theta = np.zeros((self._capacity, state_spaces[5]))
+        self.next_st_line_flow = np.zeros((self._capacity, state_spaces[6]))
 
         self.np_counter = np.zeros((1))
 
@@ -243,6 +252,7 @@ class ReplayBuffer:
         np.save(f'replay_buffer/st_gen_output_v{version}.npy', self.st_gen_output)
         np.save(f'replay_buffer/st_load_demand_v{version}.npy', self.st_load_demand)
         np.save(f'replay_buffer/st_theta_v{version}.npy', self.st_theta)
+        np.save(f'replay_buffer/st_line_flow_v{version}.npy', self.st_line_flow)
 
         np.save(f'replay_buffer/act_bus_v{save_replay_buffer_version}.npy', self.act_bus)
         np.save(f'replay_buffer/act_branch_v{save_replay_buffer_version}.npy', self.act_branch)
@@ -256,6 +266,7 @@ class ReplayBuffer:
         np.save(f'replay_buffer/next_st_gen_output_v{version}.npy', self.next_st_gen_output)
         np.save(f'replay_buffer/next_st_load_demand_v{version}.npy', self.next_st_load_demand)
         np.save(f'replay_buffer/next_st_theta_v{version}.npy', self.next_st_theta)
+        np.save(f'replay_buffer/next_st_line_flow_v{version}.npy', self.next_st_line_flow)
 
         self.np_counter[0] = self._counter
         np.save(f'replay_buffer/counter_v{version}.npy', self.np_counter)
@@ -268,6 +279,7 @@ class ReplayBuffer:
         self.st_gen_output = np.load(f'{load_buffer_dir}/st_gen_output_v{version}.npy')
         self.st_load_demand = np.load(f'{load_buffer_dir}/st_load_demand_v{version}.npy')
         self.st_theta = np.load(f'{load_buffer_dir}/st_theta_v{version}.npy')
+        self.st_line_flow = np.load(f'{load_buffer_dir}/st_line_flow_v{version}.npy')
 
         self.act_bus = np.load(f'replay_buffer/act_bus_v{load_replay_buffer_version}.npy')
         self.act_branch = np.load(f'replay_buffer/act_branch_v{load_replay_buffer_version}.npy')
@@ -281,6 +293,7 @@ class ReplayBuffer:
         self.next_st_gen_output = np.load(f'{load_buffer_dir}/next_st_gen_output_v{version}.npy')
         self.next_st_load_demand = np.load(f'{load_buffer_dir}/next_st_load_demand_v{version}.npy')
         self.next_st_theta = np.load(f'{load_buffer_dir}/next_st_theta_v{version}.npy')
+        self.next_st_line_flow = np.load(f'{load_buffer_dir}/next_st_line_flow_v{version}.npy')
 
         self.np_counter = np.load(f'{load_buffer_dir}/counter_v{version}.npy')
         self._counter = int(self.np_counter[0])
@@ -301,6 +314,7 @@ class ReplayBuffer:
         self.st_gen_output[index] = np.copy(record[0]["generator_injection"])
         self.st_load_demand[index] = np.copy(record[0]["load_demand"])
         self.st_theta[index] = np.copy(record[0]["theta"])
+        self.st_line_flow[index] = np.copy(record[0]["line_flow"])
 
         # use data from heuristic
         self.act_bus[index] = np.copy(record[4]["bus_status"])
@@ -317,6 +331,7 @@ class ReplayBuffer:
         self.next_st_gen_output[index] = np.copy(record[3]["generator_injection"])
         self.next_st_load_demand[index] = np.copy(record[3]["load_demand"])
         self.next_st_theta[index] = np.copy(record[3]["theta"])
+        self.next_st_line_flow[index] = np.copy(record[3]["line_flow"])
 
         self._counter = self._counter + 1
 
@@ -330,6 +345,7 @@ class ReplayBuffer:
         st_tf_gen_output = tf.convert_to_tensor(self.st_gen_output[batch_indices])
         st_tf_load_demand = tf.convert_to_tensor(self.st_load_demand[batch_indices])
         st_tf_theta = tf.convert_to_tensor(self.st_theta[batch_indices])
+        st_tf_line_flow = tf.convert_to_tensor(self.st_line_flow[batch_indices])
 
         act_tf_bus = tf.convert_to_tensor(self.act_bus[batch_indices])
         act_tf_branch = tf.convert_to_tensor(self.act_branch[batch_indices])
@@ -343,11 +359,12 @@ class ReplayBuffer:
         next_st_tf_gen_output = tf.convert_to_tensor(self.next_st_gen_output[batch_indices])
         next_st_tf_load_demand = tf.convert_to_tensor(self.next_st_load_demand[batch_indices])
         next_st_tf_theta = tf.convert_to_tensor(self.next_st_theta[batch_indices])
+        next_st_tf_line_flow = tf.convert_to_tensor(self.next_st_line_flow[batch_indices])
 
-        state_batch = [st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta]
+        state_batch = [st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta, st_tf_line_flow]
         action_batch = [act_tf_bus, act_tf_branch, act_tf_gen_injection]
         next_state_batch = [next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance, next_st_tf_gen_output,
-                                    next_st_tf_load_demand, next_st_tf_theta]
+                                    next_st_tf_load_demand, next_st_tf_theta, next_st_tf_line_flow]
 
         return state_batch, action_batch, reward_batch, next_state_batch
 
@@ -483,8 +500,9 @@ class DataProcessor:
         tf_generator_injection = tf.expand_dims(tf.convert_to_tensor(state["generator_injection"]), 0)
         tf_load_demand = tf.expand_dims(tf.convert_to_tensor(state["load_demand"]), 0)
         tf_theta = tf.expand_dims(tf.convert_to_tensor(state["theta"]), 0)
+        tf_line_flow = tf.expand_dims(tf.convert_to_tensor(state["line_flow"]), 0)
 
-        return [tf_bus_status, tf_branch_status, tf_fire_distance, tf_generator_injection, tf_load_demand, tf_theta]
+        return [tf_bus_status, tf_branch_status, tf_fire_distance, tf_generator_injection, tf_load_demand, tf_theta, tf_line_flow]
 
 
     def get_tf_critic_input(self, state, action):
@@ -585,7 +603,7 @@ class SimulatorResources():
 
 
 def get_state_spaces(observation_space):
-    # print("observation space: ", observation_space)
+    print("observation space: ", observation_space)
 
     num_st_bus = observation_space["bus_status"].shape[0]
     num_st_branch = observation_space["branch_status"].shape[0]
@@ -594,9 +612,10 @@ def get_state_spaces(observation_space):
     num_gen_output = observation_space["generator_injection"].shape[0]
     num_load_demand = observation_space["load_demand"].shape[0]
     num_theta = observation_space["theta"].shape[0]
-    state_spaces = [num_st_bus, num_st_branch, num_fire_distance, num_gen_output, num_load_demand, num_theta]
+    num_line_flow = observation_space["line_flow"].shape[0]
+    state_spaces = [num_st_bus, num_st_branch, num_fire_distance, num_gen_output, num_load_demand, num_theta, num_line_flow]
     print(f"State Spaces: num bus: {num_st_bus}, num branch: {num_st_branch}, fire distance: {num_fire_distance}, "
-          f"num_gen_injection: {num_gen_output}, num_load_demand: {num_load_demand}, num_theta: {num_theta}")
+          f"num_gen_injection: {num_gen_output}, num_load_demand: {num_load_demand}, num_theta: {num_theta}, num_line_flow: {num_line_flow}")
 
     return state_spaces
 

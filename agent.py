@@ -447,8 +447,8 @@ class DataProcessor:
         # print("bus status: ", bus_status)
         # print("branch status: ", branch_status)
 
-        nn_ramp = np_action["generator_injection"]
-        ramp = self._clip_ramp_values(nn_ramp, generators_current_output)
+        nn_output = np_action["generator_injection"]
+        ramp = self._clip_ramp_values(nn_output, generators_current_output)
         ramp = self._check_bus_generator_violation(bus_status, ramp)
         print("ramp: ", ramp)
 
@@ -464,7 +464,7 @@ class DataProcessor:
         return action
 
 
-    def explore_network(self, nn_action, explore_network = True, noise_range = 1.0):
+    def explore_network(self, nn_action, explore_network = True, noise_range = 0.5):
         # bus status
         # bus_status = np.squeeze(np.array(tf_action[0]))
         # for i in range(bus_status.size):
@@ -478,15 +478,15 @@ class DataProcessor:
         # print ("branch status: ", branch_status)
 
         # amount of power for ramping up/down
-        nn_ramp = np.array(tf.squeeze(nn_action[0]))
-        for i in range(nn_ramp.size):
+        nn_output = np.array(tf.squeeze(nn_action[0]))
+        for i in range(nn_output.size):
             if explore_network:
-                nn_ramp[i] = nn_ramp[i] + random.uniform(-noise_range, noise_range)
-        nn_ramp = np.clip(nn_ramp, 0, 1)
-        # print("ramp: ", nn_ramp)
+                nn_output[i] = nn_output[i] + random.uniform(-noise_range, noise_range)
+        nn_output = np.clip(nn_output, 0, 1)
+        # print("nn output: ", nn_output)
 
         action = {
-            "generator_injection": nn_ramp,
+            "generator_injection": nn_output,
         }
 
         return action
@@ -699,7 +699,7 @@ if __name__ == "__main__":
             nn_action = agent._actor(tf_state)
             print("NN generator output: ", nn_action[0])
 
-            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=.5)
+            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=0.5)
             env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
             next_state, reward, done, _ =  env.step(env_action)
@@ -752,7 +752,7 @@ if __name__ == "__main__":
             log_file.close()
 
         # save model weights
-        if (episode % 50 == 0) and save_model:
+        if (episode % 20 == 0) and save_model:
             agent.save_weight(version=save_model_version, episode_num=episode)
 
         # save replay buffer

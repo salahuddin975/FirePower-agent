@@ -146,9 +146,10 @@ log_server1/
 log_server2/
 
 # replay_buffer
-replay_buffer/
+*npy
+
+# saved_model
+*.h5
 replay_buffer1/
 replay_buffer2/
 
-# saved_model
-saved_model/

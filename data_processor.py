@@ -192,7 +192,7 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
 class SummaryWriter:
     def __init__(self, model_version):
         self._model_version = model_version
-        self._file_name = "fire_power_reward_list"
+        self._file_name = "test_result/fire_power_reward_list"
 
         self._initialize()
 

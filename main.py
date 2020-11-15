@@ -72,7 +72,7 @@ if __name__ == "__main__":
     generators = Generators(ppc = simulator_resources.ppc, ramp_frequency_in_hour = 6)
     # generators.print_info()
 
-    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=11)
+    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=generators.get_num_generators())
     state_spaces = get_state_spaces(env.observation_space)
     action_spaces = get_action_spaces(env.action_space)
 

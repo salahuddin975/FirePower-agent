@@ -34,8 +34,9 @@ class DataProcessor:
         net_output = nn_output * max_output
         # print ("network output: ", net_output)
 
-        generators_current_output = np.zeros(self.generators.get_size())
-        for i in range(self.generators.get_size()):
+        num_generators = self.generators.get_num_generators()
+        generators_current_output = np.zeros(num_generators)
+        for i in range(num_generators):
             generators_current_output[i] = generators_output[self.generators.get_generators()[i]]
         # print("generators current output: ", generators_current_output)
 

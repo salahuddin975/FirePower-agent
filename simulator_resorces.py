@@ -7,35 +7,35 @@ from pypower.ext2int import ext2int
 
 class Generators:
     def __init__(self, ppc, ramp_frequency_in_hour = 6):
-        self.generators = np.copy(ppc["gen"][:, GEN_BUS].astype("int"))
-        self.num_generators = self.generators.size
-        self.generators_min_output = np.copy(ppc["gen"][:, PMIN] / ppc["baseMVA"])
-        self.generators_max_output = np.copy(ppc["gen"][:, PMAX] / ppc["baseMVA"])
-        self.generators_max_ramp = np.copy((ppc["gen"][:, RAMP_10] / ppc["baseMVA"]) * (1 / ramp_frequency_in_hour))
+        self._generators = np.copy(ppc["gen"][:, GEN_BUS].astype("int"))
+        self._num_generators = self._generators.size
+        self._generators_min_output = np.copy(ppc["gen"][:, PMIN] / ppc["baseMVA"])
+        self._generators_max_output = np.copy(ppc["gen"][:, PMAX] / ppc["baseMVA"])
+        self._generators_max_ramp = np.copy((ppc["gen"][:, RAMP_10] / ppc["baseMVA"]) * (1 / ramp_frequency_in_hour))
 
     def get_generators(self):
-        return self.generators
+        return self._generators
 
-    def get_size(self):
-        return self.num_generators
+    def get_num_generators(self):
+        return self._num_generators
 
     def get_min_outputs(self):
-        return self.generators_min_output
+        return self._generators_min_output
 
     def get_max_outputs(self):
-        return self.generators_max_output
+        return self._generators_max_output
 
     def set_max_outputs(self, max_output):
-        self.generators_max_output = np.copy(max_output[self.generators])
+        self._generators_max_output = np.copy(max_output[self._generators])
 
     def get_max_ramps(self):
-        return  self.generators_max_ramp
+        return  self._generators_max_ramp
 
     def print_info(self):
-        print ("generators: ", self.generators)
-        print ("generators min output: ", self.generators_min_output)
-        print ("generators max output: ", self.generators_max_output)
-        print ("generators max ramp: ", self.generators_max_ramp)
+        print ("generators: ", self._generators)
+        print ("generators min output: ", self._generators_min_output)
+        print ("generators max output: ", self._generators_max_output)
+        print ("generators max ramp: ", self._generators_max_ramp)
 
 
 class SimulatorResources():

@@ -139,6 +139,7 @@ test.py
 
 # .idea
 .idea
+.git-ajay
 
 # tensorboard logs
 logs/
@@ -152,4 +153,5 @@ log_server2/
 *.h5
 replay_buffer1/
 replay_buffer2/
+
 

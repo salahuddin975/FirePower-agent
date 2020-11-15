@@ -42,10 +42,10 @@ def get_state_spaces(observation_space):
     num_gen_output = observation_space["generator_injection"].shape[0]
     num_load_demand = observation_space["load_demand"].shape[0]
     num_theta = observation_space["theta"].shape[0]
-    num_line_flow = observation_space["line_flow"].shape[0]
-    state_spaces = [num_st_bus, num_st_branch, num_fire_distance, num_gen_output, num_load_demand, num_theta, num_line_flow]
+    # num_line_flow = observation_space["line_flow"].shape[0]
+    state_spaces = [num_st_bus, num_st_branch, num_fire_distance, num_gen_output, num_load_demand, num_theta]
     print(f"State Spaces: num bus: {num_st_bus}, num branch: {num_st_branch}, fire distance: {num_fire_distance}, "
-          f"num_gen_injection: {num_gen_output}, num_load_demand: {num_load_demand}, num_theta: {num_theta}, num_line_flow: {num_line_flow}")
+          f"num_gen_injection: {num_gen_output}, num_load_demand: {num_load_demand}, num_theta: {num_theta}, num_line_flow:")
 
     return state_spaces
 

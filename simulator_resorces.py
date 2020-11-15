@@ -5,7 +5,6 @@ from pypower.loadcase import loadcase
 from pypower.ext2int import ext2int
 
 
-
 class Generators:
     def __init__(self, ppc, ramp_frequency_in_hour = 6):
         self.generators = np.copy(ppc["gen"][:, GEN_BUS].astype("int"))

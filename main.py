@@ -2,13 +2,12 @@ import os
 import csv
 import gym
 import random
-import datetime
 import argparse
 import numpy as np
 import tensorflow as tf
 from agent import Agent
 from replay_buffer import ReplayBuffer
-from data_processor import DataProcessor
+from data_processor import DataProcessor, Tensorboard
 from simulator_resorces import SimulatorResources, Generators
 
 
@@ -20,12 +19,6 @@ os.environ['PYTHONHASHSEED']=str(seed_value)
 random.seed(seed_value)
 np.random.seed(seed_value)
 tf.random.set_seed(seed_value)
-
-current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-agent_log_dir = 'logs/' + current_time + '/agent'
-citic_log_dir = 'logs/' + current_time + '/critic'
-agent_summary_writer = tf.summary.create_file_writer(agent_log_dir)
-critic_summary_writer = tf.summary.create_file_writer(citic_log_dir)
 
 
 def get_state_spaces(observation_space):
@@ -75,11 +68,11 @@ if __name__ == "__main__":
     # generators.print_info()
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=11)
-
     state_spaces = get_state_spaces(env.observation_space)
     action_spaces = get_action_spaces(env.action_space)
 
     agent = Agent(state_spaces, action_spaces)
+    tensorboard = Tensorboard()
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
     # save trained model to reuse
@@ -106,7 +99,7 @@ if __name__ == "__main__":
 
     total_episode = 100001
     max_steps_per_episode = 300
-    num_train_per_episode = 300
+    num_train_per_episode = 1000
     episodic_rewards = []
     train_network = True
     explore_network_flag = True
@@ -142,19 +135,13 @@ if __name__ == "__main__":
                 break
 
             if train_network:
-            # print ("Train at: ", episode)
-            # for i in range(num_train_per_episode):
-                state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
-                critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)   # magnitude of gradient
+                # print ("Train at: ", episode)
+                # for i in range(num_train_per_episode):
+                    state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
+                    critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)
+                    tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value)
 
-                i = step
-                with critic_summary_writer.as_default():
-                    tf.summary.scalar('critic_loss', critic_loss, step=i + episode*num_train_per_episode)
-                    tf.summary.scalar('reward_value', reward_value, step=i + episode*num_train_per_episode)
-                    tf.summary.scalar('critic_value', critic_value, step=i + episode*num_train_per_episode)
-
-        with agent_summary_writer.as_default():
-            tf.summary.scalar("episodic_reward", episodic_reward, step=episode)
+        tensorboard.add_episode_info(episodic_reward)
 
         # explore / Testing
         if episode and (episode % 10 == 0):
@@ -164,17 +151,6 @@ if __name__ == "__main__":
             print ("Start exploring network at: ", episode)
             explore_network_flag = True
 
-        # save update in csv file
-        with open(f'fire_power_reward_list_v{save_model_version}.csv', 'a') as fd:
-            writer = csv.writer(fd)
-            writer.writerow([str(save_model_version), str(episode), str(max_reached_step), str(episodic_reward)])
-
-        # save logs
-        if (episode % 5 == 0) and save_model:
-            log_file = open("saved_model/reward_log.txt", "a")
-            log_file.write(f"Episode: V{save_model_version}_{episode}, Reward: {episodic_reward}\n")
-            log_file.close()
-
         # save model weights
         if (episode % 20 == 0) and save_model:
             agent.save_weight(version=save_model_version, episode_num=episode)
@@ -183,3 +159,8 @@ if __name__ == "__main__":
         if (episode % 10 == 0) and save_replay_buffer:
             print(f"Saving replay buffer at: {episode}")
             buffer.save_buffer(save_replay_buffer_version)
+
+        # save update in csv file
+        with open(f'fire_power_reward_list_v{save_model_version}.csv', 'a') as fd:
+            writer = csv.writer(fd)
+            writer.writerow([str(save_model_version), str(episode), str(max_reached_step), str(episodic_reward)])

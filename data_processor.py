@@ -1,4 +1,5 @@
 import random
+import datetime
 import numpy as np
 import tensorflow as tf
 from pypower.idx_brch import *
@@ -158,4 +159,31 @@ class DataProcessor:
         return [st_bus_status, st_branch_status, st_fire_state, st_generator_output, st_load_demand, st_theta,
                 act_bus_status, act_branch_status, act_generator_selector, act_generator_injection]
 
+
+class Tensorboard:                 # $ tensorboard --logdir ./logs
+    def __init__(self):
+        current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+        self.agent_counter = 0
+        self.critic_counter = 0
+
+        agent_log_dir = 'logs/' + current_time + '/agent'
+        citic_log_dir = 'logs/' + current_time + '/critic'
+
+        self.agent_summary_writer = tf.summary.create_file_writer(agent_log_dir)
+        self.critic_summary_writer = tf.summary.create_file_writer(citic_log_dir)
+
+
+    def add_episode_info(self, episodic_reward):
+        with self.agent_summary_writer.as_default():
+            tf.summary.scalar("episodic_reward", episodic_reward, step=self.agent_counter)
+        self.agent_counter += 1
+
+
+    def add_critic_network_info(self, critic_loss, reward_value, critic_value):
+        with self.critic_summary_writer.as_default():
+            tf.summary.scalar('critic_loss', critic_loss, step=self.critic_counter)
+            tf.summary.scalar('reward_value', reward_value, step=self.critic_counter)
+            tf.summary.scalar('critic_value', critic_value, step=self.critic_counter)
+        self.critic_counter += 1
 

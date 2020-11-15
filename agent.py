@@ -9,6 +9,9 @@ class Agent:
         self._tau = 0.05       # used to update target network
         actor_lr = 0.001
         critic_lr = 0.002
+        self.save_weight_directory = "saved_model"
+        self.load_weight_directory = "saved_model"
+
         self._actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
         self._critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
 
@@ -24,16 +27,16 @@ class Agent:
         self._target_critic.set_weights(self._critic.get_weights())
 
     def save_weight(self, version, episode_num):
-        self._actor.save_weights(f"saved_model/agent_actor{version}_{episode_num}.h5")
-        self._critic.save_weights(f"saved_model/agent_critic{version}_{episode_num}.h5")
-        self._target_actor.save_weights(f"saved_model/agent_target_actor{version}_{episode_num}.h5")
-        self._target_critic.save_weights(f"saved_model/agent_target_critic{version}_{episode_num}.h5")
+        self._actor.save_weights(f"{self.save_weight_directory}/agent_actor{version}_{episode_num}.h5")
+        self._critic.save_weights(f"{self.save_weight_directory}/agent_critic{version}_{episode_num}.h5")
+        self._target_actor.save_weights(f"{self.save_weight_directory}/agent_target_actor{version}_{episode_num}.h5")
+        self._target_critic.save_weights(f"{self.save_weight_directory}/agent_target_critic{version}_{episode_num}.h5")
 
     def load_weight(self, version, episode_num):
-        self._actor.load_weights(f"saved_model/agent_actor{version}_{episode_num}.h5")
-        self._target_actor.load_weights(f"saved_model/agent_target_actor{version}_{episode_num}.h5")
-        self._critic.load_weights(f"saved_model/agent_critic{version}_{episode_num}.h5")
-        self._target_critic.load_weights(f"saved_model/agent_target_critic{version}_{episode_num}.h5")
+        self._actor.load_weights(f"{self.load_weight_directory}/agent_actor{version}_{episode_num}.h5")
+        self._target_actor.load_weights(f"{self.load_weight_directory}/agent_target_actor{version}_{episode_num}.h5")
+        self._critic.load_weights(f"{self.load_weight_directory}/agent_critic{version}_{episode_num}.h5")
+        self._target_critic.load_weights(f"{self.load_weight_directory}/agent_target_critic{version}_{episode_num}.h5")
         print("weights are loaded successfully!")
 
     def train(self, state_batch, action_batch, reward_batch, next_state_batch):

@@ -1,5 +1,4 @@
 import os
-import csv
 import gym
 import random
 import argparse
@@ -7,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 from agent import Agent
 from replay_buffer import ReplayBuffer
-from data_processor import DataProcessor, Tensorboard
+from data_processor import DataProcessor, Tensorboard, SummaryWriter
 from simulator_resorces import SimulatorResources, Generators
 
 
@@ -19,6 +18,18 @@ os.environ['PYTHONHASHSEED']=str(seed_value)
 random.seed(seed_value)
 np.random.seed(seed_value)
 tf.random.set_seed(seed_value)
+
+
+def add_arguments(argument_parser):
+    argument_parser.add_argument('-g', '--path-geo', help="Full path to geo file", required=True)
+    argument_parser.add_argument('-p', '--path-power', help="Full path to power systems file", required=False)
+    argument_parser.add_argument('-f', '--scale-factor', help="Scali    actor_lr = 0.001ng factor", type=int, default=6)
+    argument_parser.add_argument('-n', '--nonconvergence-penalty', help="Non-convergence penalty", type=float)
+    argument_parser.add_argument('-a', '--protectionaction-penalty', help="Protection action penalty", type=float)
+    argument_parser.add_argument('-s', '--seed', help="Seed for random number generator", type=int)
+    argument_parser.add_argument('-o', '--path-output', help="Output directory for dumping environment data")
+
+    return argument_parser
 
 
 def get_state_spaces(observation_space):
@@ -52,15 +63,9 @@ def get_action_spaces(action_space):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Dummy Agent for gym_firepower")
-    parser.add_argument('-g', '--path-geo', help="Full path to geo file", required=True)
-    parser.add_argument('-p', '--path-power', help="Full path to power systems file", required=False)
-    parser.add_argument('-f', '--scale-factor', help="Scali    actor_lr = 0.001ng factor", type=int, default=6)
-    parser.add_argument('-n', '--nonconvergence-penalty', help="Non-convergence penalty", type=float)
-    parser.add_argument('-a', '--protectionaction-penalty', help="Protection action penalty", type=float)
-    parser.add_argument('-s', '--seed', help="Seed for random number generator", type=int)
-    parser.add_argument('-o', '--path-output', help="Output directory for dumping environment data")
-    args = parser.parse_args()
+    argument_parser = argparse.ArgumentParser(description="Dummy Agent for gym_firepower")
+    add_arguments(argument_parser)
+    args = argument_parser.parse_args()
     # print(args)
 
     simulator_resources = SimulatorResources(power_file_path = args.path_power, geo_file_path=args.path_geo)
@@ -71,35 +76,34 @@ if __name__ == "__main__":
     state_spaces = get_state_spaces(env.observation_space)
     action_spaces = get_action_spaces(env.action_space)
 
-    agent = Agent(state_spaces, action_spaces)
-    tensorboard = Tensorboard()
-    data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
-
-    # save trained model to reuse
+    # agent model
     save_model = False
-    save_model_version = 0
     load_model = False
+    save_model_version = 0
     load_model_version = 0
     load_episode_num = 0
 
+    agent = Agent(state_spaces, action_spaces)
     if load_model:
         agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
+    # replay buffer
     save_replay_buffer = False
-    save_replay_buffer_version = 0
     load_replay_buffer = False
+    save_replay_buffer_version = 0
     load_replay_buffer_version = 0
 
     buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version,
                           buffer_capacity=200000, batch_size=1024)
 
-    with open(f'fire_power_reward_list_v{save_model_version}.csv', 'w') as fd:
-        writer = csv.writer(fd)
-        writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
+    tensorboard = Tensorboard()
+    summary_writer = SummaryWriter(save_model_version)
+    data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
+    # agent training
     total_episode = 100001
     max_steps_per_episode = 300
-    num_train_per_episode = 1000
+    num_train_per_episode = 1000         # canbe used by loading replay buffer
     episodic_rewards = []
     train_network = True
     explore_network_flag = True
@@ -122,9 +126,7 @@ if __name__ == "__main__":
             next_state, reward, done, _ =  env.step(env_action)
             print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
-            penalty = reward[0] # - 1 * np.sum(np.abs(net_action["generator_injection"])) * 100  # -1000 * net_action["generator_injection"][0] *  net_action["generator_injection"][0]
-            reward1 = [penalty, reward[1]]
-            buffer.add_record((state, net_action, reward1, next_state, env_action))
+            buffer.add_record((state, net_action, reward, next_state, env_action))
 
             episodic_reward += reward[0]
             state = next_state
@@ -141,7 +143,8 @@ if __name__ == "__main__":
                     critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)
                     tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value)
 
-        tensorboard.add_episode_info(episodic_reward)
+        tensorboard.add_episodic_info(episodic_reward)
+        summary_writer.add_info(episode, max_reached_step, episodic_reward)
 
         # explore / Testing
         if episode and (episode % 10 == 0):
@@ -159,8 +162,3 @@ if __name__ == "__main__":
         if (episode % 10 == 0) and save_replay_buffer:
             print(f"Saving replay buffer at: {episode}")
             buffer.save_buffer(save_replay_buffer_version)
-
-        # save update in csv file
-        with open(f'fire_power_reward_list_v{save_model_version}.csv', 'a') as fd:
-            writer = csv.writer(fd)
-            writer.writerow([str(save_model_version), str(episode), str(max_reached_step), str(episodic_reward)])

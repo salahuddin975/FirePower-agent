@@ -1,3 +1,4 @@
+import csv
 import random
 import datetime
 import numpy as np
@@ -164,26 +165,44 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
     def __init__(self):
         current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
-        self.agent_counter = 0
-        self.critic_counter = 0
+        self._agent_counter = 0
+        self._critic_counter = 0
 
         agent_log_dir = 'logs/' + current_time + '/agent'
         citic_log_dir = 'logs/' + current_time + '/critic'
 
-        self.agent_summary_writer = tf.summary.create_file_writer(agent_log_dir)
-        self.critic_summary_writer = tf.summary.create_file_writer(citic_log_dir)
+        self._agent_summary_writer = tf.summary.create_file_writer(agent_log_dir)
+        self._critic_summary_writer = tf.summary.create_file_writer(citic_log_dir)
 
 
-    def add_episode_info(self, episodic_reward):
-        with self.agent_summary_writer.as_default():
-            tf.summary.scalar("episodic_reward", episodic_reward, step=self.agent_counter)
-        self.agent_counter += 1
+    def add_episodic_info(self, episodic_reward):
+        with self._agent_summary_writer.as_default():
+            tf.summary.scalar("episodic_reward", episodic_reward, step=self._agent_counter)
+        self._agent_counter += 1
 
 
     def add_critic_network_info(self, critic_loss, reward_value, critic_value):
-        with self.critic_summary_writer.as_default():
-            tf.summary.scalar('critic_loss', critic_loss, step=self.critic_counter)
-            tf.summary.scalar('reward_value', reward_value, step=self.critic_counter)
-            tf.summary.scalar('critic_value', critic_value, step=self.critic_counter)
-        self.critic_counter += 1
+        with self._critic_summary_writer.as_default():
+            tf.summary.scalar('critic_loss', critic_loss, step=self._critic_counter)
+            tf.summary.scalar('reward_value', reward_value, step=self._critic_counter)
+            tf.summary.scalar('critic_value', critic_value, step=self._critic_counter)
+        self._critic_counter += 1
 
+
+class SummaryWriter:
+    def __init__(self, model_version):
+        self._model_version = model_version
+        self._file_name = "fire_power_reward_list"
+
+        self._initialize()
+
+    def _initialize(self):
+        with open(f'{self._file_name}_v{self._model_version}.csv', 'w') as fd:
+            writer = csv.writer(fd)
+            writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
+
+
+    def add_info(self, episode, max_reached_step, episodic_reward):
+        with open(f'{self._file_name}_v{self._model_version}.csv', 'a') as fd:
+            writer = csv.writer(fd)
+            writer.writerow([str(self._model_version), str(episode), str(max_reached_step), str(episodic_reward)])

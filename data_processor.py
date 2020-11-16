@@ -30,7 +30,7 @@ class DataProcessor:
     def add_heuristic_ramp(self, ramp, load_loss, num_generators, generators_current_output, generators_max_output, generators_max_ramp):
         for i in range(num_generators):
             ramp[i] = 0
-            if load_loss>0:
+            if load_loss > 0:
                 if generators_current_output[i] < generators_max_output[i]:
                     ramp[i] = generators_max_output[i] - generators_current_output[i]
                     if ramp[i] > generators_max_ramp[i]:
@@ -117,8 +117,7 @@ class DataProcessor:
 
         return action
 
-
-    def explore_network(self, nn_action, explore_network = True, noise_range = 0.5):
+    def explore_network(self, nn_action, explore_network, noise_range=0.5):
         # bus status
         # bus_status = np.squeeze(np.array(tf_action[0]))
         # for i in range(bus_status.size):

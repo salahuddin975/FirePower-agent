@@ -68,8 +68,8 @@ def get_action_spaces(action_space):
 if __name__ == "__main__":
     args = get_arguments()
 
-    simulator_resources = SimulatorResources(power_file_path = args.path_power, geo_file_path=args.path_geo)
-    generators = Generators(ppc = simulator_resources.ppc, ramp_frequency_in_hour = 6)
+    simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)
+    generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)
     # generators.print_info()
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=generators.get_num_generators())
@@ -117,13 +117,13 @@ if __name__ == "__main__":
 
         for step in range(max_steps_per_episode):
             tf_state = data_processor.get_tf_state(state)
-            nn_action = agent._actor(tf_state)
+            nn_action = agent.actor(tf_state)
             print("NN generator output: ", nn_action[0])
 
             net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=0.5)
             env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
-            next_state, reward, done, _ =  env.step(env_action)
+            next_state, reward, done, _ = env.step(env_action)
             print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
             buffer.add_record((state, net_action, reward, next_state, env_action))
@@ -131,7 +131,7 @@ if __name__ == "__main__":
             episodic_reward += reward[0]
             state = next_state
 
-            if done or (step == max_steps_per_episode-1):
+            if done or (step == max_steps_per_episode - 1):
                 print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_reward}")
                 max_reached_step = step
                 break
@@ -148,10 +148,10 @@ if __name__ == "__main__":
 
         # explore / Testing
         if episode and (episode % 10 == 0):
-            print ("Start testing network at: ", episode)
+            print("Start testing network at: ", episode)
             explore_network_flag = False
         if episode and (episode % 10 == 2):
-            print ("Start exploring network at: ", episode)
+            print("Start exploring network at: ", episode)
             explore_network_flag = True
 
         # save model weights

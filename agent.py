@@ -18,22 +18,22 @@ class Agent:
         self._state_spaces =  copy.deepcopy(state_spaces)
         self._action_spaces =  copy.deepcopy(action_spaces)
 
-        self._actor = self._actor_model()
+        self.actor = self._actor_model()
         self._target_actor = self._actor_model()
-        self._target_actor.set_weights(self._actor.get_weights())
+        self._target_actor.set_weights(self.actor.get_weights())
 
         self._critic = self._critic_model()
         self._target_critic = self._critic_model()
         self._target_critic.set_weights(self._critic.get_weights())
 
     def save_weight(self, version, episode_num):
-        self._actor.save_weights(f"{self.save_weight_directory}/agent_actor{version}_{episode_num}.h5")
+        self.actor.save_weights(f"{self.save_weight_directory}/agent_actor{version}_{episode_num}.h5")
         self._critic.save_weights(f"{self.save_weight_directory}/agent_critic{version}_{episode_num}.h5")
         self._target_actor.save_weights(f"{self.save_weight_directory}/agent_target_actor{version}_{episode_num}.h5")
         self._target_critic.save_weights(f"{self.save_weight_directory}/agent_target_critic{version}_{episode_num}.h5")
 
     def load_weight(self, version, episode_num):
-        self._actor.load_weights(f"{self.load_weight_directory}/agent_actor{version}_{episode_num}.h5")
+        self.actor.load_weights(f"{self.load_weight_directory}/agent_actor{version}_{episode_num}.h5")
         self._target_actor.load_weights(f"{self.load_weight_directory}/agent_target_actor{version}_{episode_num}.h5")
         self._critic.load_weights(f"{self.load_weight_directory}/agent_critic{version}_{episode_num}.h5")
         self._target_critic.load_weights(f"{self.load_weight_directory}/agent_target_critic{version}_{episode_num}.h5")
@@ -54,12 +54,12 @@ class Agent:
         action_batch1.pop()
         # update actor network
         with tf.GradientTape() as tape:
-            actions = self._actor(state_batch)
+            actions = self.actor(state_batch)
             action_batch1.append(actions)
             critic_value1 = self._critic([state_batch, action_batch1])
             actor_loss = -1 * tf.math.reduce_mean(critic_value1)
-        actor_grad = tape.gradient(actor_loss, self._actor.trainable_variables)
-        self._actor_optimizer.apply_gradients(zip(actor_grad, self._actor.trainable_variables))
+        actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
+        self._actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
         self._update_target()
         return critic_loss, tf.math.reduce_mean(reward_batch), tf.math.reduce_mean(critic_value)
@@ -75,7 +75,7 @@ class Agent:
         # update target actor network
         new_weights = []
         target_actor_weights = self._target_actor.weights
-        for i, actor_weight in enumerate(self._actor.weights):
+        for i, actor_weight in enumerate(self.actor.weights):
             new_weights.append(self._tau * actor_weight + (1 - self._tau) * target_actor_weights[i])
         self._target_actor.set_weights(new_weights)
 

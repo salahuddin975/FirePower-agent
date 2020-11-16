@@ -20,7 +20,8 @@ np.random.seed(seed_value)
 tf.random.set_seed(seed_value)
 
 
-def add_arguments(argument_parser):
+def get_arguments():
+    argument_parser = argparse.ArgumentParser(description="Dummy Agent for gym_firepower")
     argument_parser.add_argument('-g', '--path-geo', help="Full path to geo file", required=True)
     argument_parser.add_argument('-p', '--path-power', help="Full path to power systems file", required=False)
     argument_parser.add_argument('-f', '--scale-factor', help="Scali    actor_lr = 0.001ng factor", type=int, default=6)
@@ -29,7 +30,9 @@ def add_arguments(argument_parser):
     argument_parser.add_argument('-s', '--seed', help="Seed for random number generator", type=int)
     argument_parser.add_argument('-o', '--path-output', help="Output directory for dumping environment data")
 
-    return argument_parser
+    args = argument_parser.parse_args()
+    # print(args)
+    return args
 
 
 def get_state_spaces(observation_space):
@@ -63,10 +66,7 @@ def get_action_spaces(action_space):
 
 
 if __name__ == "__main__":
-    argument_parser = argparse.ArgumentParser(description="Dummy Agent for gym_firepower")
-    add_arguments(argument_parser)
-    args = argument_parser.parse_args()
-    # print(args)
+    args = get_arguments()
 
     simulator_resources = SimulatorResources(power_file_path = args.path_power, geo_file_path=args.path_geo)
     generators = Generators(ppc = simulator_resources.ppc, ramp_frequency_in_hour = 6)
@@ -139,9 +139,9 @@ if __name__ == "__main__":
             if train_network:
                 # print ("Train at: ", episode)
                 # for i in range(num_train_per_episode):
-                    state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
-                    critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)
-                    tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value)
+                state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
+                critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)
+                tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value)
 
         tensorboard.add_episodic_info(episodic_reward)
         summary_writer.add_info(episode, max_reached_step, episodic_reward)

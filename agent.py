@@ -5,7 +5,7 @@ from tensorflow.keras import layers
 
 class Agent:
     def __init__(self, state_spaces, action_spaces):
-        self._gamma = 0.9      # discount factor
+        self._gamma = 0.8      # discount factor
         self._tau = 0.05       # used to update target network
         actor_lr = 0.001
         critic_lr = 0.002

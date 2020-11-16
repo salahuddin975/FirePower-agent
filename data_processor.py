@@ -26,6 +26,20 @@ class DataProcessor:
 
         return branch_status
 
+
+    def add_heuristic_ramp(self, ramp, load_loss, num_generators, generators_current_output, generators_max_output, generators_max_ramp):
+        for i in range(num_generators):
+            ramp[i] = 0
+            if load_loss>0:
+                if generators_current_output[i] < generators_max_output[i]:
+                    ramp[i] = generators_max_output[i] - generators_current_output[i]
+                    if ramp[i] > generators_max_ramp[i]:
+                        ramp[i] = generators_max_ramp[i]
+                    if ramp[i] > load_loss:
+                        ramp[i] = load_loss
+                    load_loss = load_loss - ramp[i]
+
+
     def _clip_ramp_values(self, nn_output, generators_output):
         # print("generators output: ", generators_output)
         # print("nn ratio output: ", nn_output)

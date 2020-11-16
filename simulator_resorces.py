@@ -29,7 +29,7 @@ class Generators:
         self._generators_max_output = np.copy(max_output[self._generators])
 
     def get_max_ramps(self):
-        return  self._generators_max_ramp
+        return self._generators_max_ramp
 
     def print_info(self):
         print ("generators: ", self._generators)
@@ -50,7 +50,7 @@ class SimulatorResources():
         temp = self._ppc["gen"][0, :]
         ptr = 0
         ptr1 = 1
-        while(ptr1 < self._ppc["gen"].shape[0]):
+        while ptr1 < self._ppc["gen"].shape[0]:
             if self._ppc["gen"][ptr, GEN_BUS] == self._ppc["gen"][ptr1, GEN_BUS]:
                 temp[PG:QMIN+1] += self._ppc["gen"][ptr1, PG:QMIN+1]
                 temp[PMAX:APF+1] += self._ppc["gen"][ptr1, PMAX:APF+1]

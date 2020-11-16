@@ -30,9 +30,9 @@ def get_arguments():
     argument_parser.add_argument('-s', '--seed', help="Seed for random number generator", type=int)
     argument_parser.add_argument('-o', '--path-output', help="Output directory for dumping environment data")
 
-    args = argument_parser.parse_args()
-    # print(args)
-    return args
+    parsed_args = argument_parser.parse_args()
+    # print(parsed_args)
+    return parsed_args
 
 
 def get_state_spaces(observation_space):

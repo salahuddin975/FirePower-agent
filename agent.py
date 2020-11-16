@@ -107,7 +107,6 @@ class Agent:
         # line_flow -> Box(34, )
         line_flow_input = layers.Input(shape=(self._state_spaces[6], ))
 
-
         state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input])
         # state = layers.Concatenate() ([bus_input1, branch_input1, fire_distance_input1, gen_inj_input1, load_demand_input1, theta_input1])
         hidden = layers.Dense(512, activation="tanh") (state)
@@ -125,7 +124,6 @@ class Agent:
         model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input],
                                [gen_inj_output])
         return model
-
 
     def _critic_model(self):
         # bus -> MultiBinary(24)
@@ -180,4 +178,3 @@ class Agent:
         model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
                                 act_bus, act_branch, act_gen_injection], reward)
         return model
-

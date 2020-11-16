@@ -26,7 +26,6 @@ class DataProcessor:
 
         return branch_status
 
-
     def add_heuristic_ramp(self, ramp, load_loss, num_generators, generators_current_output, generators_max_output, generators_max_ramp):
         for i in range(num_generators):
             ramp[i] = 0
@@ -38,7 +37,6 @@ class DataProcessor:
                     if ramp[i] > load_loss:
                         ramp[i] = load_loss
                     load_loss = load_loss - ramp[i]
-
 
     def _clip_ramp_values(self, nn_output, generators_output):
         # print("generators output: ", generators_output)
@@ -84,7 +82,6 @@ class DataProcessor:
                     generators_ramp[j] = False
 
         return generators_ramp
-
 
     def check_violations(self, np_action, fire_distance, generators_current_output, bus_threshold=0.1, branch_threshold=0.1):
         bus_status = np.ones(self._state_spaces[0])
@@ -144,7 +141,6 @@ class DataProcessor:
 
         return action
 
-
     def get_tf_state(self, state):
         tf_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
         tf_branch_status = tf.expand_dims(tf.convert_to_tensor(state["branch_status"]), 0)
@@ -156,7 +152,6 @@ class DataProcessor:
         tf_line_flow = tf.expand_dims(tf.convert_to_tensor(state["line_flow"]), 0)
 
         return [tf_bus_status, tf_branch_status, tf_fire_distance, tf_generator_injection, tf_load_demand, tf_theta, tf_line_flow]
-
 
     def get_tf_critic_input(self, state, action):
         st_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
@@ -188,12 +183,10 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
         self._agent_summary_writer = tf.summary.create_file_writer(agent_log_dir)
         self._critic_summary_writer = tf.summary.create_file_writer(citic_log_dir)
 
-
     def add_episodic_info(self, episodic_reward):
         with self._agent_summary_writer.as_default():
             tf.summary.scalar("episodic_reward", episodic_reward, step=self._agent_counter)
         self._agent_counter += 1
-
 
     def add_critic_network_info(self, critic_loss, reward_value, critic_value):
         with self._critic_summary_writer.as_default():
@@ -214,7 +207,6 @@ class SummaryWriter:
         with open(f'{self._file_name}_v{self._model_version}.csv', 'w') as fd:
             writer = csv.writer(fd)
             writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
-
 
     def add_info(self, episode, max_reached_step, episodic_reward):
         with open(f'{self._file_name}_v{self._model_version}.csv', 'a') as fd:

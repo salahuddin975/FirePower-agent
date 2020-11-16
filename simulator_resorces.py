@@ -67,7 +67,7 @@ class SimulatorResources():
         temp = self._ppc["branch"][0, :]
         ptr = 0
         ptr1 = 1
-        while(ptr1 < self._ppc["branch"].shape[0]):
+        while ptr1 < self._ppc["branch"].shape[0]:
             if np.all(self._ppc["branch"][ptr, F_BUS:T_BUS+1] == self._ppc["branch"][ptr1, GEN_BUS:T_BUS+1]):
                 temp[BR_R: RATE_C+1] += self._ppc["branch"][ptr1, BR_R: RATE_C+1]
             else:

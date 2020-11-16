@@ -10,11 +10,10 @@ class ReplayBuffer:
         self.load_replay_buffer_dir = "replay_buffer"
         self.save_replay_buffer_dir = "replay_buffer"
 
-        if load_replay_buffer == False:
+        if not load_replay_buffer:
             self._initialize_buffer(state_spaces, action_spaces)
         else:
             self._load_buffer(load_replay_buffer_version)
-
 
     def _initialize_buffer(self, state_spaces, action_spaces):
         self.st_bus = np.zeros((self._capacity, state_spaces[0]))
@@ -41,7 +40,6 @@ class ReplayBuffer:
 
         self.np_counter = np.zeros((1))
 
-
     def save_buffer(self, version):
         np.save(f'{self.save_replay_buffer_dir}/st_bus_v{version}.npy', self.st_bus)
         np.save(f'{self.save_replay_buffer_dir}/st_branch_v{version}.npy', self.st_branch)
@@ -67,7 +65,6 @@ class ReplayBuffer:
 
         self.np_counter[0] = self._counter
         np.save(f'{self.save_replay_buffer_dir}/counter_v{version}.npy', self.np_counter)
-
 
     def _load_buffer(self, version):
         self.st_bus = np.load(f'{self.load_replay_buffer_dir}/st_bus_v{version}.npy')

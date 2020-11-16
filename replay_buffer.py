@@ -133,7 +133,7 @@ class ReplayBuffer:
         self._counter = self._counter + 1
 
     def get_batch(self):
-        record_size = min(self._capacity, self._counter)
+        record_size = self.get_num_records()
         batch_indices = np.random.choice(record_size, self._batch_size)
 
         st_tf_bus = tf.convert_to_tensor(self.st_bus[batch_indices])

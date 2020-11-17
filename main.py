@@ -77,7 +77,7 @@ if __name__ == "__main__":
     action_spaces = get_action_spaces(env.action_space)
 
     # agent model
-    save_model = False
+    save_model = True
     load_model = False
     save_model_version = 0
     load_model_version = 0
@@ -88,7 +88,7 @@ if __name__ == "__main__":
         agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
     # replay buffer
-    save_replay_buffer = False
+    save_replay_buffer = True
     load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0

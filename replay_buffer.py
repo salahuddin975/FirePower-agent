@@ -7,8 +7,8 @@ class ReplayBuffer:
         self._counter = 0
         self._capacity = buffer_capacity
         self._batch_size = batch_size
-        self.load_replay_buffer_dir = "replay_buffer"
-        self.save_replay_buffer_dir = "replay_buffer"
+        self._load_replay_buffer_dir = "replay_buffer"
+        self._save_replay_buffer_dir = "replay_buffer"
 
         if not load_replay_buffer:
             self._initialize_buffer(state_spaces, action_spaces)
@@ -41,55 +41,55 @@ class ReplayBuffer:
         self.np_counter = np.zeros((1))
 
     def save_buffer(self, version):
-        np.save(f'{self.save_replay_buffer_dir}/st_bus_v{version}.npy', self.st_bus)
-        np.save(f'{self.save_replay_buffer_dir}/st_branch_v{version}.npy', self.st_branch)
-        np.save(f'{self.save_replay_buffer_dir}/st_fire_distance_v{version}.npy', self.st_fire_distance)
-        np.save(f'{self.save_replay_buffer_dir}/st_gen_output_v{version}.npy', self.st_gen_output)
-        np.save(f'{self.save_replay_buffer_dir}/st_load_demand_v{version}.npy', self.st_load_demand)
-        np.save(f'{self.save_replay_buffer_dir}/st_theta_v{version}.npy', self.st_theta)
-        np.save(f'{self.save_replay_buffer_dir}/st_line_flow_v{version}.npy', self.st_line_flow)
+        np.save(f'{self._save_replay_buffer_dir}/st_bus_v{version}.npy', self.st_bus)
+        np.save(f'{self._save_replay_buffer_dir}/st_branch_v{version}.npy', self.st_branch)
+        np.save(f'{self._save_replay_buffer_dir}/st_fire_distance_v{version}.npy', self.st_fire_distance)
+        np.save(f'{self._save_replay_buffer_dir}/st_gen_output_v{version}.npy', self.st_gen_output)
+        np.save(f'{self._save_replay_buffer_dir}/st_load_demand_v{version}.npy', self.st_load_demand)
+        np.save(f'{self._save_replay_buffer_dir}/st_theta_v{version}.npy', self.st_theta)
+        np.save(f'{self._save_replay_buffer_dir}/st_line_flow_v{version}.npy', self.st_line_flow)
 
-        np.save(f'{self.save_replay_buffer_dir}/act_bus_v{version}.npy', self.act_bus)
-        np.save(f'{self.save_replay_buffer_dir}/act_branch_v{version}.npy', self.act_branch)
-        np.save(f'{self.save_replay_buffer_dir}/act_gen_injection_v{version}.npy', self.act_gen_injection)
+        np.save(f'{self._save_replay_buffer_dir}/act_bus_v{version}.npy', self.act_bus)
+        np.save(f'{self._save_replay_buffer_dir}/act_branch_v{version}.npy', self.act_branch)
+        np.save(f'{self._save_replay_buffer_dir}/act_gen_injection_v{version}.npy', self.act_gen_injection)
 
-        np.save(f'{self.save_replay_buffer_dir}/rewards_v{version}.npy', self.rewards)
+        np.save(f'{self._save_replay_buffer_dir}/rewards_v{version}.npy', self.rewards)
 
-        np.save(f'{self.save_replay_buffer_dir}/next_st_bus_v{version}.npy', self.next_st_bus)
-        np.save(f'{self.save_replay_buffer_dir}/next_st_branch_v{version}.npy', self.next_st_branch)
-        np.save(f'{self.save_replay_buffer_dir}/next_st_fire_distance_v{version}.npy', self.next_st_fire_distance)
-        np.save(f'{self.save_replay_buffer_dir}/next_st_gen_output_v{version}.npy', self.next_st_gen_output)
-        np.save(f'{self.save_replay_buffer_dir}/next_st_load_demand_v{version}.npy', self.next_st_load_demand)
-        np.save(f'{self.save_replay_buffer_dir}/next_st_theta_v{version}.npy', self.next_st_theta)
-        np.save(f'{self.save_replay_buffer_dir}/next_st_line_flow_v{version}.npy', self.next_st_line_flow)
+        np.save(f'{self._save_replay_buffer_dir}/next_st_bus_v{version}.npy', self.next_st_bus)
+        np.save(f'{self._save_replay_buffer_dir}/next_st_branch_v{version}.npy', self.next_st_branch)
+        np.save(f'{self._save_replay_buffer_dir}/next_st_fire_distance_v{version}.npy', self.next_st_fire_distance)
+        np.save(f'{self._save_replay_buffer_dir}/next_st_gen_output_v{version}.npy', self.next_st_gen_output)
+        np.save(f'{self._save_replay_buffer_dir}/next_st_load_demand_v{version}.npy', self.next_st_load_demand)
+        np.save(f'{self._save_replay_buffer_dir}/next_st_theta_v{version}.npy', self.next_st_theta)
+        np.save(f'{self._save_replay_buffer_dir}/next_st_line_flow_v{version}.npy', self.next_st_line_flow)
 
         self.np_counter[0] = self._counter
-        np.save(f'{self.save_replay_buffer_dir}/counter_v{version}.npy', self.np_counter)
+        np.save(f'{self._save_replay_buffer_dir}/counter_v{version}.npy', self.np_counter)
 
     def _load_buffer(self, version):
-        self.st_bus = np.load(f'{self.load_replay_buffer_dir}/st_bus_v{version}.npy')
-        self.st_branch = np.load(f'{self.load_replay_buffer_dir}/st_branch_v{version}.npy')
-        self.st_fire_distance = np.load(f'{self.load_replay_buffer_dir}/st_fire_distance_v{version}.npy')
-        self.st_gen_output = np.load(f'{self.load_replay_buffer_dir}/st_gen_output_v{version}.npy')
-        self.st_load_demand = np.load(f'{self.load_replay_buffer_dir}/st_load_demand_v{version}.npy')
-        self.st_theta = np.load(f'{self.load_replay_buffer_dir}/st_theta_v{version}.npy')
-        self.st_line_flow = np.load(f'{self.load_replay_buffer_dir}/st_line_flow_v{version}.npy')
+        self.st_bus = np.load(f'{self._load_replay_buffer_dir}/st_bus_v{version}.npy')
+        self.st_branch = np.load(f'{self._load_replay_buffer_dir}/st_branch_v{version}.npy')
+        self.st_fire_distance = np.load(f'{self._load_replay_buffer_dir}/st_fire_distance_v{version}.npy')
+        self.st_gen_output = np.load(f'{self._load_replay_buffer_dir}/st_gen_output_v{version}.npy')
+        self.st_load_demand = np.load(f'{self._load_replay_buffer_dir}/st_load_demand_v{version}.npy')
+        self.st_theta = np.load(f'{self._load_replay_buffer_dir}/st_theta_v{version}.npy')
+        self.st_line_flow = np.load(f'{self._load_replay_buffer_dir}/st_line_flow_v{version}.npy')
 
-        self.act_bus = np.load(f'{self.load_replay_buffer_dir}/act_bus_v{version}.npy')
-        self.act_branch = np.load(f'{self.load_replay_buffer_dir}/act_branch_v{version}.npy')
-        self.act_gen_injection = np.load(f'{self.load_replay_buffer_dir}/act_gen_injection_v{version}.npy')
+        self.act_bus = np.load(f'{self._load_replay_buffer_dir}/act_bus_v{version}.npy')
+        self.act_branch = np.load(f'{self._load_replay_buffer_dir}/act_branch_v{version}.npy')
+        self.act_gen_injection = np.load(f'{self._load_replay_buffer_dir}/act_gen_injection_v{version}.npy')
 
-        self.rewards = np.load(f'{self.load_replay_buffer_dir}/rewards_v{version}.npy')
+        self.rewards = np.load(f'{self._load_replay_buffer_dir}/rewards_v{version}.npy')
 
-        self.next_st_bus = np.load(f'{self.load_replay_buffer_dir}/next_st_bus_v{version}.npy')
-        self.next_st_branch = np.load(f'{self.load_replay_buffer_dir}/next_st_branch_v{version}.npy')
-        self.next_st_fire_distance = np.load(f'{self.load_replay_buffer_dir}/next_st_fire_distance_v{version}.npy')
-        self.next_st_gen_output = np.load(f'{self.load_replay_buffer_dir}/next_st_gen_output_v{version}.npy')
-        self.next_st_load_demand = np.load(f'{self.load_replay_buffer_dir}/next_st_load_demand_v{version}.npy')
-        self.next_st_theta = np.load(f'{self.load_replay_buffer_dir}/next_st_theta_v{version}.npy')
-        self.next_st_line_flow = np.load(f'{self.load_replay_buffer_dir}/next_st_line_flow_v{version}.npy')
+        self.next_st_bus = np.load(f'{self._load_replay_buffer_dir}/next_st_bus_v{version}.npy')
+        self.next_st_branch = np.load(f'{self._load_replay_buffer_dir}/next_st_branch_v{version}.npy')
+        self.next_st_fire_distance = np.load(f'{self._load_replay_buffer_dir}/next_st_fire_distance_v{version}.npy')
+        self.next_st_gen_output = np.load(f'{self._load_replay_buffer_dir}/next_st_gen_output_v{version}.npy')
+        self.next_st_load_demand = np.load(f'{self._load_replay_buffer_dir}/next_st_load_demand_v{version}.npy')
+        self.next_st_theta = np.load(f'{self._load_replay_buffer_dir}/next_st_theta_v{version}.npy')
+        self.next_st_line_flow = np.load(f'{self._load_replay_buffer_dir}/next_st_line_flow_v{version}.npy')
 
-        self.np_counter = np.load(f'{self.load_replay_buffer_dir}/counter_v{version}.npy')
+        self.np_counter = np.load(f'{self._load_replay_buffer_dir}/counter_v{version}.npy')
         self._counter = int(self.np_counter[0])
         print("Replay buffer loaded successfully!")
         print("Counter set at: ", self._counter)

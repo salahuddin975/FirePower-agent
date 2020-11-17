@@ -42,10 +42,6 @@ class DataProcessor:
         # print("generators output: ", generators_output)
         # print("nn ratio output: ", nn_output)
 
-        max_output = self.generators.get_max_outputs()
-        net_output = nn_output * max_output
-        # print ("network output: ", net_output)
-
         num_generators = self.generators.get_num_generators()
         generators_current_output = np.zeros(num_generators)
         for i in range(num_generators):
@@ -57,6 +53,11 @@ class DataProcessor:
         generators_max_output = self.generators.get_max_outputs()
         generators_min_output = self.generators.get_min_outputs()
         generators_max_ramp = self.generators.get_max_ramps()
+
+        # net_output =  nn_output * generators_max_output
+        net_output = generators_min_output + nn_output * (generators_max_output - generators_min_output)
+        # print ("network output: ", net_output)
+
         ramp = net_output - generators_current_output
         # print("generators initial ramp: ", ramp)
 

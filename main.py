@@ -19,6 +19,11 @@ random.seed(seed_value)
 np.random.seed(seed_value)
 tf.random.set_seed(seed_value)
 
+physical_devices = tf.config.list_physical_devices('GPU')
+tf.config.set_logical_device_configuration(
+physical_devices[0],
+[tf.config.LogicalDeviceConfiguration(memory_limit=1024)])
+
 
 def get_arguments():
     argument_parser = argparse.ArgumentParser(description="Dummy Agent for gym_firepower")
@@ -110,7 +115,7 @@ if __name__ == "__main__":
 
     for episode in range(total_episode):
         state = env.reset()
-
+        # print(state)
         episodic_reward = 0
         max_reached_step = 0
         # generators.set_max_outputs(state["generator_injection"])

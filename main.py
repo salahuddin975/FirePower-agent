@@ -113,7 +113,7 @@ if __name__ == "__main__":
 
         episodic_reward = 0
         max_reached_step = 0
-        generators.set_max_outputs(state["generator_injection"])
+        # generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
             tf_state = data_processor.get_tf_state(state)

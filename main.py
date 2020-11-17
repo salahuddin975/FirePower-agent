@@ -45,7 +45,7 @@ def get_state_spaces(observation_space):
     num_gen_output = observation_space["generator_injection"].shape[0]
     num_load_demand = observation_space["load_demand"].shape[0]
     num_theta = observation_space["theta"].shape[0]
-    num_line_flow = observation_space["line_flow"].shape[0]
+    num_line_flow = observation_space["theta"].shape[0]
     state_spaces = [num_st_bus, num_st_branch, num_fire_distance, num_gen_output, num_load_demand, num_theta, num_line_flow]
     print(f"State Spaces: num bus: {num_st_bus}, num branch: {num_st_branch}, fire distance: {num_fire_distance}, "
           f"num_gen_injection: {num_gen_output}, num_load_demand: {num_load_demand}, num_theta: {num_theta}, num_line_flow: {num_line_flow}")
@@ -77,18 +77,18 @@ if __name__ == "__main__":
     action_spaces = get_action_spaces(env.action_space)
 
     # agent model
-    save_model = True
-    load_model = False
+    save_model = False
+    load_model = True
     save_model_version = 0
     load_model_version = 0
-    load_episode_num = 0
+    load_episode_num = 450
 
     agent = Agent(state_spaces, action_spaces)
     if load_model:
         agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
     # replay buffer
-    save_replay_buffer = True
+    save_replay_buffer = False
     load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
@@ -105,15 +105,15 @@ if __name__ == "__main__":
     max_steps_per_episode = 300
     num_train_per_episode = 1000         # canbe used by loading replay buffer
     episodic_rewards = []
-    train_network = True
-    explore_network_flag = True
+    train_network = False
+    explore_network_flag = False
 
     for episode in range(total_episode):
         state = env.reset()
 
         episodic_reward = 0
         max_reached_step = 0
-        # generators.set_max_outputs(state["generator_injection"])
+        generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
             tf_state = data_processor.get_tf_state(state)

@@ -108,7 +108,7 @@ class ReplayBuffer:
         self.st_gen_output[index] = np.copy(record[0]["generator_injection"])
         self.st_load_demand[index] = np.copy(record[0]["load_demand"])
         self.st_theta[index] = np.copy(record[0]["theta"])
-        self.st_line_flow[index] = np.copy(record[0]["line_flow"])
+        self.st_line_flow[index] = np.copy(record[0]["theta"])
 
         # use data from heuristic
         self.act_bus[index] = np.copy(record[4]["bus_status"])
@@ -125,7 +125,7 @@ class ReplayBuffer:
         self.next_st_gen_output[index] = np.copy(record[3]["generator_injection"])
         self.next_st_load_demand[index] = np.copy(record[3]["load_demand"])
         self.next_st_theta[index] = np.copy(record[3]["theta"])
-        self.next_st_line_flow[index] = np.copy(record[3]["line_flow"])
+        self.next_st_line_flow[index] = np.copy(record[3]["theta"])
 
         self._counter = self._counter + 1
 

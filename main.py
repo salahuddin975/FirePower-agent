@@ -147,10 +147,10 @@ if __name__ == "__main__":
         summary_writer.add_info(episode, max_reached_step, episodic_reward)
 
         # explore / Testing
-        if episode and (episode % 10 == 0):
+        if episode and (episode % 20 == 0):
             print("Start testing network at: ", episode)
             explore_network_flag = False
-        if episode and (episode % 10 == 2):
+        if episode and (episode % 20 == 2):
             print("Start exploring network at: ", episode)
             explore_network_flag = True
 
@@ -159,6 +159,6 @@ if __name__ == "__main__":
             agent.save_weight(version=save_model_version, episode_num=episode)
 
         # save replay buffer
-        if (episode % 10 == 0) and save_replay_buffer:
+        if (episode % 20 == 0) and save_replay_buffer:
             print(f"Saving replay buffer at: {episode}")
             buffer.save_buffer(save_replay_buffer_version)

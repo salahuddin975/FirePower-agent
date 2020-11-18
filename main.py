@@ -14,12 +14,6 @@ from simulator_resorces import SimulatorResources, Generators
 gym.logger.set_level(25)
 np.set_printoptions(linewidth=300)
 
-seed_value = 50
-os.environ['PYTHONHASHSEED']=str(seed_value)
-random.seed(seed_value)
-np.random.seed(seed_value)
-tf.random.set_seed(seed_value)
-
 try:
     physical_devices = tf.config.list_physical_devices('GPU')
     tf.config.set_logical_device_configuration(physical_devices[0],[tf.config.LogicalDeviceConfiguration(memory_limit=1024)])
@@ -30,16 +24,24 @@ except:
 def get_arguments():
     argument_parser = argparse.ArgumentParser(description="Dummy Agent for gym_firepower")
     argument_parser.add_argument('-g', '--path-geo', help="Full path to geo file", required=True)
-    argument_parser.add_argument('-p', '--path-power', help="Full path to power systems file", required=False)
+    argument_parser.add_argument('-p', '--path-power', help="Full path to power systems file", required=True)
+    argument_parser.add_argument('-s', '--seed', help="Seed for agent", type=int, required=True)
+
     argument_parser.add_argument('-f', '--scale-factor', help="Scali    actor_lr = 0.001ng factor", type=int, default=6)
     argument_parser.add_argument('-n', '--nonconvergence-penalty', help="Non-convergence penalty", type=float)
     argument_parser.add_argument('-a', '--protectionaction-penalty', help="Protection action penalty", type=float)
-    argument_parser.add_argument('-s', '--seed', help="Seed for random number generator", type=int)
     argument_parser.add_argument('-o', '--path-output', help="Output directory for dumping environment data")
 
     parsed_args = argument_parser.parse_args()
     # print(parsed_args)
     return parsed_args
+
+
+def set_seed(seed_value):
+    os.environ['PYTHONHASHSEED'] = str(seed_value)
+    random.seed(seed_value)
+    np.random.seed(seed_value)
+    tf.random.set_seed(seed_value)
 
 
 def get_state_spaces(observation_space):
@@ -74,6 +76,9 @@ def get_action_spaces(action_space):
 
 if __name__ == "__main__":
     args = get_arguments()
+    seed_value = args.seed
+
+    set_seed(seed_value)
     base_path = "database_seed_" + str(seed_value)
 
     simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)

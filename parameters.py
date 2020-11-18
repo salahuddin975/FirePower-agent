@@ -12,7 +12,7 @@ class Parameters:
         self.gamma = 0.9
         self.hidden_layer1 = 512
         self.hidden_layer2 = 128
-        self.obs_fields = "bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input"
+        self.obs_fields = "fire_distance_input, gen_inj_input, load_demand_input, line_flow_input"
 
         # ------------ main training loop -----------
         self.generator_max_output = False
@@ -20,7 +20,7 @@ class Parameters:
         self.test_after_episodes = 20
 
         # ----------- commit history ---------------
-        self.agent_branch = "rl_agent"
+        self.agent_branch = "reduced_observation_space (private)"
         self.agent_commit_number = ""
         self.simulator_branch = "main"
         self.simulator_commit_number = "78e0aeeebc2830507b173a463fbb8ff84d6ca00b"

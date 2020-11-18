@@ -4,6 +4,7 @@ import random
 import argparse
 import numpy as np
 import tensorflow as tf
+from parameters import Parameters
 from agent import Agent
 from replay_buffer import ReplayBuffer
 from data_processor import DataProcessor, Tensorboard, SummaryWriter
@@ -13,7 +14,7 @@ from simulator_resorces import SimulatorResources, Generators
 gym.logger.set_level(25)
 np.set_printoptions(linewidth=300)
 
-seed_value = 50
+seed_value = 51
 os.environ['PYTHONHASHSEED']=str(seed_value)
 random.seed(seed_value)
 np.random.seed(seed_value)
@@ -89,6 +90,10 @@ if __name__ == "__main__":
     save_model_version = 0
     load_model_version = 0
     load_episode_num = 0
+
+    parameters = Parameters(base_path, save_model_version)
+    parameters.save_parameters()
+    parameters.print_parameters()
 
     agent = Agent(base_path, state_spaces, action_spaces)
     if load_model:

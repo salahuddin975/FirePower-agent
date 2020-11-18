@@ -14,11 +14,21 @@ from simulator_resorces import SimulatorResources, Generators
 gym.logger.set_level(25)
 np.set_printoptions(linewidth=300)
 
-try:
-    physical_devices = tf.config.list_physical_devices('GPU')
-    tf.config.set_logical_device_configuration(physical_devices[0],[tf.config.LogicalDeviceConfiguration(memory_limit=1024)])
-except:
-    pass
+
+def set_seed(seed_value):
+    os.environ['PYTHONHASHSEED'] = str(seed_value)
+    random.seed(seed_value)
+    np.random.seed(seed_value)
+    tf.random.set_seed(seed_value)
+    print("Set seed: ", seed_value)
+
+
+def set_gpu_memory_limit():
+    try:
+        physical_devices = tf.config.list_physical_devices('GPU')
+        tf.config.set_logical_device_configuration(physical_devices[0],[tf.config.LogicalDeviceConfiguration(memory_limit=1024)])
+    except:
+        print("Couldn't set GPU memory limit!")
 
 
 def get_arguments():
@@ -37,15 +47,8 @@ def get_arguments():
     return parsed_args
 
 
-def set_seed(seed_value):
-    os.environ['PYTHONHASHSEED'] = str(seed_value)
-    random.seed(seed_value)
-    np.random.seed(seed_value)
-    tf.random.set_seed(seed_value)
-
-
 def get_state_spaces(observation_space):
-    print("observation space: ", observation_space)
+    # print("observation space: ", observation_space)
 
     num_st_bus = observation_space["bus_status"].shape[0]
     num_st_branch = observation_space["branch_status"].shape[0]
@@ -56,8 +59,8 @@ def get_state_spaces(observation_space):
     num_theta = observation_space["theta"].shape[0]
     num_line_flow = observation_space["line_flow"].shape[0]
     state_spaces = [num_st_bus, num_st_branch, num_fire_distance, num_gen_output, num_load_demand, num_theta, num_line_flow]
-    print(f"State Spaces: num bus: {num_st_bus}, num branch: {num_st_branch}, fire distance: {num_fire_distance}, "
-          f"num_gen_injection: {num_gen_output}, num_load_demand: {num_load_demand}, num_theta: {num_theta}, num_line_flow: {num_line_flow}")
+    # print(f"State Spaces: num bus: {num_st_bus}, num branch: {num_st_branch}, fire distance: {num_fire_distance}, "
+    #       f"num_gen_injection: {num_gen_output}, num_load_demand: {num_load_demand}, num_theta: {num_theta}, num_line_flow: {num_line_flow}")
 
     return state_spaces
 
@@ -68,8 +71,8 @@ def get_action_spaces(action_space):
     num_generator_selector = action_space["generator_selector"].shape[0]
     num_generator_injection = action_space["generator_injection"].shape[0]
     action_spaces = [num_bus, num_branch, num_generator_selector, num_generator_injection]
-    print (f"Action Spaces: num bus: {num_bus}, num branch: {num_branch}, num_generator_selector: {num_generator_selector}, "
-            f"num generator injection: {num_generator_injection}")
+    # print (f"Action Spaces: num bus: {num_bus}, num branch: {num_branch}, num_generator_selector: {num_generator_selector}, "
+    #         f"num generator injection: {num_generator_injection}")
 
     return action_spaces
 
@@ -79,6 +82,7 @@ if __name__ == "__main__":
     seed_value = args.seed
 
     set_seed(seed_value)
+    set_gpu_memory_limit()
     base_path = "database_seed_" + str(seed_value)
 
     simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)

@@ -73,7 +73,7 @@ def get_action_spaces(action_space):
 
 if __name__ == "__main__":
     args = get_arguments()
-    base_path = "database_" + str(seed_value)
+    base_path = "database_seed_" + str(seed_value)
 
     simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)
     generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)

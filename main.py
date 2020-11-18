@@ -4,6 +4,7 @@ import random
 import argparse
 import numpy as np
 import tensorflow as tf
+from parameters import Parameters
 from agent import Agent
 from replay_buffer import ReplayBuffer
 from data_processor import DataProcessor, Tensorboard, SummaryWriter
@@ -13,26 +14,34 @@ from simulator_resorces import SimulatorResources, Generators
 gym.logger.set_level(25)
 np.set_printoptions(linewidth=300)
 
-seed_value = 50
-os.environ['PYTHONHASHSEED']=str(seed_value)
-random.seed(seed_value)
-np.random.seed(seed_value)
-tf.random.set_seed(seed_value)
+try:
+    physical_devices = tf.config.list_physical_devices('GPU')
+    tf.config.set_logical_device_configuration(physical_devices[0],[tf.config.LogicalDeviceConfiguration(memory_limit=1024)])
+except:
+    pass
 
 
 def get_arguments():
     argument_parser = argparse.ArgumentParser(description="Dummy Agent for gym_firepower")
     argument_parser.add_argument('-g', '--path-geo', help="Full path to geo file", required=True)
-    argument_parser.add_argument('-p', '--path-power', help="Full path to power systems file", required=False)
+    argument_parser.add_argument('-p', '--path-power', help="Full path to power systems file", required=True)
+    argument_parser.add_argument('-s', '--seed', help="Seed for agent", type=int, required=True)
+
     argument_parser.add_argument('-f', '--scale-factor', help="Scali    actor_lr = 0.001ng factor", type=int, default=6)
     argument_parser.add_argument('-n', '--nonconvergence-penalty', help="Non-convergence penalty", type=float)
     argument_parser.add_argument('-a', '--protectionaction-penalty', help="Protection action penalty", type=float)
-    argument_parser.add_argument('-s', '--seed', help="Seed for random number generator", type=int)
     argument_parser.add_argument('-o', '--path-output', help="Output directory for dumping environment data")
 
     parsed_args = argument_parser.parse_args()
     # print(parsed_args)
     return parsed_args
+
+
+def set_seed(seed_value):
+    os.environ['PYTHONHASHSEED'] = str(seed_value)
+    random.seed(seed_value)
+    np.random.seed(seed_value)
+    tf.random.set_seed(seed_value)
 
 
 def get_state_spaces(observation_space):
@@ -67,6 +76,10 @@ def get_action_spaces(action_space):
 
 if __name__ == "__main__":
     args = get_arguments()
+    seed_value = args.seed
+
+    set_seed(seed_value)
+    base_path = "database_seed_" + str(seed_value)
 
     simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)
     generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)
@@ -83,7 +96,11 @@ if __name__ == "__main__":
     load_model_version = 0
     load_episode_num = 0
 
-    agent = Agent(state_spaces, action_spaces)
+    parameters = Parameters(base_path, save_model_version)
+    parameters.save_parameters()
+    parameters.print_parameters()
+
+    agent = Agent(base_path, state_spaces, action_spaces)
     if load_model:
         agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
@@ -93,11 +110,11 @@ if __name__ == "__main__":
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
 
-    buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version,
+    buffer = ReplayBuffer(base_path, state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version,
                           buffer_capacity=200000, batch_size=1024)
 
-    tensorboard = Tensorboard()
-    summary_writer = SummaryWriter(save_model_version)
+    tensorboard = Tensorboard(base_path)
+    summary_writer = SummaryWriter(base_path, save_model_version)
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
     # agent training
@@ -113,7 +130,9 @@ if __name__ == "__main__":
 
         episodic_reward = 0
         max_reached_step = 0
-        # generators.set_max_outputs(state["generator_injection"])
+
+        if not parameters.generator_max_output:
+            generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
             tf_state = data_processor.get_tf_state(state)
@@ -147,18 +166,18 @@ if __name__ == "__main__":
         summary_writer.add_info(episode, max_reached_step, episodic_reward)
 
         # explore / Testing
-        if episode and (episode % 20 == 0):
+        if episode and (episode % parameters.test_after_episodes == 0):
             print("Start testing network at: ", episode)
             explore_network_flag = False
-        if episode and (episode % 20 == 2):
+        if episode and (episode % parameters.test_after_episodes == 2):
             print("Start exploring network at: ", episode)
             explore_network_flag = True
 
         # save model weights
-        if (episode % 20 == 0) and save_model:
+        if (episode % parameters.test_after_episodes == 0) and save_model:
             agent.save_weight(version=save_model_version, episode_num=episode)
 
         # save replay buffer
-        if (episode % 20 == 0) and save_replay_buffer:
+        if (episode % parameters.test_after_episodes == 0) and save_replay_buffer:
             print(f"Saving replay buffer at: {episode}")
             buffer.save_buffer(save_replay_buffer_version)

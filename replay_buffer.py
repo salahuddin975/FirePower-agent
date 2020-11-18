@@ -1,19 +1,32 @@
+import os
 import numpy as np
 import tensorflow as tf
 
 
 class ReplayBuffer:
-    def __init__(self, state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version=0, buffer_capacity=200000, batch_size=256):
+    def __init__(self, base_path, state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version=0, buffer_capacity=200000, batch_size=256):
         self._counter = 0
         self._capacity = buffer_capacity
         self._batch_size = batch_size
-        self._load_replay_buffer_dir = "replay_buffer"
-        self._save_replay_buffer_dir = "replay_buffer"
+        self._load_replay_buffer_dir = os.path.join(base_path, "replay_buffer")
+        self._save_replay_buffer_dir = os.path.join(base_path, "replay_buffer")
+        self._create_dir()
 
         if not load_replay_buffer:
             self._initialize_buffer(state_spaces, action_spaces)
         else:
             self._load_buffer(load_replay_buffer_version)
+
+    def _create_dir(self):
+        try:
+            os.makedirs(self._load_replay_buffer_dir)
+        except OSError as error:
+            print(error)
+
+        try:
+            os.makedirs(self._save_replay_buffer_dir)
+        except OSError as error:
+            print(error)
 
     def _initialize_buffer(self, state_spaces, action_spaces):
         self.st_bus = np.zeros((self._capacity, state_spaces[0]))

@@ -15,6 +15,7 @@ class Parameters:
         self.obs_fields = "bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input"
 
         # ------------ main training loop -----------
+        self.generator_max_output = False
         self.noise_rate = 0.5
         self.test_after_episodes = 20
 
@@ -33,9 +34,12 @@ class Parameters:
             "first hidden layer: " + str(self.hidden_layer1) + "\n" + \
             "second hidden layer: " + str(self.hidden_layer2) + "\n" + \
             "observation fields: " + self.obs_fields + "\n" + \
+            \
             "\n ------------ Main training loop --------- \n" + \
+            "generator max output: " + str(self.generator_max_output)  + "\n" + \
             "noise_range: " + str(self.noise_rate)  + "\n" + \
             "test after every: " + str(self.test_after_episodes) + " episodes"  + "\n" + \
+            \
             "\n ------------ Commit history --------- \n" + \
             "agent branch: " + self.agent_branch + "\n" + \
             "agent commit number: " + self.agent_commit_number + "\n" + \

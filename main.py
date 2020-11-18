@@ -125,7 +125,9 @@ if __name__ == "__main__":
 
         episodic_reward = 0
         max_reached_step = 0
-        # generators.set_max_outputs(state["generator_injection"])
+
+        if not parameters.generator_max_output:
+            generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
             tf_state = data_processor.get_tf_state(state)
@@ -159,18 +161,18 @@ if __name__ == "__main__":
         summary_writer.add_info(episode, max_reached_step, episodic_reward)
 
         # explore / Testing
-        if episode and (episode % 20 == 0):
+        if episode and (episode % parameters.test_after_episodes == 0):
             print("Start testing network at: ", episode)
             explore_network_flag = False
-        if episode and (episode % 20 == 2):
+        if episode and (episode % parameters.test_after_episodes == 2):
             print("Start exploring network at: ", episode)
             explore_network_flag = True
 
         # save model weights
-        if (episode % 20 == 0) and save_model:
+        if (episode % parameters.test_after_episodes == 0) and save_model:
             agent.save_weight(version=save_model_version, episode_num=episode)
 
         # save replay buffer
-        if (episode % 20 == 0) and save_replay_buffer:
+        if (episode % parameters.test_after_episodes == 0) and save_replay_buffer:
             print(f"Saving replay buffer at: {episode}")
             buffer.save_buffer(save_replay_buffer_version)

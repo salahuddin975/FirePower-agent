@@ -117,7 +117,7 @@ if __name__ == "__main__":
 
     for episode in range(total_episode):
         state = env.reset()
-        # print(state)
+
         episodic_reward = 0
         max_reached_step = 0
         # generators.set_max_outputs(state["generator_injection"])

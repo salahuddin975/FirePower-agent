@@ -14,7 +14,7 @@ from simulator_resorces import SimulatorResources, Generators
 gym.logger.set_level(25)
 np.set_printoptions(linewidth=300)
 
-seed_value = 51
+seed_value = 50
 os.environ['PYTHONHASHSEED']=str(seed_value)
 random.seed(seed_value)
 np.random.seed(seed_value)

@@ -1,16 +1,18 @@
+import os
 import copy
 import tensorflow as tf
 from tensorflow.keras import layers
 
 
 class Agent:
-    def __init__(self, state_spaces, action_spaces):
+    def __init__(self, base_path, state_spaces, action_spaces):
         self._gamma = 0.9      # discount factor
         self._tau = 0.05       # used to update target network
         actor_lr = 0.001
         critic_lr = 0.002
-        self._save_weight_directory = "saved_model"
-        self._load_weight_directory = "saved_model"
+        self._save_weight_directory = os.path.join(base_path, "agent_model")
+        self._load_weight_directory = os.path.join(base_path, "agent_model")
+        self._create_dir()
 
         self._actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
         self._critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
@@ -25,6 +27,17 @@ class Agent:
         self._critic = self._critic_model()
         self._target_critic = self._critic_model()
         self._target_critic.set_weights(self._critic.get_weights())
+
+    def _create_dir(self):
+        try:
+            os.makedirs(self._save_weight_directory)
+        except OSError as error:
+            print(error)
+
+        try:
+            os.makedirs(self._load_weight_directory)
+        except OSError as error:
+            print(error)
 
     def save_weight(self, version, episode_num):
         self.actor.save_weights(f"{self._save_weight_directory}/agent_actor{version}_{episode_num}.h5")

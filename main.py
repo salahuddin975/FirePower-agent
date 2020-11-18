@@ -19,10 +19,11 @@ random.seed(seed_value)
 np.random.seed(seed_value)
 tf.random.set_seed(seed_value)
 
-physical_devices = tf.config.list_physical_devices('GPU')
-tf.config.set_logical_device_configuration(
-physical_devices[0],
-[tf.config.LogicalDeviceConfiguration(memory_limit=1024)])
+try:
+    physical_devices = tf.config.list_physical_devices('GPU')
+    tf.config.set_logical_device_configuration(physical_devices[0],[tf.config.LogicalDeviceConfiguration(memory_limit=1024)])
+except:
+    pass
 
 
 def get_arguments():
@@ -72,6 +73,7 @@ def get_action_spaces(action_space):
 
 if __name__ == "__main__":
     args = get_arguments()
+    base_path = "database_" + str(seed_value)
 
     simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)
     generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)
@@ -88,7 +90,7 @@ if __name__ == "__main__":
     load_model_version = 0
     load_episode_num = 0
 
-    agent = Agent(state_spaces, action_spaces)
+    agent = Agent(base_path, state_spaces, action_spaces)
     if load_model:
         agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
@@ -98,11 +100,11 @@ if __name__ == "__main__":
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
 
-    buffer = ReplayBuffer(state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version,
+    buffer = ReplayBuffer(base_path, state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version,
                           buffer_capacity=200000, batch_size=1024)
 
-    tensorboard = Tensorboard()
-    summary_writer = SummaryWriter(save_model_version)
+    tensorboard = Tensorboard(base_path)
+    summary_writer = SummaryWriter(base_path, save_model_version)
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
     # agent training

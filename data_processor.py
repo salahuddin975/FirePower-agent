@@ -1,3 +1,4 @@
+import os
 import csv
 import random
 import datetime
@@ -172,14 +173,14 @@ class DataProcessor:
 
 
 class Tensorboard:                 # $ tensorboard --logdir ./logs
-    def __init__(self):
+    def __init__(self, base_path):
         current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
         self._agent_counter = 0
         self._critic_counter = 0
 
-        agent_log_dir = 'logs/' + current_time + '/agent'
-        citic_log_dir = 'logs/' + current_time + '/critic'
+        agent_log_dir = os.path.join(base_path, 'logs', current_time, 'agent')
+        citic_log_dir = os.path.join(base_path, 'logs', current_time, 'critic')
 
         self._agent_summary_writer = tf.summary.create_file_writer(agent_log_dir)
         self._critic_summary_writer = tf.summary.create_file_writer(citic_log_dir)
@@ -198,11 +199,19 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
 
 
 class SummaryWriter:
-    def __init__(self, model_version):
+    def __init__(self, base_path, model_version):
         self._model_version = model_version
-        self._file_name = "test_result/fire_power_reward_list"
+        self._dir_name = os.path.join(base_path, "test_result")
+        self._file_name = os.path.join(self._dir_name, "fire_power_reward_list")
 
+        self._create_dir()
         self._initialize()
+
+    def _create_dir(self):
+        try:
+            os.makedirs(self._dir_name)
+        except OSError as error:
+            print(error)
 
     def _initialize(self):
         with open(f'{self._file_name}_v{self._model_version}.csv', 'w') as fd:

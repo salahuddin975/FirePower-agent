@@ -151,9 +151,9 @@ class DataProcessor:
         tf_generator_injection = tf.expand_dims(tf.convert_to_tensor(state["generator_injection"]), 0)
         tf_load_demand = tf.expand_dims(tf.convert_to_tensor(state["load_demand"]), 0)
         tf_theta = tf.expand_dims(tf.convert_to_tensor(state["theta"]), 0)
-        tf_line_flow = tf.expand_dims(tf.convert_to_tensor(state["line_flow"]), 0)
+        # tf_line_flow = tf.expand_dims(tf.convert_to_tensor(state["line_flow"]), 0)
 
-        return [tf_bus_status, tf_branch_status, tf_fire_distance, tf_generator_injection, tf_load_demand, tf_theta, tf_line_flow]
+        return [tf_bus_status, tf_branch_status, tf_fire_distance, tf_generator_injection, tf_load_demand, tf_theta]
 
     def get_tf_critic_input(self, state, action):
         st_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)

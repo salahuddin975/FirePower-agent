@@ -23,7 +23,7 @@ class Parameters:
         self.agent_branch = "rl_agent"
         self.agent_commit_number = ""
         self.simulator_branch = "main"
-        self.simulator_commit_number = "78e0aeeebc2830507b173a463fbb8ff84d6ca00b"
+        self.simulator_commit_number = "eeab19a3f67d094cda42a31e063e70fcea029a90"
 
         self._initialize()
 

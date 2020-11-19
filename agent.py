@@ -118,9 +118,9 @@ class Agent:
         # theta_input1 = layers.Dense(32, activation="tanh") (theta_input)
 
         # line_flow -> Box(34, )
-        line_flow_input = layers.Input(shape=(self._state_spaces[6], ))
+        # line_flow_input = layers.Input(shape=(self._state_spaces[6], ))
 
-        state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input])
+        state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input])
         # state = layers.Concatenate() ([bus_input1, branch_input1, fire_distance_input1, gen_inj_input1, load_demand_input1, theta_input1])
         hidden = layers.Dense(512, activation="tanh") (state)
         hidden = layers.Dense(128, activation="tanh") (hidden)
@@ -134,7 +134,7 @@ class Agent:
         # generator_injection (generator output) -> Box(5, )
         gen_inj_output = layers.Dense(self._action_spaces[3], activation="sigmoid") (hidden)
 
-        model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input],
+        model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input],
                                [gen_inj_output])
         return model
 
@@ -164,7 +164,7 @@ class Agent:
         # st_theta1 = layers.Dense(30, activation="relu") (st_theta)
 
         # line_flow -> Box(34, )
-        st_line_flow = layers.Input(shape=(self._state_spaces[6], ))
+        # st_line_flow = layers.Input(shape=(self._state_spaces[6], ))
 
         # bus -> MultiBinary(24)
         act_bus = layers.Input(shape=(self._action_spaces[0],))
@@ -179,7 +179,7 @@ class Agent:
         # act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
 
         # state = layers.Concatenate() ([st_bus, act_gen_injection])
-        state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
+        state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
                                        act_bus, act_branch, act_gen_injection])
         # state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1,
         #                                act_bus1, act_branch1, act_gen_injection1])
@@ -188,6 +188,6 @@ class Agent:
         hidden = layers.Dense(128, activation="relu") (hidden)
         reward = layers.Dense(1, activation="linear") (hidden)
 
-        model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
+        model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
                                 act_bus, act_branch, act_gen_injection], reward)
         return model

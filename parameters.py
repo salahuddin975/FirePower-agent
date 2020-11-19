@@ -20,7 +20,7 @@ class Parameters:
         self.test_after_episodes = 20
 
         # ----------- commit history ---------------
-        self.agent_branch = "rl_agent"
+        self.agent_branch = "pmin_zero"
         self.agent_commit_number = ""
         self.simulator_branch = "main"
         self.simulator_commit_number = "78e0aeeebc2830507b173a463fbb8ff84d6ca00b"

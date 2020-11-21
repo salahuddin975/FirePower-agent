@@ -1,0 +1,1 @@
+store test result from rnslab1 server

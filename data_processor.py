@@ -70,6 +70,9 @@ class DataProcessor:
                 ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[i] else -generators_max_ramp[i]
                 ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] > generators_min_output[i] else generators_min_output[i] - generators_current_output[i]
 
+            if abs(ramp[i]) < 0.0001:
+                ramp[i] = 0.0
+
         # print("generators set ramp: ", ramp)
         return ramp
 

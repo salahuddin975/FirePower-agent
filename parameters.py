@@ -20,7 +20,7 @@ class Parameters:
 
         # ------------ main training loop -----------
         self.generator_max_output = False           # True
-        self.noise_rate = 0.5                       # False
+        self.noise_rate = 0.5                       # True
         self.test_after_episodes = 20               # True
 
         # ----------- commit history ---------------

@@ -1,4 +1,5 @@
 import os
+import git
 
 
 class Parameters:
@@ -7,6 +8,9 @@ class Parameters:
         self._model_version = model_version
         self._file_name = os.path.join(base_path, "parameters")
         self._create_dir()
+
+        self._agent_git_repo = git.Repo(search_parent_directories=True)
+        self._simulator_git_repo = git.Repo(path="./../gym-firepower/")
 
         # ------------ agent.py -------------
         self.gamma = 0.9
@@ -20,10 +24,10 @@ class Parameters:
         self.test_after_episodes = 20
 
         # ----------- commit history ---------------
-        self.agent_branch = "rl_agent"
-        self.agent_commit_number = ""
-        self.simulator_branch = "main"
-        self.simulator_commit_number = "6d3d172512c6da12c8edb5808208235588bbb31f"
+        self.agent_branch = self._agent_git_repo.active_branch.name
+        self.agent_commit_number = self._agent_git_repo.head.object.hexsha
+        self.simulator_branch = self._simulator_git_repo.active_branch.name
+        self.simulator_commit_number = self._simulator_git_repo.head.object.hexsha
 
         self._initialize()
 

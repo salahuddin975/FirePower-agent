@@ -13,15 +13,15 @@ class Parameters:
         self._simulator_git_repo = git.Repo(path="./../gym-firepower/")
 
         # ------------ agent.py -------------
-        self.gamma = 0.9
-        self.hidden_layer1 = 512
-        self.hidden_layer2 = 128
-        self.obs_fields = "bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input"
+        self.gamma = 0.9                    # False
+        self.hidden_layer1 = 512            # False
+        self.hidden_layer2 = 128            # False
+        self.obs_fields = "bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input"           # False
 
         # ------------ main training loop -----------
-        self.generator_max_output = False
-        self.noise_rate = 0.5
-        self.test_after_episodes = 20
+        self.generator_max_output = False           # True
+        self.noise_rate = 0.5                       # False
+        self.test_after_episodes = 20               # True
 
         # ----------- commit history ---------------
         self.agent_branch = self._agent_git_repo.active_branch.name

@@ -173,7 +173,7 @@ if __name__ == "__main__":
         if episode and (episode % parameters.test_after_episodes == 0):
             print("Start testing network at: ", episode)
             explore_network_flag = False
-        if episode and (episode % parameters.test_after_episodes == 2):
+        if episode and (episode % parameters.test_after_episodes == 4):
             print("Start exploring network at: ", episode)
             explore_network_flag = True
 

@@ -100,7 +100,7 @@ if __name__ == "__main__":
     load_model_version = 0
     load_episode_num = 0
 
-    parameters = Parameters(base_path, save_model_version)
+    parameters = Parameters(base_path, save_model_version, args.path_geo)
     parameters.save_parameters()
     parameters.print_parameters()
 

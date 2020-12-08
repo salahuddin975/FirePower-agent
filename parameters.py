@@ -1,9 +1,10 @@
 import os
 import git
+import json
 
 
 class Parameters:
-    def __init__(self, base_path, model_version):
+    def __init__(self, base_path, model_version, geo_file):
         self._base_dir = base_path
         self._model_version = model_version
         self._file_name = os.path.join(base_path, "parameters")
@@ -29,6 +30,9 @@ class Parameters:
         self.simulator_branch = self._simulator_git_repo.active_branch.name
         self.simulator_commit_number = self._simulator_git_repo.head.object.hexsha
 
+        # ----------- fire spread conf ---------------
+        self._parse_geo_file(geo_file)
+
         self._initialize()
 
     def _initialize(self):
@@ -48,7 +52,24 @@ class Parameters:
             "agent branch: " + self.agent_branch + "\n" + \
             "agent commit number: " + self.agent_commit_number + "\n" + \
             "simulator branch: " + self.simulator_branch + "\n" + \
-            "simulator commit number: " + self.simulator_commit_number + "\n"
+            "simulator commit number: " + self.simulator_commit_number + "\n" + \
+            \
+            "\n ------------ fire spread conf --------- \n" + \
+            "box: " + str(self._boxes) + "\n" + \
+            "num of sources: " + str(self._num_sources) + "\n"
+
+    def _parse_geo_file(self, geo_file):
+        args = {"cols": 40, "rows": 40, "sources": [[5, 5]],
+                "seed": 30, "random_source":False, "num_sources":1}
+
+        with open(geo_file, 'r') as config_file:
+            args.update(json.load(config_file))
+
+        self._rows = int(args["rows"])
+        self._cols = int(args["cols"])
+        self._random_source = args["random_source"]
+        self._boxes = args["boxes"]
+        self._num_sources = args["num_sources"]
 
     def _create_dir(self):
         try:

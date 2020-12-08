@@ -25,9 +25,15 @@ class Parameters:
         self.test_after_episodes = 20               # True
 
         # ----------- commit history ---------------
-        self.agent_branch = self._agent_git_repo.active_branch.name
+        try:
+            self.agent_branch = self._agent_git_repo.active_branch.name
+        except:
+            self.agent_branch = "detached head"
         self.agent_commit_number = self._agent_git_repo.head.object.hexsha
-        self.simulator_branch = self._simulator_git_repo.active_branch.name
+        try:
+            self.simulator_branch = self._simulator_git_repo.active_branch.name
+        except:
+            self.simulator_branch = "detached head"
         self.simulator_commit_number = self._simulator_git_repo.head.object.hexsha
 
         # ----------- fire spread conf ---------------

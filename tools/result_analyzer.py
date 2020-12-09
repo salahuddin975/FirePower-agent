@@ -3,13 +3,13 @@ import csv
 
 # seed = int(sys.argv[1])
 
-seed=50
-num_of_result=5
+seed=101
+num_of_result=20
+path = "rnslab2/"
 
-path = "rnslab1/"
 file_name = "fire_power_reward_list_v0.csv"
-
 test_result = []
+
 for i in range(num_of_result):
     file_path = path + "seed_" + str(seed+i) + "_" + file_name
     print(file_path)

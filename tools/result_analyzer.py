@@ -2,14 +2,14 @@ import pandas as pd
 
 
 seed = 101
-num_of_result = 25
-path = "rnslab2/"
+num_of_result = 17
+path = "rnslab1/"
 
 test_result = []
 file_name = "fire_power_reward_list_v0.csv"
 
-for i in range(num_of_result):
-    file_path = path + "seed_" + str(seed + i) + "_" + file_name
+for itr1 in range(num_of_result):
+    file_path = path + "seed_" + str(seed + itr1) + "_" + file_name
     print(file_path)
 
     df = pd.read_csv(file_path, header=0)
@@ -27,13 +27,13 @@ for i in range(num_of_result):
                 step_count = min(df.loc[i+1, "max_reached_step"], df.loc[i+2, "max_reached_step"], df.loc[i+3, "max_reached_step"], df.loc[i+4, "max_reached_step"])
                 print("min_penalty: ", min_penalty, "; at: ", penalty_ep_no)
 
-    test_result.append((penalty_ep_no, step_count, min_penalty))
-    print("episode_no: ", penalty_ep_no, "; max_reached_step: ", step_count, "; minimum_penalty: ", min_penalty)
+    test_result.append((seed+itr1, penalty_ep_no, step_count, min_penalty))
+    print("seed: ", seed+itr1, "episode_no: ", penalty_ep_no, "; max_reached_step: ", step_count, "; minimum_penalty: ", min_penalty)
 
 
 penalty = []
-for i, result in enumerate(test_result):
-    print(f" - Test result{i+1}: episode_no: {result[0]}; max_reached_step: {result[1]}; minimum_penalty: {result[2]}")
-    penalty.append(result[2])
+for result in test_result:
+    print(f" - Seed: {result[0]}; episode_no: {result[1]}; max_reached_step: {result[2]}; minimum_penalty: {result[3]}")
+    penalty.append(result[3])
 
 print(f"\n - Summary: average minimum penalty: {sum(penalty)/5}; lowest: {max(penalty)}; highest: {min(penalty)}")

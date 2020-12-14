@@ -33,7 +33,7 @@ for itr1 in range(num_of_result):
 
 penalty = []
 for result in test_result:
-    print(f" - Seed: {result[0]}; episode_no: {result[1]}; max_reached_step: {result[2]}; minimum_penalty: {result[3]}")
+    print(f" - Seed: {result[0]}; episode_no: {result[1]}; min_reached_step: {result[2]}; minimum_penalty: {result[3]}")
     penalty.append(result[3])
 
 print(f"\n - Summary: average minimum penalty: {sum(penalty)/5}; lowest: {max(penalty)}; highest: {min(penalty)}")

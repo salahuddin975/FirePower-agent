@@ -59,6 +59,8 @@ class Parameters:
             "simulator commit number: " + self.simulator_commit_number + "\n" + \
             \
             "\n ------------ fire spread conf --------- \n" + \
+            "random_source: " + str(self._random_source) + "\n" + \
+            "fixed_source: " + str(self._fixed_source) + "\n" + \
             "box: " + str(self._boxes) + "\n" + \
             "num of sources: " + str(self._num_sources) + "\n"
 
@@ -71,6 +73,7 @@ class Parameters:
 
         self._rows = int(args["rows"])
         self._cols = int(args["cols"])
+        self._fixed_source = args["sources"]
         self._random_source = args["random_source"]
         self._boxes = args["boxes"]
         self._num_sources = args["num_sources"]

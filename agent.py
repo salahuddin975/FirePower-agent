@@ -180,7 +180,7 @@ class Agent:
 
         # state = layers.Concatenate() ([st_bus, act_gen_injection])
         state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
-                                       act_bus, act_branch, act_gen_injection])
+                                    act_gen_injection])
         # state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1,
         #                                act_bus1, act_branch1, act_gen_injection1])
 

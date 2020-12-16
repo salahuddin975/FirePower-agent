@@ -14,7 +14,7 @@ class Parameters:
         self._simulator_git_repo = git.Repo(path="./../gym-firepower/")
 
         # ------------ agent.py -------------
-        self.gamma = 0.9                         # False
+        self.gamma = 0.99                        # False
         self.hidden_layer = "512, 128"           # False
         self.obs_fields = "bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input"           # False
 

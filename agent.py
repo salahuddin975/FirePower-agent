@@ -122,9 +122,9 @@ class Agent:
 
         state = layers.Concatenate() ([fire_distance_input, theta_input, line_flow_input])
         # state = layers.Concatenate() ([bus_input1, branch_input1, fire_distance_input1, gen_inj_input1, load_demand_input1, theta_input1])
-        hidden = layers.Dense(400, activation="relu") (state)
+        hidden = layers.Dense(400, activation="tanh") (state)
         hidden = layers.BatchNormalization()(hidden)
-        hidden = layers.Dense(300, activation="relu") (hidden)
+        hidden = layers.Dense(300, activation="tanh") (hidden)
         hidden = layers.BatchNormalization()(hidden)
 
         # bus -> MultiBinary(24)
@@ -152,7 +152,7 @@ class Agent:
         # fire_distance -> Box(58, )
         st_fire_distance = layers.Input(shape=(self._state_spaces[2],))
         st_fire_distance1 = layers.BatchNormalization()(st_fire_distance)
-        st_fire_distance1 = layers.Dense(64, activation="relu") (st_fire_distance1)
+        st_fire_distance1 = layers.Dense(60, activation="relu") (st_fire_distance1)
         st_fire_distance1 = layers.BatchNormalization()(st_fire_distance1)
 
         # generator_injection (output) -> Box(24, )

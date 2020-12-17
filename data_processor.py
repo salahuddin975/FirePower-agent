@@ -114,8 +114,8 @@ class DataProcessor:
         # generators_ramp = np.zeros(11, int)      # overwrite by dummy value (need to remove)
 
         action = {
-            "bus_status": bus_status,
-            "branch_status": branch_status,
+            "bus_status": np.ones(24, int), # bus_status,
+            "branch_status": np.ones(34, int), # branch_status,
             "generator_selector": self.generators.get_generators(),
             "generator_injection": ramp,
         }

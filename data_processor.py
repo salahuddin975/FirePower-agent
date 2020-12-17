@@ -14,6 +14,9 @@ class DataProcessor:
         self._state_spaces = state_spaces
         self._action_spaces = action_spaces
 
+        num_generators = generators.get_num_generators()
+        self._ou_noise = OUActionNoise(mean=np.zeros(num_generators), std_deviation=float(0.2) * np.ones(num_generators))
+
     def _check_network_violations(self, bus_status, branch_status):
         from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
         to_buses = self.simulator_resources.ppc["branch"][:, T_BUS].astype('int')
@@ -134,11 +137,13 @@ class DataProcessor:
 
         # amount of power for ramping up/down
         nn_output = np.array(tf.squeeze(nn_action[0]))
-        for i in range(nn_output.size):
-            if explore_network:
-                nn_output[i] = nn_output[i] + random.uniform(-noise_range, noise_range)
+        # for i in range(nn_output.size):
+        #     if explore_network:
+        #         nn_output[i] = nn_output[i] + random.uniform(-noise_range, noise_range)
+        if explore_network:
+            nn_output = nn_output + self._ou_noise()
         nn_output = np.clip(nn_output, 0, 1)
-        # print("nn output: ", nn_output)
+        # print("after exploration: ", nn_output)
 
         action = {
             "generator_injection": nn_output,
@@ -173,6 +178,33 @@ class DataProcessor:
 
         return [st_bus_status, st_branch_status, st_fire_state, st_generator_output, st_load_demand, st_theta,
                 act_bus_status, act_branch_status, act_generator_selector, act_generator_injection]
+
+
+class OUActionNoise:
+    def __init__(self, mean, std_deviation, theta=0.15, dt=1e-2, x_initial=None):
+        self.theta = theta
+        self.mean = mean
+        self.std_dev = std_deviation
+        self.dt = dt
+        self.x_initial = x_initial
+        self.reset()
+
+    def __call__(self):
+        x = (
+            self.x_prev
+            + self.theta * (self.mean - self.x_prev) * self.dt
+            + self.std_dev * np.sqrt(self.dt) * np.random.normal(size=self.mean.shape)
+        )
+        # Store x into x_prev
+        # Makes next noise dependent on current one
+        self.x_prev = x
+        return x
+
+    def reset(self):
+        if self.x_initial is not None:
+            self.x_prev = self.x_initial
+        else:
+            self.x_prev = np.zeros_like(self.mean)
 
 
 class Tensorboard:                 # $ tensorboard --logdir ./logs

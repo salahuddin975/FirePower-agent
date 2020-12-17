@@ -120,10 +120,12 @@ class Agent:
         # line_flow -> Box(34, )
         line_flow_input = layers.Input(shape=(self._state_spaces[6], ))
 
-        state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input])
+        state = layers.Concatenate() ([fire_distance_input, theta_input, line_flow_input])
         # state = layers.Concatenate() ([bus_input1, branch_input1, fire_distance_input1, gen_inj_input1, load_demand_input1, theta_input1])
-        hidden = layers.Dense(512, activation="tanh") (state)
-        hidden = layers.Dense(128, activation="tanh") (hidden)
+        hidden = layers.Dense(400, activation="relu") (state)
+        hidden = layers.BatchNormalization()(hidden)
+        hidden = layers.Dense(300, activation="relu") (hidden)
+        hidden = layers.BatchNormalization()(hidden)
 
         # bus -> MultiBinary(24)
         # bus_output = layers.Dense(action_space[0], activation="sigmoid") (hidden)
@@ -149,7 +151,9 @@ class Agent:
 
         # fire_distance -> Box(58, )
         st_fire_distance = layers.Input(shape=(self._state_spaces[2],))
-        # st_fire_distance1 = layers.Dense(64, activation="relu") (st_fire_distance)
+        st_fire_distance1 = layers.BatchNormalization()(st_fire_distance)
+        st_fire_distance1 = layers.Dense(64, activation="relu") (st_fire_distance1)
+        st_fire_distance1 = layers.BatchNormalization()(st_fire_distance1)
 
         # generator_injection (output) -> Box(24, )
         st_gen_output = layers.Input(shape=(self._state_spaces[3],))                     # Generator current total output
@@ -161,10 +165,15 @@ class Agent:
 
         # theta -> Box(24, )
         st_theta = layers.Input(shape=(self._state_spaces[5], ))
-        # st_theta1 = layers.Dense(30, activation="relu") (st_theta)
+        st_theta1 = layers.BatchNormalization()(st_theta)
+        st_theta1 = layers.Dense(30, activation="relu") (st_theta1)
+        st_theta1 = layers.BatchNormalization()(st_theta1)
 
         # line_flow -> Box(34, )
         st_line_flow = layers.Input(shape=(self._state_spaces[6], ))
+        st_line_flow1 = layers.BatchNormalization()(st_line_flow)
+        st_line_flow1 = layers.Dense(40, activation="relu") (st_line_flow1)
+        st_line_flow1 = layers.BatchNormalization()(st_line_flow1)
 
         # bus -> MultiBinary(24)
         act_bus = layers.Input(shape=(self._action_spaces[0],))
@@ -176,16 +185,19 @@ class Agent:
 
         # generator_injection -> Box(5, )
         act_gen_injection = layers.Input(shape=(self._action_spaces[3],))
-        # act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
+        act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
+        act_gen_injection1 = layers.BatchNormalization()(act_gen_injection1)
 
         # state = layers.Concatenate() ([st_bus, act_gen_injection])
-        state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
-                                       act_bus, act_branch, act_gen_injection])
+        state = layers.Concatenate() ([st_fire_distance1, st_theta1, st_line_flow1,
+                                       act_gen_injection1])
         # state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1,
         #                                act_bus1, act_branch1, act_gen_injection1])
 
-        hidden = layers.Dense(512, activation="relu") (state)
-        hidden = layers.Dense(128, activation="relu") (hidden)
+        hidden = layers.Dense(300, activation="relu") (state)
+        hidden = layers.BatchNormalization()(hidden)
+        hidden = layers.Dense(250, activation="relu") (hidden)
+        hidden = layers.BatchNormalization()(hidden)
         reward = layers.Dense(1, activation="linear") (hidden)
 
         model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,

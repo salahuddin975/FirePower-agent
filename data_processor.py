@@ -39,7 +39,7 @@ class DataProcessor:
                         ramp[i] = load_loss
                     load_loss = load_loss - ramp[i]
 
-    def _clip_ramp_values(self, nn_output, generators_output):
+    def _clip_ramp_values(self, nn_selected_generators, nn_generator_output, generators_output):
         # print("generators output: ", generators_output)
         # print("nn ratio output: ", nn_output)
 
@@ -49,39 +49,43 @@ class DataProcessor:
             generators_current_output[i] = generators_output[self.generators.get_generators()[i]]
         # print("generators current output: ", generators_current_output)
 
-        # print("nn ramp: ", nn_ramp)
-
         generators_max_output = self.generators.get_max_outputs()
         generators_min_output = self.generators.get_min_outputs()
         generators_max_ramp = self.generators.get_max_ramps()
 
+        selected_generators_indices= (nn_selected_generators*11).astype(int)
+        # print("selected generators: ", selected_generators)
+
         # net_output =  nn_output * generators_max_output
-        net_output = generators_min_output + nn_output * (generators_max_output - generators_min_output)
+        net_output = generators_min_output[selected_generators_indices] + nn_generator_output * (generators_max_output[selected_generators_indices] - generators_min_output[selected_generators_indices])
         # print ("network output: ", net_output)
 
-        ramp = net_output - generators_current_output
+        ramp = net_output - generators_current_output[selected_generators_indices]
         # print("generators initial ramp: ", ramp)
 
         for i in range(ramp.size):
+            gen = selected_generators_indices[i]
             if ramp[i] > 0:
-                ramp[i] = ramp[i] if ramp[i] < generators_max_ramp[i] else generators_max_ramp[i]
-                ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] < generators_max_output[i] else generators_max_output[i] - generators_current_output[i]
+                ramp[i] = ramp[i] if ramp[i] < generators_max_ramp[gen] else generators_max_ramp[gen]
+                ramp[i] = ramp[i] if ramp[i] + generators_current_output[gen] < generators_max_output[gen] else generators_max_output[gen] - generators_current_output[gen]
             else:
-                ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[i] else -generators_max_ramp[i]
-                ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] > generators_min_output[i] else generators_min_output[i] - generators_current_output[i]
+                ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[gen] else -generators_max_ramp[gen]
+                ramp[i] = ramp[i] if ramp[i] + generators_current_output[gen] > generators_min_output[gen] else generators_min_output[gen] - generators_current_output[gen]
 
             if abs(ramp[i]) < 0.0001:
                 ramp[i] = 0.0
 
+        # print("selected generators: ", selected_generators)
         # print("generators set ramp: ", ramp)
-        return ramp
+        selected_generators = self.generators.get_generators()[selected_generators_indices]
+        return selected_generators, ramp
 
-    def _check_bus_generator_violation(self, bus_status, generators_ramp):
-        selected_generators = self.generators.get_generators()
+    def _check_bus_generator_violation(self, bus_status, selected_generators, generators_ramp):
+        # selected_generators = self.generators.get_generators()
 
         for bus in range(bus_status.size):
             flag = bus_status[bus]
-            for j in range(selected_generators.size):
+            for j in range(len(selected_generators)):
                 gen_bus = selected_generators[j]
                 if bus == gen_bus and flag == False:
                     generators_ramp[j] = False
@@ -103,17 +107,20 @@ class DataProcessor:
         # print("bus status: ", bus_status)
         # print("branch status: ", branch_status)
 
-        nn_output = np_action["generator_injection"]
-        ramp = self._clip_ramp_values(nn_output, generators_current_output)
-        ramp = self._check_bus_generator_violation(bus_status, ramp)
-        print("ramp: ", ramp)
+        nn_selected_generators = np_action["generator_selector"]
+        nn_generator_output = np_action["generator_injection"]
+        selected_generators, ramp = self._clip_ramp_values(nn_selected_generators, nn_generator_output, generators_current_output)
+        ramp = self._check_bus_generator_violation(bus_status, selected_generators, ramp)
 
-        # generators_ramp = np.zeros(11, int)      # overwrite by dummy value (need to remove)
+        print("selected generators: ", selected_generators)
+        print("generators set ramp: ", ramp)
+
+        # ramp = np.zeros(11, int)      # overwrite by dummy value (need to remove)
 
         action = {
             "bus_status": bus_status,
             "branch_status": branch_status,
-            "generator_selector": self.generators.get_generators(),
+            "generator_selector": selected_generators,
             "generator_injection": ramp,
         }
 
@@ -132,16 +139,27 @@ class DataProcessor:
         #     total = branch_status[i] + random.uniform(-1 * noise_range, noise_range)
         # print ("branch status: ", branch_status)
 
-        # amount of power for ramping up/down
-        nn_output = np.array(tf.squeeze(nn_action[0]))
-        for i in range(nn_output.size):
+        # generator selector
+        nn_selector_output = np.array(tf.squeeze(nn_action[0]))
+        # print ("nn_generators_selector: ", nn_selector_output)
+        for i in range(nn_selector_output.size):
             if explore_network:
-                nn_output[i] = nn_output[i] + random.uniform(-noise_range, noise_range)
-        nn_output = np.clip(nn_output, 0, 1)
-        # print("nn output: ", nn_output)
+                nn_selector_output[i] = nn_selector_output[i] + random.uniform(-noise_range, noise_range)
+        nn_selector_output = np.clip(nn_selector_output, 0, 0.99)
+        # print("nn_generators_selector: ", nn_selector_output)
+
+        # amount of power for ramping up/down
+        nn_generator_output = np.array(tf.squeeze(nn_action[1]))
+        # print ("nn_generator_output: ", nn_generator_output)
+        for i in range(nn_generator_output.size):
+            if explore_network:
+                nn_generator_output[i] = nn_generator_output[i] + random.uniform(-noise_range, noise_range)
+        nn_generator_output = np.clip(nn_generator_output, 0, 1)
+        # print("nn_generator_output: ", nn_generator_output)
 
         action = {
-            "generator_injection": nn_output,
+            "generator_selector": nn_selector_output,
+            "generator_injection": nn_generator_output,
         }
 
         return action

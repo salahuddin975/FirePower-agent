@@ -71,8 +71,8 @@ def get_action_spaces(action_space):
     num_generator_selector = action_space["generator_selector"].shape[0]
     num_generator_injection = action_space["generator_injection"].shape[0]
     action_spaces = [num_bus, num_branch, num_generator_selector, num_generator_injection]
-    # print (f"Action Spaces: num bus: {num_bus}, num branch: {num_branch}, num_generator_selector: {num_generator_selector}, "
-    #         f"num generator injection: {num_generator_injection}")
+    print (f"Action Spaces: num bus: {num_bus}, num branch: {num_branch}, num_generator_selector: {num_generator_selector}, "
+            f"num generator injection: {num_generator_injection}")
 
     return action_spaces
 
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)
     # generators.print_info()
 
-    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=generators.get_num_generators())
+    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=2)
     state_spaces = get_state_spaces(env.observation_space)
     action_spaces = get_action_spaces(env.action_space)
 
@@ -141,7 +141,7 @@ if __name__ == "__main__":
         for step in range(max_steps_per_episode):
             tf_state = data_processor.get_tf_state(state)
             nn_action = agent.actor(tf_state)
-            print("NN generator output: ", nn_action[0])
+            print("NN generator output: ", nn_action[1])
 
             net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
             env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])

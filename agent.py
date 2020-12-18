@@ -131,11 +131,14 @@ class Agent:
         # # num_branch -> MultiBinary(34)
         # branch_output = layers.Dense(action_space[1], activation="sigmoid") (hidden)
 
+        # generator selector
+        gen_selector_output = layers.Dense(self._action_spaces[2], activation="sigmoid") (hidden)
+
         # generator_injection (generator output) -> Box(5, )
         gen_inj_output = layers.Dense(self._action_spaces[3], activation="sigmoid") (hidden)
 
         model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input],
-                               [gen_inj_output])
+                               [gen_selector_output, gen_inj_output])
         return model
 
     def _critic_model(self):
@@ -174,13 +177,16 @@ class Agent:
         act_branch = layers.Input(shape=(self._action_spaces[1],))
         # act_branch1 = layers.Dense(30, activation="relu") (act_branch)
 
+        # generator selector
+        act_gen_selector = layers.Input(shape=(self._action_spaces[2],))
+
         # generator_injection -> Box(5, )
         act_gen_injection = layers.Input(shape=(self._action_spaces[3],))
         # act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
 
         # state = layers.Concatenate() ([st_bus, act_gen_injection])
         state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
-                                       act_bus, act_branch, act_gen_injection])
+                                       act_bus, act_branch, act_gen_selector, act_gen_injection])
         # state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1,
         #                                act_bus1, act_branch1, act_gen_injection1])
 
@@ -189,5 +195,5 @@ class Agent:
         reward = layers.Dense(1, activation="linear") (hidden)
 
         model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
-                                act_bus, act_branch, act_gen_injection], reward)
+                                act_bus, act_branch, act_gen_selector, act_gen_injection], reward)
         return model

@@ -19,6 +19,7 @@ class Parameters:
         self.obs_fields = "bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input"           # False
 
         # ------------ main training loop -----------
+        self.number_of_generators = 1               # False
         self.generator_max_output = False           # True
         self.noise_rate = 0.5                       # True
         self.test_after_episodes = 20               # True
@@ -48,6 +49,7 @@ class Parameters:
             "observation fields: " + self.obs_fields + "\n" + \
             \
             "\n ------------ Main training loop --------- \n" + \
+            "number of generators: " + str(self.number_of_generators) + "\n" + \
             "generator max output: " + str(self.generator_max_output)  + "\n" + \
             "noise_range: " + str(self.noise_rate)  + "\n" + \
             "test after every: " + str(self.test_after_episodes) + " episodes"  + "\n" + \

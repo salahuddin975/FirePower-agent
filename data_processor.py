@@ -140,7 +140,11 @@ class DataProcessor:
         # print ("branch status: ", branch_status)
 
         # generator selector
-        nn_selector_output = np.array(tf.squeeze(nn_action[0]))
+        if self._action_spaces[3] == 1:
+            nn_selector_output = np.array(tf.squeeze(nn_action[0], [1]))
+        else:
+            nn_selector_output = np.array(tf.squeeze(nn_action[0]))
+
         # print ("nn_generators_selector: ", nn_selector_output)
         for i in range(nn_selector_output.size):
             if explore_network:
@@ -149,7 +153,11 @@ class DataProcessor:
         # print("nn_generators_selector: ", nn_selector_output)
 
         # amount of power for ramping up/down
-        nn_generator_output = np.array(tf.squeeze(nn_action[1]))
+        if self._action_spaces[3] == 1:
+            nn_generator_output = np.array(tf.squeeze(nn_action[1], [1]))
+        else:
+            nn_generator_output = np.array(tf.squeeze(nn_action[1]))
+
         # print ("nn_generator_output: ", nn_generator_output)
         for i in range(nn_generator_output.size):
             if explore_network:

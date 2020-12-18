@@ -8,11 +8,12 @@ from pypower.idx_brch import *
 
 
 class DataProcessor:
-    def __init__(self, simulator_resources, generators, state_spaces, action_spaces):
+    def __init__(self, simulator_resources, generators, selected_generators_indices, state_spaces, action_spaces):
         self.simulator_resources = simulator_resources
-        self.generators = generators
+        self._obj_generators = generators
         self._state_spaces = state_spaces
         self._action_spaces = action_spaces
+        self._selected_generators_indices = selected_generators_indices
 
     def _check_network_violations(self, bus_status, branch_status):
         from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
@@ -39,49 +40,54 @@ class DataProcessor:
                         ramp[i] = load_loss
                     load_loss = load_loss - ramp[i]
 
-    def _clip_ramp_values(self, nn_output, generators_output):
+    def _clip_ramp_values(self, nn_generator_output, generators_output):
         # print("generators output: ", generators_output)
-        # print("nn ratio output: ", nn_output)
+        # print("nn ratio output: ", nn_generator_output)
 
-        num_generators = self.generators.get_num_generators()
+        generators = self._obj_generators.get_generators()
+        selected_generators = generators[self._selected_generators_indices]
+
+        generators_min_output = self._obj_generators.get_min_outputs()
+        generators_max_output = self._obj_generators.get_max_outputs()
+        generators_max_ramp = self._obj_generators.get_max_ramps()
+
+        num_generators = self._obj_generators.get_num_generators()
         generators_current_output = np.zeros(num_generators)
         for i in range(num_generators):
-            generators_current_output[i] = generators_output[self.generators.get_generators()[i]]
+            generators_current_output[i] = generators_output[generators[i]]
         # print("generators current output: ", generators_current_output)
 
-        # print("nn ramp: ", nn_ramp)
-
-        generators_max_output = self.generators.get_max_outputs()
-        generators_min_output = self.generators.get_min_outputs()
-        generators_max_ramp = self.generators.get_max_ramps()
-
-        # net_output =  nn_output * generators_max_output
-        net_output = generators_min_output + nn_output * (generators_max_output - generators_min_output)
+        # rule1: net_output = min + ratio * (max - min)
+        net_output = generators_min_output[self._selected_generators_indices] + \
+                     nn_generator_output * (generators_max_output[self._selected_generators_indices] - generators_min_output[self._selected_generators_indices])
         # print ("network output: ", net_output)
 
-        ramp = net_output - generators_current_output
+        # rule2: ramp = nn output - current output (supposed to be - current)
+        ramp = net_output - generators_current_output[self._selected_generators_indices]
         # print("generators initial ramp: ", ramp)
 
         for i in range(ramp.size):
+            index = self._selected_generators_indices[i]
             if ramp[i] > 0:
-                ramp[i] = ramp[i] if ramp[i] < generators_max_ramp[i] else generators_max_ramp[i]
-                ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] < generators_max_output[i] else generators_max_output[i] - generators_current_output[i]
+                ramp[i] = ramp[i] if ramp[i] < generators_max_ramp[index] else generators_max_ramp[index]
+                ramp[i] = ramp[i] if ramp[i] + generators_current_output[index] < generators_max_output[index] else generators_max_output[index] - generators_current_output[index]
             else:
-                ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[i] else -generators_max_ramp[i]
-                ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] > generators_min_output[i] else generators_min_output[i] - generators_current_output[i]
+                ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[index] else -generators_max_ramp[index]
+                ramp[i] = ramp[i] if ramp[i] + generators_current_output[index] > generators_min_output[index] else generators_min_output[index] - generators_current_output[index]
 
             if abs(ramp[i]) < 0.0001:
                 ramp[i] = 0.0
 
+        # print("selected generators: ", selected_generators)
         # print("generators set ramp: ", ramp)
-        return ramp
+        return selected_generators, ramp
 
-    def _check_bus_generator_violation(self, bus_status, generators_ramp):
-        selected_generators = self.generators.get_generators()
+    def _check_bus_generator_violation(self, bus_status, selected_generators, generators_ramp):
+        # selected_generators = self.generators.get_generators()
 
         for bus in range(bus_status.size):
             flag = bus_status[bus]
-            for j in range(selected_generators.size):
+            for j in range(len(selected_generators)):
                 gen_bus = selected_generators[j]
                 if bus == gen_bus and flag == False:
                     generators_ramp[j] = False
@@ -104,8 +110,8 @@ class DataProcessor:
         # print("branch status: ", branch_status)
 
         nn_output = np_action["generator_injection"]
-        ramp = self._clip_ramp_values(nn_output, generators_current_output)
-        ramp = self._check_bus_generator_violation(bus_status, ramp)
+        selected_generators, ramp = self._clip_ramp_values(nn_output, generators_current_output)
+        ramp = self._check_bus_generator_violation(bus_status, selected_generators, ramp)
         print("ramp: ", ramp)
 
         # generators_ramp = np.zeros(11, int)      # overwrite by dummy value (need to remove)
@@ -113,7 +119,7 @@ class DataProcessor:
         action = {
             "bus_status": bus_status,
             "branch_status": branch_status,
-            "generator_selector": self.generators.get_generators(),
+            "generator_selector": selected_generators,
             "generator_injection": ramp,
         }
 

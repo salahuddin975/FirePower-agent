@@ -89,7 +89,10 @@ if __name__ == "__main__":
     generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)
     # generators.print_info()
 
-    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=generators.get_num_generators())
+    num_of_generators = 5
+    selected_generators_indices = [0, 2, 5, 7, 9]
+
+    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power, num_tunable_gen=num_of_generators)
     state_spaces = get_state_spaces(env.observation_space)
     action_spaces = get_action_spaces(env.action_space)
 
@@ -100,7 +103,7 @@ if __name__ == "__main__":
     load_model_version = 0
     load_episode_num = 0
 
-    parameters = Parameters(base_path, save_model_version, args.path_geo)
+    parameters = Parameters(base_path, save_model_version, args.path_geo, num_of_generators, selected_generators_indices)
     parameters.save_parameters()
     parameters.print_parameters()
 
@@ -119,7 +122,7 @@ if __name__ == "__main__":
 
     tensorboard = Tensorboard(base_path)
     summary_writer = SummaryWriter(base_path, save_model_version)
-    data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
+    data_processor = DataProcessor(simulator_resources, generators, selected_generators_indices, state_spaces, action_spaces)
 
     # agent training
     total_episode = 100001

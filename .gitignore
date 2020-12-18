@@ -154,4 +154,6 @@ log_server2/
 replay_buffer1/
 replay_buffer2/
 
-
+tools/rnslab1
+tools/rnslab2
+database_seed_*

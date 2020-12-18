@@ -4,7 +4,7 @@ import json
 
 
 class Parameters:
-    def __init__(self, base_path, model_version, geo_file):
+    def __init__(self, base_path, model_version, geo_file, num_of_gen, generator_indices):
         self._base_dir = base_path
         self._model_version = model_version
         self._file_name = os.path.join(base_path, "parameters")
@@ -38,9 +38,9 @@ class Parameters:
         # ----------- fire spread conf ---------------
         self._parse_geo_file(geo_file)
 
-        self._initialize()
+        self._initialize(num_of_gen, generator_indices)
 
-    def _initialize(self):
+    def _initialize(self, num_of_gen, generator_indices):
         self.parameters = \
             "------------ Agent NN ---------- \n" + \
             "gamma: " + str(self.gamma) + "\n" + \
@@ -48,6 +48,8 @@ class Parameters:
             "observation fields: " + self.obs_fields + "\n" + \
             \
             "\n ------------ Main training loop --------- \n" + \
+            "num of generators: " + str(num_of_gen)  + "\n" + \
+            "selected generators index: " + str(generator_indices)  + "\n" + \
             "generator max output: " + str(self.generator_max_output)  + "\n" + \
             "noise_range: " + str(self.noise_rate)  + "\n" + \
             "test after every: " + str(self.test_after_episodes) + " episodes"  + "\n" + \

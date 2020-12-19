@@ -15,7 +15,7 @@ class Parameters:
 
         # ------------ agent.py -------------
         self.gamma = 0.99                        # False
-        self.hidden_layer = "512, 128"           # False
+        self.hidden_layer = "400, 300"           # False
         self.obs_fields = "bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input"           # False
 
         # ------------ main training loop -----------

@@ -7,7 +7,7 @@ from tensorflow.keras import layers
 class Agent:
     def __init__(self, base_path, state_spaces, action_spaces):
         self._gamma = 0.99      # discount factor
-        self._tau = 0.05       # used to update target network
+        self._tau = 0.01       # used to update target network
         actor_lr = 0.001
         critic_lr = 0.002
         self._save_weight_directory = os.path.join(base_path, "trained_model")
@@ -143,48 +143,58 @@ class Agent:
     def _critic_model(self):
         # bus -> MultiBinary(24)
         st_bus = layers.Input(shape=(self._state_spaces[0],))
-        # st_bus1 = layers.Dense(32, activation="relu") (st_bus)
+        st_bus1 = layers.Dense(32, activation="relu") (st_bus)
+        st_bus1 = layers.BatchNormalization()(st_bus1)
 
         # num_branch -> MultiBinary(34)
         st_branch = layers.Input(shape=(self._state_spaces[1],))
-        # st_branch1 = layers.Dense(32, activation="relu") (st_branch)
+        st_branch1 = layers.Dense(32, activation="relu") (st_branch)
+        st_branch1 = layers.BatchNormalization()(st_branch1)
 
         # fire_distance -> Box(58, )
         st_fire_distance = layers.Input(shape=(self._state_spaces[2],))
-        # st_fire_distance1 = layers.Dense(64, activation="relu") (st_fire_distance)
+        st_fire_distance1 = layers.Dense(64, activation="relu") (st_fire_distance)
+        st_fire_distance1 = layers.BatchNormalization()(st_fire_distance1)
 
         # generator_injection (output) -> Box(24, )
         st_gen_output = layers.Input(shape=(self._state_spaces[3],))                     # Generator current total output
-        # st_gen_output1 = layers.Dense(32, activation="relu") (st_gen_output)
+        st_gen_output1 = layers.Dense(32, activation="relu") (st_gen_output)
+        st_gen_output1 = layers.BatchNormalization()(st_gen_output1)
 
         # load_demand -> Box(24, )
         st_load_demand = layers.Input(shape=(self._state_spaces[4], ))
-        # st_load_demand1 = layers.Dense(32, activation="relu") (st_load_demand)
+        st_load_demand1 = layers.Dense(32, activation="relu") (st_load_demand)
+        st_load_demand1 = layers.BatchNormalization()(st_load_demand1)
 
         # theta -> Box(24, )
         st_theta = layers.Input(shape=(self._state_spaces[5], ))
-        # st_theta1 = layers.Dense(30, activation="relu") (st_theta)
+        st_theta1 = layers.Dense(32, activation="relu") (st_theta)
+        st_theta1 = layers.BatchNormalization()(st_theta1)
 
         # line_flow -> Box(34, )
         st_line_flow = layers.Input(shape=(self._state_spaces[6], ))
+        st_line_flow1 = layers.Dense(32, activation="relu") (st_line_flow)
+        st_line_flow1 = layers.BatchNormalization()(st_line_flow1)
 
         # bus -> MultiBinary(24)
         act_bus = layers.Input(shape=(self._action_spaces[0],))
-        # act_bus1 = layers.Dense(30, activation="relu") (act_bus)
-        #
+        act_bus1 = layers.Dense(32, activation="relu") (act_bus)
+        act_bus1 = layers.BatchNormalization()(act_bus1)
+
         # # num_branch -> MultiBinary(34)
         act_branch = layers.Input(shape=(self._action_spaces[1],))
-        # act_branch1 = layers.Dense(30, activation="relu") (act_branch)
+        act_branch1 = layers.Dense(32, activation="relu") (act_branch)
+        act_branch1 = layers.BatchNormalization()(act_branch1)
 
         # generator_injection -> Box(5, )
         act_gen_injection = layers.Input(shape=(self._action_spaces[3],))
-        # act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
+        act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
+        act_gen_injection1 = layers.BatchNormalization()(act_gen_injection1)
 
-        # state = layers.Concatenate() ([st_bus, act_gen_injection])
-        state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
-                                       act_bus, act_branch, act_gen_injection])
-        # state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1,
-        #                                act_bus1, act_branch1, act_gen_injection1])
+        # state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
+        #                                act_bus, act_branch, act_gen_injection])
+        state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1, st_line_flow1,
+                                       act_bus1, act_branch1, act_gen_injection1])
 
         hidden = layers.Dense(400, activation="relu") (state)
         hidden = layers.BatchNormalization()(hidden)

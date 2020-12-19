@@ -15,6 +15,7 @@ class Parameters:
 
         # ------------ agent.py -------------
         self.gamma = 0.99                        # False
+        self.tau = 0.01                          # False
         self.hidden_layer = "400, 300"           # False
         self.obs_fields = "bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input"           # False
 
@@ -44,6 +45,7 @@ class Parameters:
         self.parameters = \
             "------------ Agent NN ---------- \n" + \
             "gamma: " + str(self.gamma) + "\n" + \
+            "tau: " + str(self.tau) + "\n" + \
             "hidden layers: " + self.hidden_layer + "\n" + \
             "observation fields: " + self.obs_fields + "\n" + \
             \

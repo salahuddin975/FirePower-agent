@@ -15,11 +15,13 @@ class Parameters:
 
         # ------------ agent.py -------------
         self.gamma = 0.99                        # False
-        self.hidden_layer = "512, 128"           # False
-        self.obs_fields = "bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input"           # False
+        self.tau = 0.01                          # False
+        self.hidden_layer = "450, 300"           # False
+        self.obs_fields = "bus_input, branch_input, fire_distance_input, gen_inj_input, theta_input, line_flow_input (without: load_demand_input)"           # False
 
         # ------------ main training loop -----------
         self.generator_max_output = False           # True
+        self.batch_size = 1024                       # True
         self.noise_rate = 0.5                       # True
         self.test_after_episodes = 20               # True
 
@@ -44,11 +46,13 @@ class Parameters:
         self.parameters = \
             "------------ Agent NN ---------- \n" + \
             "gamma: " + str(self.gamma) + "\n" + \
+            "tau: " + str(self.tau) + "\n" + \
             "hidden layers: " + self.hidden_layer + "\n" + \
             "observation fields: " + self.obs_fields + "\n" + \
             \
             "\n ------------ Main training loop --------- \n" + \
             "num of generators: " + str(num_of_gen)  + "\n" + \
+            "batch size: " + str(self.batch_size)  + "\n" + \
             "selected generators index: " + str(generator_indices)  + "\n" + \
             "generator max output: " + str(self.generator_max_output)  + "\n" + \
             "noise_range: " + str(self.noise_rate)  + "\n" + \

@@ -188,7 +188,7 @@ class Agent:
         #                                act_bus1, act_branch1, act_gen_injection1])
 
         hidden = layers.Dense(500, activation="relu") (state)
-        hidden = layers.Dense(300, activation="relu") (hidden)
+        hidden = layers.Dense(350, activation="relu") (hidden)
         reward = layers.Dense(1, activation="linear") (hidden)
 
         model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,

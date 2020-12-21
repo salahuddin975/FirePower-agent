@@ -115,7 +115,7 @@ if __name__ == "__main__":
     load_replay_buffer_version = 0
 
     buffer = ReplayBuffer(base_path, state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version,
-                          buffer_capacity=1000000, batch_size=64)
+                          buffer_capacity=1000000, batch_size=parameters.batch_size)
 
     tensorboard = Tensorboard(base_path)
     summary_writer = SummaryWriter(base_path, save_model_version)

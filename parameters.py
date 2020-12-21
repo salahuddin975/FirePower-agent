@@ -17,10 +17,11 @@ class Parameters:
         self.gamma = 0.99                        # False
         self.tau = 0.005                         # False
         self.hidden_layer = "500, 350"           # False
-        self.obs_fields = "bus_input, branch_input, fire_distance_input, gen_inj_input, theta_input, line_flow_input"           # False
+        self.obs_fields = "bus_input, branch_input, fire_distance_input, gen_inj_input, theta_input, line_flow_input (without: load_demand) "           # False
 
         # ------------ main training loop -----------
         self.generator_max_output = False           # True
+        self.batch_size = 1024                      # True
         self.noise_rate = 0.5                       # True
         self.test_after_episodes = 20               # True
 
@@ -51,6 +52,7 @@ class Parameters:
             \
             "\n ------------ Main training loop --------- \n" + \
             "generator max output: " + str(self.generator_max_output)  + "\n" + \
+            "batch_size: " + str(self.batch_size)  + "\n" + \
             "noise_range: " + str(self.noise_rate)  + "\n" + \
             "test after every: " + str(self.test_after_episodes) + " episodes"  + "\n" + \
             \

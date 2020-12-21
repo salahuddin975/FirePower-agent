@@ -53,8 +53,13 @@ class DataProcessor:
         generators_min_output = self.generators.get_min_outputs()
         generators_max_ramp = self.generators.get_max_ramps()
 
-        selected_generators_indices= (nn_selected_generators*11).astype(int)
-        # print("selected generators: ", selected_generators)
+        selected_generators_indices = np.zeros(5).astype(int)
+        for i in range(len(nn_selected_generators)):
+            selected_generators_indices[i] = (i * 2) if nn_selected_generators[i] < 0.5 else (i*2 + 1)
+            if selected_generators_indices[i] > 3:
+                selected_generators_indices[i] = selected_generators_indices[i] + 1
+
+        print("selected generators: ", selected_generators_indices)
 
         # net_output =  nn_output * generators_max_output
         net_output = generators_min_output[selected_generators_indices] + nn_generator_output * (generators_max_output[selected_generators_indices] - generators_min_output[selected_generators_indices])

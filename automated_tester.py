@@ -25,6 +25,7 @@ if __name__ == "__main__":
     df = pd.read_csv(path, header=0)
     max_episode = len(df)
 
+    flag = True
     for i in range(max_episode):
         episode = max_episode - i -1
         if episode < end_episode:
@@ -33,6 +34,10 @@ if __name__ == "__main__":
 
         if episode%check_at_episode != 0:
             continue
+
+        if flag:
+            result_writer.add_info(episode, 0, 0)
+            flag = False
 
         if episode+4 < len(df):
             penalty = (df.loc[episode + 1, "reward"] + df.loc[episode + 2, "reward"] + df.loc[episode + 3, "reward"] + df.loc[episode + 4, "reward"]) / 4

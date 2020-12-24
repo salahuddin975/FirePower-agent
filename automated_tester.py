@@ -39,6 +39,7 @@ if __name__ == "__main__":
             if penalty > max_penalty:
                 continue
 
+        print("Start testing episode: ", episode)
         avg_score = automated_tester_main.main(seed_value, num_of_generator, model_version, episode)
         if avg_score != 0:
             result_writer.add_info(episode, 299, avg_score)

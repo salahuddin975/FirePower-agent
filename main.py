@@ -132,8 +132,9 @@ if __name__ == "__main__":
     for episode in range(total_episode):
         state = env.reset()
 
-        episodic_reward = 0
         max_reached_step = 0
+        episodic_penalty = 0
+        episodic_load_loss = 0
 
         if not parameters.generator_max_output:
             generators.set_max_outputs(state["generator_injection"])
@@ -151,11 +152,12 @@ if __name__ == "__main__":
 
             buffer.add_record((state, net_action, reward, next_state, env_action))
 
-            episodic_reward += reward[0]
+            episodic_penalty += reward[0]
+            episodic_load_loss += reward[1]
             state = next_state
 
             if done or (step == max_steps_per_episode - 1):
-                print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_reward}")
+                print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_penalty}")
                 max_reached_step = step
                 break
 
@@ -166,8 +168,8 @@ if __name__ == "__main__":
                 critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)
                 tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value)
 
-        tensorboard.add_episodic_info(episodic_reward)
-        summary_writer.add_info(episode, max_reached_step, episodic_reward)
+        tensorboard.add_episodic_info(episodic_penalty)
+        summary_writer.add_info(episode, max_reached_step, episodic_penalty, episodic_load_loss)
 
         # explore / Testing
         if episode and (episode % parameters.test_after_episodes == 0):

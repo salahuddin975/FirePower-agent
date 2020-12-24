@@ -219,9 +219,9 @@ class SummaryWriter:
     def _initialize(self):
         with open(f'{self._file_name}_v{self._model_version}.csv', 'w') as fd:
             writer = csv.writer(fd)
-            writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
+            writer.writerow(["model_version", "episode_number", "max_reached_step", "total_penalty", "load_loss"])
 
-    def add_info(self, episode, max_reached_step, episodic_reward):
+    def add_info(self, episode, max_reached_step, episodic_penalty, load_loss):
         with open(f'{self._file_name}_v{self._model_version}.csv', 'a') as fd:
             writer = csv.writer(fd)
-            writer.writerow([str(self._model_version), str(episode), str(max_reached_step), str(episodic_reward)])
+            writer.writerow([str(self._model_version), str(episode), str(max_reached_step), str(episodic_penalty), str(load_loss)])

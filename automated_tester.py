@@ -28,7 +28,7 @@ if __name__ == "__main__":
         if episode%check_at_episode != 0:
             continue
 
-        if i+4 < len(df):
+        if episode+4 < len(df):
             penalty = (df.loc[episode + 1, "reward"] + df.loc[episode + 2, "reward"] + df.loc[episode + 3, "reward"] + df.loc[episode + 4, "reward"]) / 4
             if penalty > max_penalty:
                 continue

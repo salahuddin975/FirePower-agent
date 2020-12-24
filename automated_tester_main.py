@@ -16,6 +16,7 @@ np.set_printoptions(linewidth=300)
 power_path = "./assets/case24_ieee_rts.py"
 geo_path = "./configurations/configuration.json"
 
+
 class ResultWriter:
     def __init__(self, base_path, model_version, episode_num, file_name="_test_result"):
         self._model_version = model_version
@@ -40,6 +41,9 @@ class ResultWriter:
         with open(f'{self._file_name}_v{self._model_version}.csv', 'a') as fd:
             writer = csv.writer(fd)
             writer.writerow([str(self._model_version), str(episode), str(max_reached_step), str(episodic_reward)])
+
+    def delete_file(self):
+        os.remove(f'{self._file_name}_v{self._model_version}.csv')
 
 
 def set_seed(seed_value):
@@ -88,7 +92,7 @@ def get_action_spaces(action_space):
     return action_spaces
 
 
-def main(seed, load_model_version=0, load_episode_num=0):
+def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
     seed_value = seed
     set_seed(50)
 
@@ -98,29 +102,22 @@ def main(seed, load_model_version=0, load_episode_num=0):
     simulator_resources = SimulatorResources(power_file_path=power_path, geo_file_path=geo_path)
     generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)
 
-    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=geo_path, network_file=power_path, num_tunable_gen=5)
+    env = gym.envs.make("gym_firepower:firepower-v0", geo_file=geo_path, network_file=power_path, num_tunable_gen=num_of_generator)
     state_spaces = get_state_spaces(env.observation_space)
     action_spaces = get_action_spaces(env.action_space)
 
-    save_model_version = 0
-    parameters = Parameters(base_path, save_model_version, geo_path)
+    parameters = Parameters(base_path, load_model_version, geo_path)
     parameters.save_parameters()
     parameters.print_parameters()
 
     agent = Agent(base_path, state_spaces, action_spaces)
     agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
-    # replay buffer
-    load_replay_buffer = False
-    load_replay_buffer_version = 0
-    buffer = ReplayBuffer(base_path, state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version,
-                          buffer_capacity=1000000, batch_size=parameters.batch_size)
-
-    result_writer = ResultWriter(base_path, save_model_version, load_episode_num)
+    result_writer = ResultWriter(base_path, load_model_version, load_episode_num)
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
     # agent training
-    total_episode = 100
+    total_episode = 15
     max_steps_per_episode = 300
     explore_network_flag = False
     episodic_rewards = []
@@ -145,13 +142,11 @@ def main(seed, load_model_version=0, load_episode_num=0):
             next_state, reward, done, _ = env.step(env_action)
             print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
-            buffer.add_record((state, net_action, reward, next_state, env_action))
-
             episodic_reward += reward[0]
             state = next_state
 
             if done or (step == max_steps_per_episode - 1):
-                print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_reward}")
+                print(f"Episode: V{load_model_version}_{episode}, done at step: {step}, total reward: {episodic_reward}")
                 max_reached_step = step
                 break
 
@@ -159,6 +154,7 @@ def main(seed, load_model_version=0, load_episode_num=0):
         episodic_rewards.append(episodic_reward)
 
         if max_reached_step != max_steps_per_episode-1:
+            result_writer.delete_file()
             return 0
 
         if episode == total_episode-1:

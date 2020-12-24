@@ -9,9 +9,14 @@ max_penalty = 400000
 
 
 if __name__ == "__main__":
-    model_version = 0
+    if len(sys.argv) != 3:
+        print("python automated_tester.py <seed> <num_of_generator>")
+        print("Ex. python automated_tester.py 50 11")
+
     seed_value = int(sys.argv[1])
     num_of_generator = int(sys.argv[2])
+
+    model_version = 0
     path = f"./database_seed_{seed_value}/test_result/fire_power_reward_list_v0.csv"
 
     base_path = "database_seed_" + str(seed_value)

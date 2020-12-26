@@ -7,7 +7,7 @@ from tensorflow.keras import layers
 class Agent:
     def __init__(self, base_path, state_spaces, action_spaces):
         self._gamma = 0.99      # discount factor
-        self._tau = 0.01       # used to update target network
+        self._tau = 0.05       # used to update target network
         actor_lr = 0.001
         critic_lr = 0.002
         self._save_weight_directory = os.path.join(base_path, "trained_model")
@@ -123,7 +123,7 @@ class Agent:
         state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, theta_input, line_flow_input])
         # state = layers.Concatenate() ([bus_input1, branch_input1, fire_distance_input1, gen_inj_input1, load_demand_input1, theta_input1])
         hidden = layers.Dense(500, activation="tanh") (state)
-        hidden = layers.Dense(300, activation="tanh") (hidden)
+        hidden = layers.Dense(200, activation="tanh") (hidden)
 
         # bus -> MultiBinary(24)
         # bus_output = layers.Dense(action_space[0], activation="sigmoid") (hidden)
@@ -191,7 +191,7 @@ class Agent:
         #                                act_bus1, act_branch1, act_gen_injection1])
 
         hidden = layers.Dense(500, activation="relu") (state)
-        hidden = layers.Dense(300, activation="relu") (hidden)
+        hidden = layers.Dense(200, activation="relu") (hidden)
         reward = layers.Dense(1, activation="linear") (hidden)
 
         model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,

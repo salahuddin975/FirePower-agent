@@ -39,6 +39,29 @@ class DataProcessor:
                         ramp[i] = load_loss
                     load_loss = load_loss - ramp[i]
 
+
+    def _get_selected_generator_indices(self, nn_selected_generators):
+        selected_generators_indices = np.zeros(5).astype(int)
+        for i in range(len(nn_selected_generators)):
+            if i == 0:                                        # 0, 1
+                selected_generators_indices[i] = 0 if nn_selected_generators[i] < 0.5 else 1
+            elif i == 1:                                      # 2
+                selected_generators_indices[i] = 2
+            elif i == 2:                                      # 3, 10
+                selected_generators_indices[i] = 3 if nn_selected_generators[i] < 0.5 else 10
+            elif i == 3:                                      # 5, 6
+                selected_generators_indices[i] = 5 if nn_selected_generators[i] < 0.5 else 6
+            elif i == 4:                                      # 7, 8, 9
+                if nn_selected_generators[i] < 0.33:
+                    selected_generators_indices[i] = 7
+                elif nn_selected_generators[i] < 0.66:
+                    selected_generators_indices[i] = 8
+                else:
+                    selected_generators_indices[i] = 9
+
+        return selected_generators_indices
+
+
     def _clip_ramp_values(self, nn_selected_generators, nn_generator_output, generators_output):
         # print("generators output: ", generators_output)
         # print("nn ratio output: ", nn_output)
@@ -53,11 +76,7 @@ class DataProcessor:
         generators_min_output = self.generators.get_min_outputs()
         generators_max_ramp = self.generators.get_max_ramps()
 
-        selected_generators_indices = np.zeros(5).astype(int)
-        for i in range(len(nn_selected_generators)):
-            selected_generators_indices[i] = (i * 2) if nn_selected_generators[i] < 0.5 else (i*2 + 1)
-            if selected_generators_indices[i] > 3:
-                selected_generators_indices[i] = selected_generators_indices[i] + 1
+        selected_generators_indices = self._get_selected_generator_indices(nn_selected_generators)
         # print("selected generators: ", selected_generators_indices)
 
         # net_output =  nn_output * generators_max_output

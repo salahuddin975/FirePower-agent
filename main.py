@@ -145,12 +145,12 @@ if __name__ == "__main__":
             print("NN generator output: ", nn_action[0])
 
             net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
-            env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
+            action_nn, action_env = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
-            next_state, reward, done, _ = env.step(env_action)
+            next_state, reward, done, _ = env.step(action_env)
             print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
-            buffer.add_record((state, net_action, reward, next_state, env_action))
+            buffer.add_record((state, net_action, reward, next_state, action_nn))
 
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]

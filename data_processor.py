@@ -110,14 +110,27 @@ class DataProcessor:
 
         # generators_ramp = np.zeros(11, int)      # overwrite by dummy value (need to remove)
 
-        action = {
+        action_nn = {
             "bus_status": bus_status,
             "branch_status": branch_status,
             "generator_selector": self.generators.get_generators(),
             "generator_injection": ramp,
         }
 
-        return action
+        selected_generators = np.copy(self.generators.get_generators())
+        for i in range(ramp.size):
+            if ramp[i] == 0.0:
+                selected_generators[i] = 24
+        print("selected_generators: ", selected_generators)
+
+        action_env = {
+            "bus_status": bus_status,
+            "branch_status": branch_status,
+            "generator_selector": selected_generators,
+            "generator_injection": ramp,
+        }
+
+        return action_nn, action_env
 
     def explore_network(self, nn_action, explore_network, noise_range=0.5):
         # bus status

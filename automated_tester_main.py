@@ -107,7 +107,6 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
     action_spaces = get_action_spaces(env.action_space)
 
     parameters = Parameters(base_path, load_model_version, geo_path)
-    parameters.save_parameters()
     parameters.print_parameters()
 
     agent = Agent(base_path, state_spaces, action_spaces)
@@ -138,6 +137,7 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
 
             net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
             env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
+            #nn_action, env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
             next_state, reward, done, _ = env.step(env_action)
             print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")

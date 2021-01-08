@@ -3,7 +3,7 @@ import pandas as pd
 import automated_tester_main
 from automated_tester_main import ResultWriter
 
-end_episode = 350
+end_episode = 80
 check_at_episode = 20
 max_penalty = 400000
 
@@ -34,13 +34,14 @@ if __name__ == "__main__":
 
         if episode%check_at_episode != 0:
             continue
-
+        
         if flag:
             result_writer.add_info(episode, 0, 0)
             flag = False
-
+            
         if episode+4 < len(df):
-            penalty = (df.loc[episode + 1, "reward"] + df.loc[episode + 2, "reward"] + df.loc[episode + 3, "reward"] + df.loc[episode + 4, "reward"]) / 4
+            penalty = (df.loc[episode + 1, "total_penalty"] + df.loc[episode + 2, "total_penalty"] + df.loc[episode + 3, "total_penalty"] + df.loc[episode + 4, "total_penalty"]) / 4
+            #penalty = (df.loc[episode + 1, "reward"] + df.loc[episode + 2, "reward"] + df.loc[episode + 3, "reward"] + df.loc[episode + 4, "reward"]) / 4
             if penalty > max_penalty:
                 continue
 

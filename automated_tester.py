@@ -20,7 +20,7 @@ if __name__ == "__main__":
     path = f"./database_seed_{seed_value}/test_result/fire_power_reward_list_v0.csv"
 
     base_path = "database_seed_" + str(seed_value)
-    result_writer = ResultWriter(base_path, model_version, seed_value, "_summary")
+    result_writer = ResultWriter(base_path, model_version, seed_value, "_summary", True)
 
     df = pd.read_csv(path, header=0)
     max_episode = len(df)
@@ -46,8 +46,8 @@ if __name__ == "__main__":
                 continue
 
         print("Start testing episode: ", episode)
-        avg_score = automated_tester_main.main(seed_value, num_of_generator, model_version, episode)
+        avg_score, violation_count = automated_tester_main.main(seed_value, num_of_generator, model_version, episode)
         if avg_score != 0:
-            result_writer.add_info(episode, 299, avg_score)
-        print(f"episode: {episode}, avg_score: {avg_score}")
+            result_writer.add_info(episode, violation_count, avg_score)
+        print(f"episode: {episode}, avg_score: {avg_score}, violation_count_episodes: {violation_count}")
 

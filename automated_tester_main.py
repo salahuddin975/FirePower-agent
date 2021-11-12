@@ -18,7 +18,8 @@ geo_path = "./configurations/configuration.json"
 
 
 class ResultWriter:
-    def __init__(self, base_path, model_version, episode_num, file_name="_test_result"):
+    def __init__(self, base_path, model_version, episode_num, file_name="_test_result", is_summary=False):
+        self._is_summary = is_summary
         self._model_version = model_version
         self._dir_name = os.path.join(base_path, "test_result", "test_result")
         self._file_name = os.path.join(self._dir_name, f"{episode_num}{file_name}")
@@ -35,12 +36,15 @@ class ResultWriter:
     def _initialize(self):
         with open(f'{self._file_name}_v{self._model_version}.csv', 'w') as fd:
             writer = csv.writer(fd)
-            writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
+            if self._is_summary == False:
+                writer.writerow(["model_version", "episode_number", "max_reached_step", "reward"])
+            else:
+                writer.writerow(["model_version", "trained_agent_episode", "violation_count", "reward"])
 
-    def add_info(self, episode, max_reached_step, episodic_reward):
+    def add_info(self, episode, max_reached_step_or_violation_count, episodic_reward):
         with open(f'{self._file_name}_v{self._model_version}.csv', 'a') as fd:
             writer = csv.writer(fd)
-            writer.writerow([str(self._model_version), str(episode), str(max_reached_step), str(episodic_reward)])
+            writer.writerow([str(self._model_version), str(episode), str(max_reached_step_or_violation_count), str(episodic_reward)])
 
     def delete_file(self):
         os.remove(f'{self._file_name}_v{self._model_version}.csv')
@@ -151,11 +155,10 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
                 break
 
         result_writer.add_info(episode, max_reached_step, episodic_reward)
-        episodic_rewards.append(episodic_reward)
 
-        if max_reached_step != max_steps_per_episode-1:
-            result_writer.delete_file()
-            return 0
+        if max_reached_step == max_steps_per_episode-1:
+            episodic_rewards.append(episodic_reward)
+            # result_writer.delete_file()
+            # return 0
 
-        if episode == total_episode-1:
-            return sum(episodic_rewards)/len(episodic_rewards)
+    return sum(episodic_rewards)/len(episodic_rewards), total_episode - len(episodic_rewards)

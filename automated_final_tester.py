@@ -1,7 +1,7 @@
 import sys
 import pandas as pd
-import automated_tester_main1
-from automated_tester_main1 import ResultWriter
+import automated_tester_main
+from automated_tester_main import ResultWriter
 
 
 
@@ -33,7 +33,7 @@ if __name__ == "__main__":
             
 
         print("Start testing episode: ", episode)
-        avg_score = automated_tester_main1.main(seed_value, num_of_generator, model_version, episode)
+        avg_score = automated_tester_main.main(seed_value, num_of_generator, model_version, episode)
         if avg_score != 0:
             result_writer.add_info(episode, 299, avg_score)
         print(f"episode: {episode}, avg_score: {avg_score}")

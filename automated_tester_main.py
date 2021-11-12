@@ -98,7 +98,7 @@ def get_action_spaces(action_space):
 
 def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
     seed_value = seed
-    set_seed(seed_value)
+    set_seed(50)
 
     set_gpu_memory_limit()
     base_path = "database_seed_" + str(seed_value)
@@ -107,7 +107,7 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
     generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=geo_path, network_file=power_path,
-                        num_tunable_gen=num_of_generator, scaling_factor=1, seed=seed_value)
+                        num_tunable_gen=num_of_generator, scaling_factor=1, seed=50)
 
     state_spaces = get_state_spaces(env.observation_space)
     action_spaces = get_action_spaces(env.action_space)

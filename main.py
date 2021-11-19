@@ -37,7 +37,7 @@ def get_arguments():
     argument_parser.add_argument('-p', '--path-power', help="Full path to power systems file", required=True)
     argument_parser.add_argument('-s', '--seed', help="Seed for agent", type=int, required=True)
 
-    argument_parser.add_argument('-f', '--scale-factor', help="Scali    actor_lr = 0.001ng factor", type=int, default=6)
+    argument_parser.add_argument('-f', '--scale-factor', help="Scali    actor_lr = 0.001ng factor", type=int, default=1)
     argument_parser.add_argument('-n', '--nonconvergence-penalty', help="Non-convergence penalty", type=float)
     argument_parser.add_argument('-a', '--protectionaction-penalty', help="Protection action penalty", type=float)
     argument_parser.add_argument('-o', '--path-output', help="Output directory for dumping environment data")

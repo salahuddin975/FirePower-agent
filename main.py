@@ -151,7 +151,7 @@ if __name__ == "__main__":
             next_state, reward, done, _ = env.step(env_action)
             print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
-            buffer.add_record((state, net_action, reward, next_state, env_action))
+            buffer.add_record((state, net_action, reward, next_state, env_action, not done))
 
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]
@@ -165,8 +165,8 @@ if __name__ == "__main__":
             if train_network:
                 # print ("Train at: ", episode)
                 # for i in range(num_train_per_episode):
-                state_batch, action_batch, reward_batch, next_state_batch = buffer.get_batch()
-                critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch)
+                state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
+                critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
                 tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value)
 
         tensorboard.add_episodic_info(episodic_penalty)

@@ -42,6 +42,7 @@ class ReplayBuffer:
         self.act_gen_injection = np.zeros((self._capacity, action_spaces[3]))
 
         self.rewards = np.zeros((self._capacity, 1))
+        self.episode_end_flag = np.zeros((self._capacity, 1), dtype=bool)
 
         self.next_st_bus = np.zeros((self._capacity, state_spaces[0]))
         self.next_st_branch = np.zeros((self._capacity, state_spaces[1]))
@@ -67,6 +68,7 @@ class ReplayBuffer:
         np.save(f'{self._save_replay_buffer_dir}/act_gen_injection_v{version}.npy', self.act_gen_injection)
 
         np.save(f'{self._save_replay_buffer_dir}/rewards_v{version}.npy', self.rewards)
+        np.save(f'{self._save_replay_buffer_dir}/episode_end_flag_v{version}.npy', self.episode_end_flag)
 
         np.save(f'{self._save_replay_buffer_dir}/next_st_bus_v{version}.npy', self.next_st_bus)
         np.save(f'{self._save_replay_buffer_dir}/next_st_branch_v{version}.npy', self.next_st_branch)
@@ -93,6 +95,7 @@ class ReplayBuffer:
         self.act_gen_injection = np.load(f'{self._load_replay_buffer_dir}/act_gen_injection_v{version}.npy')
 
         self.rewards = np.load(f'{self._load_replay_buffer_dir}/rewards_v{version}.npy')
+        self.episode_end_flag = np.load(f'{self._load_replay_buffer_dir}/episode_end_flag_v{version}.npy')
 
         self.next_st_bus = np.load(f'{self._load_replay_buffer_dir}/next_st_bus_v{version}.npy')
         self.next_st_branch = np.load(f'{self._load_replay_buffer_dir}/next_st_branch_v{version}.npy')
@@ -130,6 +133,7 @@ class ReplayBuffer:
         self.act_gen_injection[index] = np.copy(record[1]["generator_injection"])
 
         self.rewards[index] = record[2][0]
+        self.episode_end_flag[index] = record[5]
 
         self.next_st_bus[index] = np.copy(record[3]["bus_status"])
         self.next_st_branch[index] = np.copy(record[3]["branch_status"])
@@ -159,6 +163,7 @@ class ReplayBuffer:
         act_tf_gen_injection = tf.convert_to_tensor(self.act_gen_injection[batch_indices])
 
         reward_batch = tf.convert_to_tensor(self.rewards[batch_indices], dtype=tf.float32)
+        episode_end_flag_batch = tf.convert_to_tensor(self.episode_end_flag[batch_indices], dtype=tf.float32)
 
         next_st_tf_bus = tf.convert_to_tensor(self.next_st_bus[batch_indices])
         next_st_tf_branch = tf.convert_to_tensor(self.next_st_branch[batch_indices])
@@ -173,4 +178,4 @@ class ReplayBuffer:
         next_state_batch = [next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance, next_st_tf_gen_output,
                                     next_st_tf_load_demand, next_st_tf_theta, next_st_tf_line_flow]
 
-        return state_batch, action_batch, reward_batch, next_state_batch
+        return state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch

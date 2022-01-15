@@ -52,13 +52,13 @@ class Agent:
         self._target_critic.load_weights(f"{self._load_weight_directory}/agent_target_critic{version}_{episode_num}.h5")
         print("weights are loaded successfully!")
 
-    def train(self, state_batch, action_batch, reward_batch, next_state_batch):
+    def train(self, state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch):
         action_batch1 = [action_batch[0], action_batch[1]]
         # update critic network
         with tf.GradientTape() as tape:
             target_actions = self._target_actor(next_state_batch)
             action_batch1.append(target_actions)
-            y = reward_batch + self._gamma * self._target_critic([next_state_batch, action_batch1])
+            y = reward_batch + self._gamma * self._target_critic([next_state_batch, action_batch1]) * episode_end_flag_batch
             critic_value = self._critic([state_batch, action_batch])
             critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
         critic_grad = tape.gradient(critic_loss, self._critic.trainable_variables)

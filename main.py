@@ -143,11 +143,12 @@ if __name__ == "__main__":
         for step in range(max_steps_per_episode):
             tf_state = data_processor.get_tf_state(state)
             nn_action = agent.actor(tf_state)
-            print("NN generator output: ", nn_action[0])
+            # print("NN generator output: ", nn_action[0])
 
             net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
             env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
+            print("ramp:", env_action['generator_injection'])
             next_state, reward, done, _ = env.step(env_action)
             print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 

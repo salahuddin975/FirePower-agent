@@ -82,6 +82,7 @@ class ReplayBuffer:
         np.save(f'{self._save_replay_buffer_dir}/counter_v{version}.npy', self.np_counter)
 
     def _load_buffer(self, version):
+        print("Loading replay buffer!")
         self.st_bus = np.load(f'{self._load_replay_buffer_dir}/st_bus_v{version}.npy')
         self.st_branch = np.load(f'{self._load_replay_buffer_dir}/st_branch_v{version}.npy')
         self.st_fire_distance = np.load(f'{self._load_replay_buffer_dir}/st_fire_distance_v{version}.npy')

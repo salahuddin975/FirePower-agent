@@ -3,6 +3,7 @@ import gym
 import random
 import argparse
 import numpy as np
+from datetime import datetime
 import tensorflow as tf
 from parameters import Parameters
 from agent import Agent
@@ -111,7 +112,7 @@ if __name__ == "__main__":
 
     # replay buffer
     save_replay_buffer = True
-    load_replay_buffer = False
+    load_replay_buffer = True
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
 
@@ -125,10 +126,10 @@ if __name__ == "__main__":
     # agent training
     total_episode = 100001
     max_steps_per_episode = 300
-    num_train_per_episode = 1000         # canbe used by loading replay buffer
+    num_train_per_episode = 10000         # canbe used by loading replay buffer
     episodic_rewards = []
     train_network = True
-    explore_network_flag = True
+    explore_network_flag = False
 
     for episode in range(total_episode):
         state = env.reset()
@@ -163,12 +164,18 @@ if __name__ == "__main__":
                 max_reached_step = step
                 break
 
-            if train_network:
-                # print ("Train at: ", episode)
-                # for i in range(num_train_per_episode):
+        if train_network:
+            print ("Train at episode: ", episode)
+            start_time = datetime.now()
+            for i in range(num_train_per_episode):
                 state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
                 critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
                 tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value)
+                if i % 500 == 0:
+                    print("train at: ", i)
+
+            computation_time = (datetime.now() - start_time).total_seconds()
+            print("Training_computation_time:", computation_time)
 
         tensorboard.add_episodic_info(episodic_penalty)
         summary_writer.add_info(episode, max_reached_step, episodic_penalty, episodic_load_loss)

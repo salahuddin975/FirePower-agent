@@ -37,6 +37,7 @@ def get_arguments():
     argument_parser.add_argument('-g', '--path-geo', help="Full path to geo file", required=True)
     argument_parser.add_argument('-p', '--path-power', help="Full path to power systems file", required=True)
     argument_parser.add_argument('-s', '--seed', help="Seed for agent", type=int, required=True)
+    argument_parser.add_argument('-b', '--replay-buffer-loading-seed', help="Replay buffer loading seed for agent", type=int, required=True)
 
     argument_parser.add_argument('-f', '--scale-factor', help="Scali    actor_lr = 0.001ng factor", type=int, default=6)
     argument_parser.add_argument('-n', '--nonconvergence-penalty', help="Non-convergence penalty", type=float)
@@ -81,10 +82,13 @@ def get_action_spaces(action_space):
 if __name__ == "__main__":
     args = get_arguments()
     seed_value = args.seed
+    print(args)
+    replay_buffer_loading_seed = args.replay_buffer_loading_seed
 
     set_seed(seed_value)
     set_gpu_memory_limit()
     base_path = "database_seed_" + str(seed_value)
+    replay_buffer_loading_path = "database_seed_" + str(replay_buffer_loading_seed)
 
     simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)
     generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)
@@ -116,7 +120,7 @@ if __name__ == "__main__":
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
 
-    buffer = ReplayBuffer(base_path, state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version,
+    buffer = ReplayBuffer(replay_buffer_loading_path, state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version,
                           buffer_capacity=1000000, batch_size=parameters.batch_size)
 
     tensorboard = Tensorboard(base_path)

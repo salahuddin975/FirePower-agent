@@ -171,7 +171,7 @@ if __name__ == "__main__":
                 state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
                 critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
                 tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value)
-                if i % 500 == 0:
+                if i % 1000 == 0:
                     print("train at: ", i)
 
             computation_time = (datetime.now() - start_time).total_seconds()

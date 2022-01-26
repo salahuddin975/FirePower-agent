@@ -47,7 +47,7 @@ class DataProcessor:
         generators_current_output = np.zeros(num_generators)
         for i in range(num_generators):
             generators_current_output[i] = generators_output[self.generators.get_generators()[i]]
-        print("generators current output: ", generators_current_output)
+        # print("generators current output: ", generators_current_output)
 
         # print("nn ramp: ", nn_ramp)
 

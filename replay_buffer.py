@@ -4,18 +4,49 @@ import tensorflow as tf
 
 
 class ReplayBuffer:
-    def __init__(self, base_path, state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version=0, buffer_capacity=200000, batch_size=256):
+    def __init__(self, base_path, state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version=0, buffer_capacity=2000000, batch_size=256):
         self._counter = 0
         self._capacity = buffer_capacity
         self._batch_size = batch_size
-        self._load_replay_buffer_dir = os.path.join(base_path, "replay_buffer")
-        self._save_replay_buffer_dir = os.path.join(base_path, "replay_buffer")
+        self._load_replay_buffer_dir = os.path.join("database_seed_" + str(1131), "replay_buffer")
+        self._load_replay_buffer_dir2 = os.path.join("database_seed_" + str(1132), "replay_buffer")
+
+        self._save_replay_buffer_dir = os.path.join(base_path, "combined_replay_buffer")
         self._create_dir()
 
-        if not load_replay_buffer:
-            self._initialize_buffer(state_spaces, action_spaces)
-        else:
-            self._load_buffer(load_replay_buffer_version)
+        # self._initialize_buffer(state_spaces, action_spaces)
+        self._load_buffer(load_replay_buffer_version)
+        self._load_buffer2(load_replay_buffer_version)
+
+        self._merge_buffer()
+
+    def _merge_buffer(self):
+        print("merging replay buffer!")
+        self.st_bus = np.concatenate((self.st_bus, self.st_bus2), axis=0)
+        self.st_branch = np.concatenate((self.st_branch, self.st_branch2), axis=0)
+        self.st_fire_distance = np.concatenate((self.st_fire_distance, self.st_fire_distance2), axis=0)
+        self.st_gen_output = np.concatenate((self.st_gen_output, self.st_gen_output2), axis=0)
+        self.st_load_demand = np.concatenate((self.st_load_demand, self.st_load_demand2), axis=0)
+        self.st_theta = np.concatenate((self.st_theta, self.st_theta2), axis=0)
+        self.st_line_flow = np.concatenate((self.st_line_flow, self.st_line_flow2), axis=0)
+
+        self.act_bus = np.concatenate((self.act_bus, self.act_bus2), axis=0)
+        self.act_branch = np.concatenate((self.act_branch, self.act_branch2), axis=0)
+        self.act_gen_injection = np.concatenate((self.act_gen_injection, self.act_gen_injection2), axis=0)
+
+        self.rewards = np.concatenate((self.rewards, self.rewards2), axis=0)
+        self.episode_end_flag = np.concatenate((self.episode_end_flag, self.episode_end_flag2), axis=0)
+
+        self.next_st_bus = np.concatenate((self.next_st_bus, self.next_st_bus2), axis=0)
+        self.next_st_branch = np.concatenate((self.next_st_branch, self.next_st_branch2), axis=0)
+        self.next_st_fire_distance = np.concatenate((self.next_st_fire_distance, self.next_st_fire_distance2), axis=0)
+        self.next_st_gen_output = np.concatenate((self.next_st_gen_output, self.next_st_gen_output2), axis=0)
+        self.next_st_load_demand = np.concatenate((self.next_st_load_demand, self.next_st_load_demand2), axis=0)
+        self.next_st_theta = np.concatenate((self.next_st_theta, self.next_st_theta2), axis=0)
+        self.next_st_line_flow = np.concatenate((self.next_st_line_flow, self.next_st_line_flow2), axis=0)
+
+        self._counter = self._counter + self._counter2
+        print("counter set at:", self._counter)
 
     def _create_dir(self):
         try:
@@ -110,6 +141,37 @@ class ReplayBuffer:
         self._counter = int(self.np_counter[0])
         print("Replay buffer loaded successfully!")
         print("Counter set at: ", self._counter)
+
+    def _load_buffer2(self, version):
+        print("Loading replay buffer: ", self._load_replay_buffer_dir2)
+        self.st_bus2 = np.load(f'{self._load_replay_buffer_dir2}/st_bus_v{version}.npy')
+        self.st_branch2 = np.load(f'{self._load_replay_buffer_dir2}/st_branch_v{version}.npy')
+        self.st_fire_distance2 = np.load(f'{self._load_replay_buffer_dir2}/st_fire_distance_v{version}.npy')
+        self.st_gen_output2 = np.load(f'{self._load_replay_buffer_dir2}/st_gen_output_v{version}.npy')
+        self.st_load_demand2 = np.load(f'{self._load_replay_buffer_dir2}/st_load_demand_v{version}.npy')
+        self.st_theta2 = np.load(f'{self._load_replay_buffer_dir2}/st_theta_v{version}.npy')
+        self.st_line_flow2 = np.load(f'{self._load_replay_buffer_dir2}/st_line_flow_v{version}.npy')
+
+        self.act_bus2 = np.load(f'{self._load_replay_buffer_dir2}/act_bus_v{version}.npy')
+        self.act_branch2 = np.load(f'{self._load_replay_buffer_dir2}/act_branch_v{version}.npy')
+        self.act_gen_injection2 = np.load(f'{self._load_replay_buffer_dir2}/act_gen_injection_v{version}.npy')
+
+        self.rewards2 = np.load(f'{self._load_replay_buffer_dir2}/rewards_v{version}.npy')
+        self.episode_end_flag2 = np.load(f'{self._load_replay_buffer_dir2}/episode_end_flag_v{version}.npy')
+
+        self.next_st_bus2 = np.load(f'{self._load_replay_buffer_dir2}/next_st_bus_v{version}.npy')
+        self.next_st_branch2 = np.load(f'{self._load_replay_buffer_dir2}/next_st_branch_v{version}.npy')
+        self.next_st_fire_distance2 = np.load(f'{self._load_replay_buffer_dir2}/next_st_fire_distance_v{version}.npy')
+        self.next_st_gen_output2 = np.load(f'{self._load_replay_buffer_dir2}/next_st_gen_output_v{version}.npy')
+        self.next_st_load_demand2 = np.load(f'{self._load_replay_buffer_dir2}/next_st_load_demand_v{version}.npy')
+        self.next_st_theta2 = np.load(f'{self._load_replay_buffer_dir2}/next_st_theta_v{version}.npy')
+        self.next_st_line_flow2 = np.load(f'{self._load_replay_buffer_dir2}/next_st_line_flow_v{version}.npy')
+
+        self.np_counter2 = np.load(f'{self._load_replay_buffer_dir2}/counter_v{version}.npy')
+        self._counter2 = int(self.np_counter2[0])
+        print("Replay buffer loaded successfully!")
+        print("Counter set at: ", self._counter2)
+
 
     def get_num_records(self):
         record_size = min(self._capacity, self._counter)

@@ -100,7 +100,7 @@ if __name__ == "__main__":
     action_spaces = get_action_spaces(env.action_space)
 
     # agent model
-    save_model = True
+    save_model = False
     load_model = False
     save_model_version = 0
     load_model_version = 0
@@ -121,82 +121,83 @@ if __name__ == "__main__":
     load_replay_buffer_version = 0
 
     buffer = ReplayBuffer(replay_buffer_loading_path, state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version,
-                          buffer_capacity=1000000, batch_size=parameters.batch_size)
+                          buffer_capacity=2000000, batch_size=parameters.batch_size)
 
-    tensorboard = Tensorboard(base_path)
-    summary_writer = SummaryWriter(base_path, save_model_version)
-    data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
+    # tensorboard = Tensorboard(base_path)
+    # summary_writer = SummaryWriter(base_path, save_model_version)
+    # data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
+    #
+    # # agent training
+    # total_episode = 100001
+    # max_steps_per_episode = 300
+    # num_train_per_episode = 10000         # canbe used by loading replay buffer
+    # episodic_rewards = []
+    # train_network = True
+    # explore_network_flag = False
+    #
+    # for episode in range(total_episode):
+    #     state = env.reset()
+    #
+    #     max_reached_step = 0
+    #     episodic_penalty = 0
+    #     episodic_load_loss = 0
+    #
+    #     if not parameters.generator_max_output:
+    #         generators.set_max_outputs(state["generator_injection"])
+    #
+    #     for step in range(max_steps_per_episode):
+    #         tf_state = data_processor.get_tf_state(state)
+    #         nn_action = agent.actor(tf_state)
+    #         # print("NN generator output: ", nn_action[0])
+    #
+    #         net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
+    #         env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
+    #
+    #         # print("ramp:", env_action['generator_injection'])
+    #         next_state, reward, done, _ = env.step(env_action)
+    #         print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+    #
+    #         buffer.add_record((state, net_action, reward, next_state, env_action, not done))
+    #
+    #         episodic_penalty += reward[0]
+    #         episodic_load_loss += reward[1]
+    #         state = next_state
+    #
+    #         if done or (step == max_steps_per_episode - 1):
+    #             print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_penalty}")
+    #             max_reached_step = step
+    #             break
+    #
+    #     if train_network:
+    #         print ("Train at episode: ", episode)
+    #         start_time = datetime.now()
+    #         for i in range(num_train_per_episode):
+    #             state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
+    #             critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
+    #             tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value)
+    #             if i % 2000 == 0:
+    #                 print("train at: ", i)
+    #
+    #         computation_time = (datetime.now() - start_time).total_seconds()
+    #         print("Training_computation_time:", computation_time)
+    #
+    #     tensorboard.add_episodic_info(episodic_penalty)
+    #     summary_writer.add_info(episode, max_reached_step, episodic_penalty, episodic_load_loss)
+    #
+    #     # explore / Testing
+    #     # if episode and (episode % parameters.test_after_episodes == 0):
+    #     #     print("Start testing network at: ", episode)
+    #     #     explore_network_flag = False
+    #     # if episode and (episode % parameters.test_after_episodes == 4):
+    #     #     print("Start exploring network at: ", episode)
+    #     #     explore_network_flag = True
+    #
+    #     # save model weights
+    #     # if (episode % parameters.test_after_episodes == 0) and save_model:
+    #     agent.save_weight(version=save_model_version, episode_num=episode)
+    #
+    #     # save replay buffer
+    #     # if (episode % parameters.test_after_episodes == 0) and save_replay_buffer:
+    #     #     print(f"Saving replay buffer at: {episode}")
 
-    # agent training
-    total_episode = 100001
-    max_steps_per_episode = 300
-    num_train_per_episode = 10000         # canbe used by loading replay buffer
-    episodic_rewards = []
-    train_network = True
-    explore_network_flag = False
-
-    for episode in range(total_episode):
-        state = env.reset()
-
-        max_reached_step = 0
-        episodic_penalty = 0
-        episodic_load_loss = 0
-
-        if not parameters.generator_max_output:
-            generators.set_max_outputs(state["generator_injection"])
-
-        for step in range(max_steps_per_episode):
-            tf_state = data_processor.get_tf_state(state)
-            nn_action = agent.actor(tf_state)
-            # print("NN generator output: ", nn_action[0])
-
-            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
-            env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
-
-            # print("ramp:", env_action['generator_injection'])
-            next_state, reward, done, _ = env.step(env_action)
-            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
-
-            buffer.add_record((state, net_action, reward, next_state, env_action, not done))
-
-            episodic_penalty += reward[0]
-            episodic_load_loss += reward[1]
-            state = next_state
-
-            if done or (step == max_steps_per_episode - 1):
-                print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_penalty}")
-                max_reached_step = step
-                break
-
-        if train_network:
-            print ("Train at episode: ", episode)
-            start_time = datetime.now()
-            for i in range(num_train_per_episode):
-                state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
-                critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
-                tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value)
-                if i % 2000 == 0:
-                    print("train at: ", i)
-
-            computation_time = (datetime.now() - start_time).total_seconds()
-            print("Training_computation_time:", computation_time)
-
-        tensorboard.add_episodic_info(episodic_penalty)
-        summary_writer.add_info(episode, max_reached_step, episodic_penalty, episodic_load_loss)
-
-        # explore / Testing
-        # if episode and (episode % parameters.test_after_episodes == 0):
-        #     print("Start testing network at: ", episode)
-        #     explore_network_flag = False
-        # if episode and (episode % parameters.test_after_episodes == 4):
-        #     print("Start exploring network at: ", episode)
-        #     explore_network_flag = True
-
-        # save model weights
-        # if (episode % parameters.test_after_episodes == 0) and save_model:
-        agent.save_weight(version=save_model_version, episode_num=episode)
-
-        # save replay buffer
-        # if (episode % parameters.test_after_episodes == 0) and save_replay_buffer:
-        #     print(f"Saving replay buffer at: {episode}")
-        buffer.save_buffer(save_replay_buffer_version)
+    buffer.save_buffer(save_replay_buffer_version)

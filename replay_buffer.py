@@ -8,7 +8,8 @@ class ReplayBuffer:
         self._counter = 0
         self._capacity = buffer_capacity
         self._batch_size = batch_size
-        self._load_replay_buffer_dir = os.path.join(base_path, "replay_buffer")
+        # self._load_replay_buffer_dir = os.path.join(base_path, "replay_buffer")
+        self._load_replay_buffer_dir = os.path.join("2M_experiences")
         self._save_replay_buffer_dir = os.path.join(base_path, "replay_buffer")
         self._create_dir()
 

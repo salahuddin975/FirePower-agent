@@ -4,7 +4,7 @@ import tensorflow as tf
 
 
 class ReplayBuffer:
-    def __init__(self, base_path, state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version=0, buffer_capacity=200000, batch_size=256):
+    def __init__(self, base_path, state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version, buffer_capacity, batch_size):
         self._counter = 0
         self._capacity = buffer_capacity
         self._batch_size = batch_size

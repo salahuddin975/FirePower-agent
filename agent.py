@@ -189,7 +189,7 @@ class Agent:
         st_gen_combine = layers.Concatenate() ([st_gen_output, act_gen_injection])
         st_gen_layer1 = layers.Dense(32, "relu") (st_gen_combine)
 
-        st_gen_line_flow_combine = layers.Concatenate() (st_gen_layer1, st_line_flow)
+        st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_line_flow])
         st_gen_line_flow_layer1 = layers.Dense(64, activation="relu") (st_gen_line_flow_combine)
 
         st_line_flow_layer1 = layers.Dense(32, activation="relu") (st_line_flow)

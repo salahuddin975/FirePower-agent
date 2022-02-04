@@ -6,7 +6,7 @@ from tensorflow.keras import layers
 
 class Agent:
     def __init__(self, base_path, state_spaces, action_spaces):
-        self._gamma = 0.99      # discount factor
+        self._gamma = 0.9      # discount factor
         self._tau = 0.01       # used to update target network
         actor_lr = 0.001
         critic_lr = 0.002
@@ -53,29 +53,29 @@ class Agent:
         print("weights are loaded successfully!")
 
     def train(self, state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch):
-        # action_batch1 = [action_batch[0], action_batch[1]]
+        action_batch1 = [action_batch[0], action_batch[1]]
         # update critic network
         with tf.GradientTape() as tape:
-            # target_actions = self._target_actor(next_state_batch)
-            # action_batch1.append(target_actions)
-            # y = reward_batch + self._gamma * self._target_critic([next_state_batch, action_batch1]) * episode_end_flag_batch
+            target_actions = self._target_actor(next_state_batch)
+            action_batch1.append(target_actions)
+            y = reward_batch + self._gamma * self._target_critic([next_state_batch, action_batch1]) * episode_end_flag_batch
             y = reward_batch[0] + reward_batch[1] +  reward_batch[2] +  reward_batch[3] +  reward_batch[4]
             critic_value = self._critic([state_batch, action_batch])
             critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
         critic_grad = tape.gradient(critic_loss, self._critic.trainable_variables)
         self._critic_optimizer.apply_gradients(zip(critic_grad, self._critic.trainable_variables))
 
-        # action_batch1.pop()
-        # # update actor network
-        # with tf.GradientTape() as tape:
-        #     actions = self.actor(state_batch)
-        #     action_batch1.append(actions)
-        #     critic_value1 = self._critic([state_batch, action_batch1])
-        #     actor_loss = -1 * tf.math.reduce_mean(critic_value1)
-        # actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
-        # self._actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
+        action_batch1.pop()
+        # update actor network
+        with tf.GradientTape() as tape:
+            actions = self.actor(state_batch)
+            action_batch1.append(actions)
+            critic_value1 = self._critic([state_batch, action_batch1])
+            actor_loss = -1 * tf.math.reduce_mean(critic_value1)
+        actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
+        self._actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
-        # self._update_target()
+        self._update_target()
         return critic_loss, tf.math.reduce_mean(reward_batch[0]), tf.math.reduce_mean(critic_value)
 
     def _update_target(self):
@@ -121,17 +121,56 @@ class Agent:
         # line_flow -> Box(34, )
         line_flow_input = layers.Input(shape=(self._state_spaces[6], ))
 
-        state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, theta_input, line_flow_input])
+        #-------------------------------------
+        st_bus_branch = layers.Concatenate() ([bus_input, branch_input])
+        st_bus_branch_layer1 = layers.Dense(64, activation="relu") (st_bus_branch)
+
+        st_fire_distance_layer1 = layers.Dense(64, activation="relu") (fire_distance_input)
+
+        st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_branch_layer1, st_fire_distance_layer1])
+        st_bus_branch_fire_distance_comb_layer1 = layers.Dense(128, activation="relu") (st_bus_branch_fire_distance_comb)
+
+        # st_gen_combine = layers.Concatenate() ([st_gen_output, act_gen_injection])
+        st_gen_layer1 = layers.Dense(32, "relu") (gen_inj_input)
+
+        st_line_flow_layer1 = layers.Dense(32, activation="relu") (line_flow_input)
+
+        st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_line_flow_layer1])
+        st_gen_line_flow_layer1 = layers.Dense(64, activation="relu") (st_gen_line_flow_combine)
+
+        state = layers.Concatenate() ([st_bus_branch_fire_distance_comb_layer1, st_gen_line_flow_layer1])
+        # state = layers.Concatenate() ([st_bus_branch_layer1, st_fire_distance_layer1, st_gen_line_flow_layer1])
+        # state = layers.Concatenate() ([st_bus_branch_layer1, st_fire_distance_layer1, st_gen_layer1, st_line_flow_layer1])
+        # -------------------------------------
+
+        # state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_theta, st_line_flow,
+        #                                act_bus, act_branch, act_gen_injection])
+
+        # state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
+        #                                act_bus, act_branch, act_gen_injection])
+        # state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1,
+        #                                act_bus1, act_branch1, act_gen_injection1])
+
+        hidden = layers.Dense(256, activation="relu") (state)
+        hidden = layers.Dense(450, activation="relu") (hidden)
+        hidden = layers.Dense(300, activation="relu") (hidden)
+        # reward = layers.Dense(1, activation="linear") (hidden)
+
+#----------------------------------------
+
+        # state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, theta_input, line_flow_input])
         # state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input])
         # state = layers.Concatenate() ([bus_input1, branch_input1, fire_distance_input1, gen_inj_input1, load_demand_input1, theta_input1])
-        hidden = layers.Dense(450, activation="tanh") (state)
-        hidden = layers.Dense(300, activation="tanh") (hidden)
+        # hidden = layers.Dense(450, activation="tanh") (state)
+        # hidden = layers.Dense(300, activation="tanh") (hidden)
 
         # bus -> MultiBinary(24)
         # bus_output = layers.Dense(action_space[0], activation="sigmoid") (hidden)
         #
         # # num_branch -> MultiBinary(34)
         # branch_output = layers.Dense(action_space[1], activation="sigmoid") (hidden)
+
+#____________________________________________
 
         # generator_injection (generator output) -> Box(5, )
         gen_inj_output = layers.Dense(self._action_spaces[3], activation="sigmoid") (hidden)

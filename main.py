@@ -173,8 +173,8 @@ if __name__ == "__main__":
             start_time = datetime.now()
             for i in range(num_train_per_episode):
                 state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
-                critic_loss, reward_value, critic_value = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
-                tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value)
+                critic_loss, reward_value, critic_value, action_quality = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
+                tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value, action_quality)
                 if i % 2000 == 0:
                     print("train at: ", i)
 

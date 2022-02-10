@@ -193,11 +193,12 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
             tf.summary.scalar("episodic_reward", episodic_reward, step=self._agent_counter)
         self._agent_counter += 1
 
-    def add_critic_network_info(self, critic_loss, reward_value, critic_value):
+    def add_critic_network_info(self, critic_loss, reward_value, critic_value, action_quality):
         with self._critic_summary_writer.as_default():
             tf.summary.scalar('critic_loss', critic_loss, step=self._critic_counter)
             tf.summary.scalar('reward_value', reward_value, step=self._critic_counter)
             tf.summary.scalar('critic_value', critic_value, step=self._critic_counter)
+            tf.summary.scalar('action_quality', action_quality, step=self._critic_counter)
         self._critic_counter += 1
 
 

@@ -76,7 +76,8 @@ class Agent:
         self._actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
         self._update_target()
-        return critic_loss, tf.math.reduce_mean(reward_batch[0]), tf.math.reduce_mean(critic_value)
+        action_quality = tf.math.reduce_mean(critic_value1) - tf.math.reduce_mean(critic_value)
+        return critic_loss, tf.math.reduce_mean(reward_batch[0]), tf.math.reduce_mean(critic_value), action_quality
 
     def _update_target(self):
         # update target critic network

@@ -114,7 +114,7 @@ if __name__ == "__main__":
 
     # replay buffer
     save_replay_buffer = True
-    load_replay_buffer = True
+    load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
 
@@ -128,10 +128,10 @@ if __name__ == "__main__":
     # agent training
     total_episode = 100001
     max_steps_per_episode = 300
-    num_train_per_episode = 10000         # canbe used by loading replay buffer
+    num_train_per_episode = 2000         # canbe used by loading replay buffer
     episodic_rewards = []
     train_network = True
-    explore_network_flag = False
+    explore_network_flag = True
 
     for episode in range(total_episode):
         state = env.reset()
@@ -144,6 +144,8 @@ if __name__ == "__main__":
             generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
+            print("load_demand:", np.sum(state["load_demand"]), ", generator_injection:", np.sum(state["generator_injection"]) )
+
             tf_state = data_processor.get_tf_state(state)
             nn_action = agent.actor(tf_state)
             # print("NN generator output: ", nn_action[0])
@@ -153,9 +155,10 @@ if __name__ == "__main__":
 
             # print("ramp:", env_action['generator_injection'])
             next_state, reward, done, _ = env.step(env_action)
-            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", ", new:", reward[0] + (28.5-np.sum(state["load_demand"])) * 100)
 
-            buffer.add_record((state, net_action, reward, next_state, env_action, not done))
+            new_reward = (reward[0] + (28.5-np.sum(state["load_demand"])) * 100, reward[1])
+            buffer.add_record((state, net_action, new_reward, next_state, env_action, not done))
 
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]
@@ -166,7 +169,7 @@ if __name__ == "__main__":
                 max_reached_step = step
                 break
 
-        if train_network:
+        if train_network and episode > 5:
             print ("Train at episode: ", episode)
             start_time = datetime.now()
             for i in range(num_train_per_episode):
@@ -183,18 +186,18 @@ if __name__ == "__main__":
         summary_writer.add_info(episode, max_reached_step, episodic_penalty, episodic_load_loss)
 
         # explore / Testing
-        # if episode and (episode % parameters.test_after_episodes == 0):
-        #     print("Start testing network at: ", episode)
-        #     explore_network_flag = False
-        # if episode and (episode % parameters.test_after_episodes == 4):
-        #     print("Start exploring network at: ", episode)
-        #     explore_network_flag = True
+        if episode and (episode % parameters.test_after_episodes == 0):
+            print("Start testing network at: ", episode)
+            explore_network_flag = False
+        if episode and (episode % parameters.test_after_episodes == 4):
+            print("Start exploring network at: ", episode)
+            explore_network_flag = True
 
         # save model weights
-        # if (episode % parameters.test_after_episodes == 0) and save_model:
-        agent.save_weight(version=save_model_version, episode_num=episode)
+        if (episode % parameters.test_after_episodes == 0) and save_model:
+            agent.save_weight(version=save_model_version, episode_num=episode)
 
         # save replay buffer
-        # if (episode % parameters.test_after_episodes == 0) and save_replay_buffer:
-        #     print(f"Saving replay buffer at: {episode}")
-        buffer.save_buffer(save_replay_buffer_version)
+        if (episode % parameters.test_after_episodes == 0) and save_replay_buffer:
+            print(f"Saving replay buffer at: {episode}")
+            buffer.save_buffer(save_replay_buffer_version)

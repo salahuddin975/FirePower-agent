@@ -128,7 +128,7 @@ if __name__ == "__main__":
     # agent training
     total_episode = 100001
     max_steps_per_episode = 300
-    num_train_per_episode = 2000         # canbe used by loading replay buffer
+    num_train_per_episode = 1000         # canbe used by loading replay buffer
     episodic_rewards = []
     train_network = True
     explore_network_flag = True
@@ -155,9 +155,13 @@ if __name__ == "__main__":
 
             # print("ramp:", env_action['generator_injection'])
             next_state, reward, done, _ = env.step(env_action)
-            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", ", new:", reward[0] + (28.5-np.sum(state["load_demand"])) * 100)
 
-            new_reward = (reward[0] + (28.5-np.sum(state["load_demand"])) * 100, reward[1])
+            if done:
+                new_reward = reward
+            else:
+                new_reward = (reward[0] + (28.5-np.sum(state["load_demand"])) * 100, reward[1])
+
+            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", ", new:", new_reward[0])
             buffer.add_record((state, net_action, new_reward, next_state, env_action, not done))
 
             episodic_penalty += reward[0]
@@ -194,10 +198,10 @@ if __name__ == "__main__":
             explore_network_flag = True
 
         # save model weights
-        if (episode % parameters.test_after_episodes == 0) and save_model:
+        if (episode % parameters.test_after_episodes == 0) and save_model and episode:
             agent.save_weight(version=save_model_version, episode_num=episode)
 
         # save replay buffer
-        if (episode % parameters.test_after_episodes == 0) and save_replay_buffer:
+        if (episode % parameters.test_after_episodes == 0) and save_replay_buffer and episode:
             print(f"Saving replay buffer at: {episode}")
             buffer.save_buffer(save_replay_buffer_version)

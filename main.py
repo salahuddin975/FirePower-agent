@@ -144,7 +144,8 @@ if __name__ == "__main__":
             generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
-            print("load_demand:", np.sum(state["load_demand"]), ", generator_injection:", np.sum(state["generator_injection"]) )
+            if explore_network_flag == False:
+                print("load_demand:", np.sum(state["load_demand"]), ", generator_injection:", np.sum(state["generator_injection"]) )
 
             tf_state = data_processor.get_tf_state(state)
             nn_action = agent.actor(tf_state)
@@ -161,8 +162,8 @@ if __name__ == "__main__":
             # else:
             #     new_reward = (reward[0] + (28.5-np.sum(state["load_demand"])) * 100, reward[1])
             #     print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", ", new:", new_reward[0])
-
-            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+            if explore_network_flag == False:
+                print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
             buffer.add_record((state, net_action, reward, next_state, env_action, not done))
 
             episodic_penalty += reward[0]

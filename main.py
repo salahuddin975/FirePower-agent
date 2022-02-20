@@ -156,13 +156,14 @@ if __name__ == "__main__":
             # print("ramp:", env_action['generator_injection'])
             next_state, reward, done, _ = env.step(env_action)
 
-            if done:
-                new_reward = reward
-            else:
-                new_reward = (reward[0] + (28.5-np.sum(state["load_demand"])) * 100, reward[1])
+            # if done:
+            #     new_reward = reward
+            # else:
+            #     new_reward = (reward[0] + (28.5-np.sum(state["load_demand"])) * 100, reward[1])
+            #     print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", ", new:", new_reward[0])
 
-            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", ", new:", new_reward[0])
-            buffer.add_record((state, net_action, new_reward, next_state, env_action, not done))
+            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+            buffer.add_record((state, net_action, reward, next_state, env_action, not done))
 
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]

@@ -21,7 +21,7 @@ class Parameters:
 
         # ------------ main training loop -----------
         self.generator_max_output = False           # True
-        self.batch_size = 1024                      # True
+        self.batch_size = 64                      # True
         self.noise_rate = 0.5                       # True
         self.test_after_episodes = 20               # True
 

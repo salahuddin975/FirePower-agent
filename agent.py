@@ -53,24 +53,24 @@ class Agent:
         print("weights are loaded successfully!")
 
     def train(self, state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch):
-        action_batch1 = [action_batch[0], action_batch[1]]
+        # action_batch1 = [action_batch[0], action_batch[1]]
         # update critic network
         with tf.GradientTape() as tape:
-            target_actions = self._target_actor(next_state_batch)
-            action_batch1.append(target_actions)
-            y = reward_batch[0] + self._gamma * self._target_critic([next_state_batch, action_batch1]) * episode_end_flag_batch
+            target_actor_actions = self._target_actor(next_state_batch)
+            # action_batch1.append(target_actions)
+            y = reward_batch[0] + self._gamma * self._target_critic([next_state_batch, target_actor_actions]) * episode_end_flag_batch
             # y = reward_batch[0] + reward_batch[1] +  reward_batch[2] +  reward_batch[3] +  reward_batch[4]
             critic_value = self._critic([state_batch, action_batch])
             critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value))
         critic_grad = tape.gradient(critic_loss, self._critic.trainable_variables)
         self._critic_optimizer.apply_gradients(zip(critic_grad, self._critic.trainable_variables))
 
-        action_batch1.pop()
+        # action_batch1.pop()
         # update actor network
         with tf.GradientTape() as tape:
-            actions = self.actor(state_batch)
-            action_batch1.append(actions)
-            critic_value1 = self._critic([state_batch, action_batch1])
+            actor_actions = self.actor(state_batch)
+            # action_batch1.append(actions)
+            critic_value1 = self._critic([state_batch, actor_actions])
             actor_loss = -1 * tf.math.reduce_mean(critic_value1)
         actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
         self._actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
@@ -254,6 +254,10 @@ class Agent:
         hidden = layers.Dense(512, activation="relu") (hidden)
         reward = layers.Dense(1, activation="linear") (hidden)
 
+        # model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
+        #                         act_bus, act_branch, act_gen_injection], reward)
+
         model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
-                                act_bus, act_branch, act_gen_injection], reward)
+                                act_gen_injection], reward)
+
         return model

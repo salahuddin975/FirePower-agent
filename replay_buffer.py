@@ -160,8 +160,8 @@ class ReplayBuffer:
         st_tf_theta = tf.convert_to_tensor(self.st_theta[batch_indices])
         st_tf_line_flow = tf.convert_to_tensor(self.st_line_flow[batch_indices])
 
-        act_tf_bus = tf.convert_to_tensor(self.act_bus[batch_indices])
-        act_tf_branch = tf.convert_to_tensor(self.act_branch[batch_indices])
+        # act_tf_bus = tf.convert_to_tensor(self.act_bus[batch_indices])
+        # act_tf_branch = tf.convert_to_tensor(self.act_branch[batch_indices])
         act_tf_gen_injection = tf.convert_to_tensor(self.act_gen_injection[batch_indices])
 
         reward_batch1 = tf.convert_to_tensor(self.rewards[batch_indices], dtype=tf.float32)
@@ -182,8 +182,10 @@ class ReplayBuffer:
         next_st_tf_line_flow = tf.convert_to_tensor(self.next_st_line_flow[batch_indices])
 
         state_batch = [st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta, st_tf_line_flow]
-        action_batch = [act_tf_bus, act_tf_branch, act_tf_gen_injection]
+        # action_batch = [act_tf_bus, act_tf_branch, act_tf_gen_injection]
+
         next_state_batch = [next_st_tf_bus, next_st_tf_branch, next_st_tf_fire_distance, next_st_tf_gen_output,
                                     next_st_tf_load_demand, next_st_tf_theta, next_st_tf_line_flow]
 
-        return state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch
+        # return state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch
+        return state_batch, act_tf_gen_injection, reward_batch, next_state_batch, episode_end_flag_batch

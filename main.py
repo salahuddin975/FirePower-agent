@@ -12,7 +12,7 @@ from data_processor import DataProcessor, Tensorboard, SummaryWriter
 from simulator_resorces import SimulatorResources, Generators
 
 
-gym.logger.set_level(25)
+gym.logger.set_level(50)
 np.set_printoptions(linewidth=300)
 
 

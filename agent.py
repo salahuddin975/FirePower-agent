@@ -12,6 +12,7 @@ class Agent:
         critic_lr = 0.0001
         self._save_weight_directory = os.path.join(base_path, "trained_model")
         self._load_weight_directory = os.path.join(base_path, "trained_model")
+        # self._load_weight_directory = os.path.join("../../FirePower-agent-private", base_path, "trained_model")
         self._create_dir()
 
         self._actor_optimizer = tf.keras.optimizers.Adam(actor_lr)

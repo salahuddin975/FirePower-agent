@@ -3,6 +3,29 @@ import copy
 import tensorflow as tf
 from tensorflow.keras import layers
 
+class MixFeaturesLayer(layers.Layer):
+    def __init__(self, num_features, feature_len):
+        super(MixFeaturesLayer, self).__init__()
+        self.num_features = num_features
+        self.feature_len = feature_len
+
+    def call(self, inputs):
+        batch_size = len(inputs)
+        t1 = tf.reshape(inputs, [batch_size, self.num_features, self.feature_len])
+        t2 = tf.transpose(t1, perm=[0, 2, 1])
+        return tf.reshape(t2, [batch_size, self.feature_len * self.num_features])
+
+class SliceLayer(layers.Layer):
+    def __init__(self, num_features, feature_len):
+        super(SliceLayer, self).__init__()
+        self.num_features = num_features
+        self.feature_len = feature_len
+
+    def call(self, inputs):
+        all_sliced_inputs = []
+        for i in range(self.feature_len):
+            all_sliced_inputs.append(inputs[:, self.num_features * i : self.num_features * (i+1)])
+        return all_sliced_inputs
 
 class Agent:
     def __init__(self, base_path, state_spaces, action_spaces):

@@ -27,6 +27,14 @@ class SliceLayer(layers.Layer):
             all_sliced_inputs.append(inputs[:, self.num_features * i : self.num_features * (i+1)])
         return all_sliced_inputs
 
+class SliceFireDistanceLayer(layers.Layer):
+    def __init__(self, bus_size):
+        super(SliceFireDistanceLayer, self).__init__()
+        self.bus_size = bus_size
+
+    def call(self, inputs):
+        return inputs[:, :self.bus_size], inputs[:, self.bus_size:]
+
 class Agent:
     def __init__(self, base_path, state_spaces, action_spaces):
         self._gamma = 0.9      # discount factor
@@ -146,13 +154,28 @@ class Agent:
         # line_flow -> Box(34, )
         line_flow_input = layers.Input(shape=(self._state_spaces[6], ))
 
-        #-------------------------------------
-        st_bus_branch = layers.Concatenate() ([bus_input, branch_input])
-        st_bus_branch_layer1 = layers.Dense(64, activation="relu") (st_bus_branch)
+        st_bus_branch = layers.Concatenate() ([bus_input, branch_input, fire_distance_input])
 
-        st_fire_distance_layer1 = layers.Dense(64, activation="relu") (fire_distance_input)
+        #--------------------- mini hidden layers ----------------------
+        fire_distance_bus, fire_distance_branch = SliceFireDistanceLayer(24)(fire_distance_input)
 
-        st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_branch_layer1, st_fire_distance_layer1])
+        st_bus_fire_distance = layers.Concatenate() ([bus_input, fire_distance_bus])
+        st_bus_fire_distance_mix = MixFeaturesLayer(2, 24)(st_bus_fire_distance)
+        st_bus_sliced_input = SliceLayer(2, 24)(st_bus_fire_distance_mix)
+        st_bus_mini_hidden = [layers.Dense(8, activation="relu") (st_bus_sliced_input[i]) for i in range(len(st_bus_sliced_input))]
+        st_bus_mini_hidden_concat = layers.Concatenate() (st_bus_mini_hidden)
+
+        st_branch_combine = layers.Concatenate() ([branch_input, fire_distance_branch, line_flow_input])
+        st_branch_mix = MixFeaturesLayer(3, 34)(st_branch_combine)
+        st_branch_sliced_input = SliceLayer(3, 34)(st_branch_mix)
+        st_branch_mini_hidden = [layers.Dense(8, activation="relu") (st_branch_sliced_input[i]) for i in range(len(st_branch_sliced_input))]
+        st_branch_mini_hidden_concat = layers.Concatenate() (st_branch_mini_hidden)
+
+
+        # st_bus_branch_layer1 = layers.Dense(64, activation="relu") (st_bus_branch)
+        # st_fire_distance_layer1 = layers.Dense(64, activation="relu") (fire_distance_input)
+
+        st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat])
         st_bus_branch_fire_distance_comb_layer1 = layers.Dense(128, activation="relu") (st_bus_branch_fire_distance_comb)
 
         # st_gen_combine = layers.Concatenate() ([st_gen_output, act_gen_injection])
@@ -244,12 +267,29 @@ class Agent:
         # act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
 
         #-------------------------------------
-        st_bus_branch = layers.Concatenate() ([st_bus, st_branch])
-        st_bus_branch_layer1 = layers.Dense(64, activation="relu") (st_bus_branch)
+        # st_bus, st_fire_distance[0:24],     *act_bus
+        # st_branch, st_fire_distance[24:], st_line_flow,      *act_branch
+        # st_load_demand, st_generator_output, act_gen_injection
 
+        #--------------------- mini hidden layers ----------------------
+        fire_distance_bus, fire_distance_branch = SliceFireDistanceLayer(24)(st_fire_distance)
+
+        st_bus_fire_distance = layers.Concatenate() ([st_bus, fire_distance_bus])
+        st_bus_fire_distance_mix = MixFeaturesLayer(2, 24)(st_bus_fire_distance)
+        st_bus_sliced_input = SliceLayer(2, 24)(st_bus_fire_distance_mix)
+        st_bus_mini_hidden = [layers.Dense(8, activation="relu") (st_bus_sliced_input[i]) for i in range(len(st_bus_sliced_input))]
+        st_bus_mini_hidden_concat = layers.Concatenate() (st_bus_mini_hidden)
+
+        st_branch_combine = layers.Concatenate() ([st_branch, fire_distance_branch, st_line_flow])
+        st_branch_mix = MixFeaturesLayer(3, 34)(st_branch_combine)
+        st_branch_sliced_input = SliceLayer(3, 34)(st_branch_mix)
+        st_branch_mini_hidden = [layers.Dense(8, activation="relu") (st_branch_sliced_input[i]) for i in range(len(st_branch_sliced_input))]
+        st_branch_mini_hidden_concat = layers.Concatenate() (st_branch_mini_hidden)
+
+        st_bus_branch_layer1 = layers.Dense(64, activation="relu") (st_bus)
         st_fire_distance_layer1 = layers.Dense(64, activation="relu") (st_fire_distance)
 
-        st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_branch_layer1, st_fire_distance_layer1])
+        st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat])
         st_bus_branch_fire_distance_comb_layer1 = layers.Dense(128, activation="relu") (st_bus_branch_fire_distance_comb)
 
         st_gen_combine = layers.Concatenate() ([st_gen_output, act_gen_injection])

@@ -187,8 +187,9 @@ class Agent:
 
         # -------------------------------------------------------------------------------
 
-        comb_layer = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat, st_gen_mini_hidden_concat])
-        comb_hidden_layer = layers.Dense(512, "relu") (comb_layer)
+        comb_merged_layer = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat, st_gen_mini_hidden_concat])
+        comb_hidden_layer = layers.Dense(512, "relu") (comb_merged_layer)
+        comb_hidden_layer = layers.Dense(512, "relu") (comb_hidden_layer)
 
         gen_inj_output = layers.Dense(self._action_spaces[3], activation="sigmoid") (comb_hidden_layer)
         model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input],
@@ -260,8 +261,9 @@ class Agent:
 
         # -------------------------------------------------------------------------------
 
-        comb_layer = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat, st_gen_mini_hidden_concat])
-        comb_hidden_layer = layers.Dense(512, "relu") (comb_layer)
+        comb_merged_layer = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat, st_gen_mini_hidden_concat])
+        comb_hidden_layer = layers.Dense(512, "relu") (comb_merged_layer)
+        comb_hidden_layer = layers.Dense(512, "relu") (comb_hidden_layer)
 
         reward = layers.Dense(1, activation="linear") (comb_hidden_layer)
         model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,

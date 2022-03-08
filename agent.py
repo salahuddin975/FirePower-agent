@@ -35,6 +35,16 @@ class SliceFireDistanceLayer(layers.Layer):
     def call(self, inputs):
         return inputs[:, :self.bus_size], inputs[:, self.bus_size:]
 
+class SelectGeneratorsLayer(layers.Layer):
+    def __init__(self):
+        super(SelectGeneratorsLayer, self).__init__()
+
+    def call(self, inputs):
+        t = tf.transpose(inputs)
+        t = tf.gather_nd(t, indices=[[0], [1], [6], [12], [13], [14], [15], [17], [20], [21], [22]])
+        ret = tf.transpose(t)
+        return ret
+
 class Agent:
     def __init__(self, base_path, state_spaces, action_spaces):
         self._gamma = 0.9      # discount factor
@@ -171,11 +181,20 @@ class Agent:
         st_branch_mini_hidden = [layers.Dense(8, activation="relu") (st_branch_sliced_input[i]) for i in range(len(st_branch_sliced_input))]
         st_branch_mini_hidden_concat = layers.Concatenate() (st_branch_mini_hidden)
 
+        st_load_demand_gen_only = SelectGeneratorsLayer() (load_demand_input)
+        st_generator_output_gen_only = SelectGeneratorsLayer()(gen_inj_input)
+        st_gen_combine = layers.Concatenate() ([st_load_demand_gen_only, st_generator_output_gen_only])
+        st_gen_mix_feature = MixFeaturesLayer(2, 11)(st_gen_combine)
+        st_gen_sliced_input = SliceLayer(2, 11)(st_gen_mix_feature)
+        st_gen_mini_hidden = [layers.Dense(8, activation="relu") (st_gen_sliced_input[i]) for i in range(len(st_gen_sliced_input))]
+        st_gen_mini_hidden_concat = layers.Concatenate() (st_gen_mini_hidden)
+
+        # -------------------------------------------------------------------------------
 
         # st_bus_branch_layer1 = layers.Dense(64, activation="relu") (st_bus_branch)
         # st_fire_distance_layer1 = layers.Dense(64, activation="relu") (fire_distance_input)
 
-        st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat])
+        st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat, st_gen_mini_hidden_concat])
         st_bus_branch_fire_distance_comb_layer1 = layers.Dense(128, activation="relu") (st_bus_branch_fire_distance_comb)
 
         # st_gen_combine = layers.Concatenate() ([st_gen_output, act_gen_injection])
@@ -286,10 +305,20 @@ class Agent:
         st_branch_mini_hidden = [layers.Dense(8, activation="relu") (st_branch_sliced_input[i]) for i in range(len(st_branch_sliced_input))]
         st_branch_mini_hidden_concat = layers.Concatenate() (st_branch_mini_hidden)
 
+        st_load_demand_gen_only = SelectGeneratorsLayer() (st_load_demand)
+        st_generator_output_gen_only = SelectGeneratorsLayer()(st_gen_output)
+        st_gen_combine = layers.Concatenate() ([st_load_demand_gen_only, st_generator_output_gen_only, act_gen_injection])
+        st_gen_mix_feature = MixFeaturesLayer(3, 11)(st_gen_combine)
+        st_gen_sliced_input = SliceLayer(3, 11)(st_gen_mix_feature)
+        st_gen_mini_hidden = [layers.Dense(8, activation="relu") (st_gen_sliced_input[i]) for i in range(len(st_gen_sliced_input))]
+        st_gen_mini_hidden_concat = layers.Concatenate() (st_gen_mini_hidden)
+
+        # -------------------------------------------------------------------------------
+
         st_bus_branch_layer1 = layers.Dense(64, activation="relu") (st_bus)
         st_fire_distance_layer1 = layers.Dense(64, activation="relu") (st_fire_distance)
 
-        st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat])
+        st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat, st_gen_mini_hidden_concat])
         st_bus_branch_fire_distance_comb_layer1 = layers.Dense(128, activation="relu") (st_bus_branch_fire_distance_comb)
 
         st_gen_combine = layers.Concatenate() ([st_gen_output, act_gen_injection])

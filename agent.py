@@ -38,12 +38,10 @@ class SliceFireDistanceLayer(layers.Layer):
 class SelectGeneratorsLayer(layers.Layer):
     def __init__(self):
         super(SelectGeneratorsLayer, self).__init__()
+        self.indices = [0, 1, 6, 12, 13, 14, 15, 17, 20, 21, 22]
 
     def call(self, inputs):
-        t = tf.transpose(inputs)
-        t = tf.gather_nd(t, indices=[[0], [1], [6], [12], [13], [14], [15], [17], [20], [21], [22]])
-        ret = tf.transpose(t)
-        return ret
+        return tf.gather(inputs, indices=self.indices, axis=1)
 
 class Agent:
     def __init__(self, base_path, state_spaces, action_spaces):

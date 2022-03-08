@@ -189,21 +189,25 @@ class Agent:
 
         # -------------------------------------------------------------------------------
 
+        comb_layer = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat, st_gen_mini_hidden_concat])
+        comb_hidden_layer = layers.Dense(512, "relu") (comb_layer)
+
+
         # st_bus_branch_layer1 = layers.Dense(64, activation="relu") (st_bus_branch)
         # st_fire_distance_layer1 = layers.Dense(64, activation="relu") (fire_distance_input)
 
-        st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat, st_gen_mini_hidden_concat])
-        st_bus_branch_fire_distance_comb_layer1 = layers.Dense(128, activation="relu") (st_bus_branch_fire_distance_comb)
+        # st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat, st_gen_mini_hidden_concat])
+        # st_bus_branch_fire_distance_comb_layer1 = layers.Dense(128, activation="relu") (st_bus_branch_fire_distance_comb)
 
         # st_gen_combine = layers.Concatenate() ([st_gen_output, act_gen_injection])
-        st_gen_layer1 = layers.Dense(64, "relu") (gen_inj_input)
-        st_load_demand1 = layers.Dense(64, "relu") (load_demand_input)
-        st_line_flow_layer1 = layers.Dense(64, activation="relu") (line_flow_input)
-
-        st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_load_demand1, st_line_flow_layer1])
-        st_gen_line_flow_layer1 = layers.Dense(128, activation="relu") (st_gen_line_flow_combine)
-
-        state = layers.Concatenate() ([st_bus_branch_fire_distance_comb_layer1, st_gen_line_flow_layer1])
+        # st_gen_layer1 = layers.Dense(64, "relu") (gen_inj_input)
+        # st_load_demand1 = layers.Dense(64, "relu") (load_demand_input)
+        # st_line_flow_layer1 = layers.Dense(64, activation="relu") (line_flow_input)
+        #
+        # st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_load_demand1, st_line_flow_layer1])
+        # st_gen_line_flow_layer1 = layers.Dense(128, activation="relu") (st_gen_line_flow_combine)
+        #
+        # state = layers.Concatenate() ([st_bus_branch_fire_distance_comb_layer1, st_gen_line_flow_layer1])
         # state = layers.Concatenate() ([st_bus_branch_layer1, st_fire_distance_layer1, st_gen_line_flow_layer1])
         # state = layers.Concatenate() ([st_bus_branch_layer1, st_fire_distance_layer1, st_gen_layer1, st_line_flow_layer1])
         # -------------------------------------
@@ -216,8 +220,8 @@ class Agent:
         # state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1,
         #                                act_bus1, act_branch1, act_gen_injection1])
 
-        hidden = layers.Dense(512, activation="relu") (state)
-        hidden = layers.Dense(512, activation="relu") (hidden)
+        # hidden = layers.Dense(512, activation="relu") (state)
+        # hidden = layers.Dense(512, activation="relu") (hidden)
         # reward = layers.Dense(1, activation="linear") (hidden)
 
 #----------------------------------------
@@ -237,7 +241,7 @@ class Agent:
 #____________________________________________
 
         # generator_injection (generator output) -> Box(5, )
-        gen_inj_output = layers.Dense(self._action_spaces[3], activation="sigmoid") (hidden)
+        gen_inj_output = layers.Dense(self._action_spaces[3], activation="sigmoid") (comb_hidden_layer)
 
         model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input],
                                [gen_inj_output])
@@ -313,22 +317,26 @@ class Agent:
 
         # -------------------------------------------------------------------------------
 
-        st_bus_branch_layer1 = layers.Dense(64, activation="relu") (st_bus)
-        st_fire_distance_layer1 = layers.Dense(64, activation="relu") (st_fire_distance)
+        comb_layer = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat, st_gen_mini_hidden_concat])
+        comb_hidden_layer = layers.Dense(512, "relu") (comb_layer)
 
-        st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat, st_gen_mini_hidden_concat])
-        st_bus_branch_fire_distance_comb_layer1 = layers.Dense(128, activation="relu") (st_bus_branch_fire_distance_comb)
 
-        st_gen_combine = layers.Concatenate() ([st_gen_output, act_gen_injection])
-        st_gen_layer1 = layers.Dense(64, "relu") (st_gen_combine)
-
-        st_load_demand1 = layers.Dense(64, "relu") (st_load_demand)
-        st_line_flow_layer1 = layers.Dense(64, activation="relu") (st_line_flow)
-
-        st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_load_demand1, st_line_flow_layer1])
-        st_gen_line_flow_layer1 = layers.Dense(128, activation="relu") (st_gen_line_flow_combine)
-
-        state = layers.Concatenate() ([st_bus_branch_fire_distance_comb_layer1, st_gen_line_flow_layer1])
+        # st_bus_branch_layer1 = layers.Dense(64, activation="relu") (st_bus)
+        # st_fire_distance_layer1 = layers.Dense(64, activation="relu") (st_fire_distance)
+        #
+        # st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_mini_hidden_concat, st_branch_mini_hidden_concat, st_gen_mini_hidden_concat])
+        # st_bus_branch_fire_distance_comb_layer1 = layers.Dense(128, activation="relu") (st_bus_branch_fire_distance_comb)
+        #
+        # st_gen_combine = layers.Concatenate() ([st_gen_output, act_gen_injection])
+        # st_gen_layer1 = layers.Dense(64, "relu") (st_gen_combine)
+        #
+        # st_load_demand1 = layers.Dense(64, "relu") (st_load_demand)
+        # st_line_flow_layer1 = layers.Dense(64, activation="relu") (st_line_flow)
+        #
+        # st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_load_demand1, st_line_flow_layer1])
+        # st_gen_line_flow_layer1 = layers.Dense(128, activation="relu") (st_gen_line_flow_combine)
+        #
+        # state = layers.Concatenate() ([st_bus_branch_fire_distance_comb_layer1, st_gen_line_flow_layer1])
         # state = layers.Concatenate() ([st_bus_branch_layer1, st_fire_distance_layer1, st_gen_line_flow_layer1])
         # state = layers.Concatenate() ([st_bus_branch_layer1, st_fire_distance_layer1, st_gen_layer1, st_line_flow_layer1])
         # -------------------------------------
@@ -341,12 +349,13 @@ class Agent:
         # state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1,
         #                                act_bus1, act_branch1, act_gen_injection1])
 
-        hidden = layers.Dense(512, activation="relu") (state)
-        hidden = layers.Dense(512, activation="relu") (hidden)
-        reward = layers.Dense(1, activation="linear") (hidden)
+        # hidden = layers.Dense(512, activation="relu") (state)
+        # hidden = layers.Dense(512, activation="relu") (hidden)
 
         # model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
         #                         act_bus, act_branch, act_gen_injection], reward)
+
+        reward = layers.Dense(1, activation="linear") (comb_hidden_layer)
 
         model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
                                 act_gen_injection], reward)

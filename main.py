@@ -113,13 +113,13 @@ if __name__ == "__main__":
         agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
     # replay buffer
-    save_replay_buffer = False
-    load_replay_buffer = True
+    save_replay_buffer = True
+    load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
 
     buffer = ReplayBuffer(base_path, state_spaces, action_spaces, load_replay_buffer, load_replay_buffer_version,
-                          buffer_capacity=1500000, batch_size=parameters.batch_size)
+                          buffer_capacity=1000000, batch_size=parameters.batch_size)
 
     tensorboard = Tensorboard(base_path)
     summary_writer = SummaryWriter(base_path, save_model_version)
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     # agent training
     total_episode = 100001
     max_steps_per_episode = 300
-    num_train_per_episode = 1000000         # canbe used by loading replay buffer
+    num_train_per_episode = 500         # canbe used by loading replay buffer
     episodic_rewards = []
     train_network = True
     explore_network_flag = True
@@ -162,8 +162,8 @@ if __name__ == "__main__":
             # else:
             #     new_reward = (reward[0] + (28.5-np.sum(state["load_demand"])) * 100, reward[1])
             #     print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", ", new:", new_reward[0])
-            # if explore_network_flag == False:
-            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+            if explore_network_flag == False:
+                print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
             buffer.add_record((state, net_action, reward, next_state, env_action, not done))
 
             episodic_penalty += reward[0]
@@ -175,7 +175,7 @@ if __name__ == "__main__":
                 max_reached_step = step
                 break
 
-        # if train_network and episode > 5:
+        if train_network and episode > 5:
             print ("Train at episode: ", episode)
             start_time = datetime.now()
             for i in range(num_train_per_episode):

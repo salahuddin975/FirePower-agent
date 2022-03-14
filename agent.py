@@ -240,28 +240,44 @@ class Agent:
         #--------------------- mini hidden layers ----------------------
         fire_distance_bus, fire_distance_branch = SliceFireDistanceLayer(24)(st_fire_distance)
 
-        st_bus_fire_distance = layers.Concatenate() ([st_bus, fire_distance_bus])       # for 24 bus
+        # ---------- bus ---------
+        st_bus_fire_distance = layers.Concatenate() ([st_bus, fire_distance_bus])       # preprocessing
         st_bus_fire_distance_mix = MixFeaturesLayer(2, 24)(st_bus_fire_distance)
         st_bus_sliced_input = SliceLayer(2, 24)(st_bus_fire_distance_mix)
-        st_bus_mini_hidden1 = [layers.Dense(self.mini_hidden_layer_size, activation="relu") (st_bus_sliced_input[i]) for i in range(len(st_bus_sliced_input))]
-        st_bus_mini_hidden2 = [layers.Dense(self.mini_hidden_layer_size, activation="relu") (st_bus_mini_hidden1[i]) for i in range(len(st_bus_mini_hidden1))]
-        st_bus_mini_hidden_concat = layers.Concatenate() (st_bus_mini_hidden2)
 
-        st_branch_combine = layers.Concatenate() ([st_branch, fire_distance_branch, st_line_flow])     # for 34 branch
+        st_bus_weight_sharing_dense1 = layers.Dense(self.mini_hidden_layer_size, activation="relu")
+        st_bus_mini_dense1_output = [st_bus_weight_sharing_dense1 (st_bus_sliced_input[i]) for i in range(len(st_bus_sliced_input))]
+        st_bus_weight_sharing_dense2 = layers.Dense(self.mini_hidden_layer_size, activation="relu")
+        st_bus_mini_dense2_output = [st_bus_weight_sharing_dense2 (st_bus_mini_dense1_output[i]) for i in range(len(st_bus_mini_dense1_output))]
+
+        st_bus_mini_hidden_concat = layers.Concatenate() (st_bus_mini_dense2_output)
+
+        # ---------- branch ---------
+        st_branch_combine = layers.Concatenate() ([st_branch, fire_distance_branch, st_line_flow])     # preprocessing
         st_branch_mix = MixFeaturesLayer(3, 34)(st_branch_combine)
         st_branch_sliced_input = SliceLayer(3, 34)(st_branch_mix)
-        st_branch_mini_hidden1 = [layers.Dense(self.mini_hidden_layer_size, activation="relu") (st_branch_sliced_input[i]) for i in range(len(st_branch_sliced_input))]
-        st_branch_mini_hidden2 = [layers.Dense(self.mini_hidden_layer_size, activation="relu") (st_branch_mini_hidden1[i]) for i in range(len(st_branch_mini_hidden1))]
-        st_branch_mini_hidden_concat = layers.Concatenate() (st_branch_mini_hidden2)
 
+        st_branch_weight_sharing_dense1 = layers.Dense(self.mini_hidden_layer_size, activation="relu")
+        st_branch_mini_hidden1_output = [st_branch_weight_sharing_dense1 (st_branch_sliced_input[i]) for i in range(len(st_branch_sliced_input))]
+        st_branch_weight_sharing_dense2 = layers.Dense(self.mini_hidden_layer_size, activation="relu")
+        st_branch_mini_hidden2_output = [st_branch_weight_sharing_dense2 (st_branch_mini_hidden1_output[i]) for i in range(len(st_branch_mini_hidden1_output))]
+
+        st_branch_mini_hidden_concat = layers.Concatenate() (st_branch_mini_hidden2_output)
+
+        # ---------- generators ---------
         st_load_demand_gen_only = SelectGeneratorsLayer() (st_load_demand)      # for 11 generators
         st_generator_output_gen_only = SelectGeneratorsLayer()(st_gen_output)
+
         st_gen_combine = layers.Concatenate() ([st_load_demand_gen_only, st_generator_output_gen_only, act_gen_injection])
         st_gen_mix_feature = MixFeaturesLayer(3, 11)(st_gen_combine)
         st_gen_sliced_input = SliceLayer(3, 11)(st_gen_mix_feature)
-        st_gen_mini_hidden1 = [layers.Dense(self.mini_hidden_layer_size, activation="relu") (st_gen_sliced_input[i]) for i in range(len(st_gen_sliced_input))]
-        st_gen_mini_hidden2 = [layers.Dense(self.mini_hidden_layer_size, activation="relu") (st_gen_mini_hidden1[i]) for i in range(len(st_gen_mini_hidden1))]
-        st_gen_mini_hidden_concat = layers.Concatenate() (st_gen_mini_hidden2)
+
+        st_gen_weight_sharing_dense1 = layers.Dense(self.mini_hidden_layer_size, activation="relu")
+        st_gen_mini_hidden1_output = [st_gen_weight_sharing_dense1 (st_gen_sliced_input[i]) for i in range(len(st_gen_sliced_input))]
+        st_gen_weight_sharing_dense2 = layers.Dense(self.mini_hidden_layer_size, activation="relu")
+        st_gen_mini_hidden2_output = [st_gen_weight_sharing_dense2 (st_gen_mini_hidden1_output[i]) for i in range(len(st_gen_mini_hidden1_output))]
+
+        st_gen_mini_hidden_concat = layers.Concatenate() (st_gen_mini_hidden2_output)
 
         # -------------------------------------------------------------------------------
 

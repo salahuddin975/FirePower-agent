@@ -1,7 +1,9 @@
 import os
 import copy
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers
+from pypower.idx_brch import *
 
 class MixFeaturesLayer(layers.Layer):
     def __init__(self, num_features, feature_len):
@@ -44,7 +46,7 @@ class SelectGeneratorsLayer(layers.Layer):
         return tf.gather(inputs, indices=self.indices, axis=1)
 
 class Agent:
-    def __init__(self, base_path, state_spaces, action_spaces):
+    def __init__(self, base_path, state_spaces, action_spaces, simulator_resources):
         self._gamma = 0.9      # discount factor
         self._tau = 0.01       # used to update target network
         actor_lr = 0.001
@@ -69,6 +71,8 @@ class Agent:
         self._target_critic = self._critic_model()
         self._target_critic.set_weights(self._critic.get_weights())
 
+        self.simulator_resources = simulator_resources
+
     def _create_dir(self):
         try:
             os.makedirs(self._save_weight_directory)
@@ -92,6 +96,35 @@ class Agent:
         self._critic.load_weights(f"{self._load_weight_directory}/agent_critic{version}_{episode_num}.h5")
         self._target_critic.load_weights(f"{self._load_weight_directory}/agent_target_critic{version}_{episode_num}.h5")
         print("weights are loaded successfully!")
+
+    #----------------------- for heuristic action from training loop -------------
+    def _check_network_violations(self, bus_status, branch_status):
+        from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
+        to_buses = self.simulator_resources.ppc["branch"][:, T_BUS].astype('int')
+
+        for bus in range(bus_status.size):
+            is_active = bus_status[bus]
+            for branch in range(branch_status.size):
+                if bus in [from_buses[branch], to_buses[branch]]:
+                    if is_active == 0:
+                        branch_status[branch] = 0
+
+        return branch_status
+
+    def get_heuristic_action(self, fire_distance):
+        bus_status = np.ones(self._state_spaces[0])
+        for i in range(self._state_spaces[0]):
+            if fire_distance[i] < 2.0:
+                bus_status[i] = 0
+
+        branch_status = np.ones(self._state_spaces[1])
+        for i in range(self._state_spaces[1]):
+            if fire_distance[self._state_spaces[0] + i] < 2.0:
+                branch_status[i] = 0
+
+        branch_status = self._check_network_violations(bus_status, branch_status)
+        return [bus_status, branch_status]
+    # ----------------------- for heuristic action from training loop -------------
 
     def train(self, state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch):
         # update critic network

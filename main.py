@@ -108,7 +108,7 @@ if __name__ == "__main__":
     parameters.save_parameters()
     parameters.print_parameters()
 
-    agent = Agent(base_path, state_spaces, action_spaces)
+    agent = Agent(base_path, state_spaces, action_spaces, simulator_resources)
     if load_model:
         agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 

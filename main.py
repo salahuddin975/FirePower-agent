@@ -171,7 +171,7 @@ if __name__ == "__main__":
             state = next_state
 
             if done or (step == max_steps_per_episode - 1):
-                print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_penalty}")
+                print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_penalty}, total_load_loss: {episodic_load_loss}")
                 max_reached_step = step
                 break
 

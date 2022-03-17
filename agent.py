@@ -51,7 +51,7 @@ class Agent:
         self._tau = 0.01       # used to update target network
         actor_lr = 0.001
         critic_lr = 0.001
-        self.mini_hidden_layer_size = 32
+        self.mini_hidden_layer_size = 64
         self._save_weight_directory = os.path.join(base_path, "trained_model")
         self._load_weight_directory = os.path.join(base_path, "trained_model")
         # self._load_weight_directory = os.path.join("../../FirePower-agent-private", base_path, "trained_model")
@@ -124,6 +124,16 @@ class Agent:
 
         branch_status = self._check_network_violations(bus_status, branch_status)
         return [bus_status, branch_status]
+
+    def get_heuristic_action_batch(self, fire_distance_batch):
+        bus_status_batch = []
+        branch_status_batch = []
+        for fire_distance in fire_distance_batch:
+            bus_status, branch_status = self.get_heuristic_action(fire_distance)
+            bus_status_batch.append(bus_status)
+            branch_status_batch.append(branch_status)
+
+        return bus_status_batch, branch_status_batch
     # ----------------------- for heuristic action from training loop -------------
 
     def train(self, state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch):

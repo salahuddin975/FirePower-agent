@@ -181,6 +181,9 @@ class ReplayBuffer:
         next_st_tf_theta = tf.convert_to_tensor(self.next_st_theta[batch_indices])
         next_st_tf_line_flow = tf.convert_to_tensor(self.next_st_line_flow[batch_indices])
 
+        # next_state_act_tf_bus = tf.convert_to_tensor(self.act_bus[(batch_indices + 1) % record_size])
+        # next_state_act_tf_branch = tf.convert_to_tensor(self.act_branch[(batch_indices + 1) % record_size])
+
         state_batch = [st_tf_bus, st_tf_branch, st_tf_fire_distance, st_tf_gen_output, st_tf_load_demand, st_tf_theta, st_tf_line_flow]
         # action_batch = [act_tf_bus, act_tf_branch, act_tf_gen_injection]
 

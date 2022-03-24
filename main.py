@@ -175,18 +175,23 @@ if __name__ == "__main__":
                 max_reached_step = step
                 break
 
-        if train_network and episode > 5:
-            print ("Train at episode: ", episode)
-            start_time = datetime.now()
-            for i in range(num_train_per_episode):
+            if train_network and episode > 2:
                 state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
                 critic_loss, reward_value, critic_value, action_quality = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
                 tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value, action_quality)
-                if i % 1000 == 0:
-                    print("train at: ", i)
 
-            computation_time = (datetime.now() - start_time).total_seconds()
-            print("Training_computation_time:", computation_time)
+        # if train_network and episode > 5:
+        #     print ("Train at episode: ", episode)
+        #     start_time = datetime.now()
+        #     for i in range(num_train_per_episode):
+        #         state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
+        #         critic_loss, reward_value, critic_value, action_quality = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
+        #         tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value, action_quality)
+        #         if i % 1000 == 0:
+        #             print("train at: ", i)
+        #
+        #     computation_time = (datetime.now() - start_time).total_seconds()
+        #     print("Training_computation_time:", computation_time)
 
         tensorboard.add_episodic_info(episodic_penalty)
         summary_writer.add_info(episode, max_reached_step, episodic_penalty, episodic_load_loss)

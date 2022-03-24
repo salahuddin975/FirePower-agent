@@ -136,6 +136,7 @@ class Agent:
         return bus_status_batch, branch_status_batch
     # ----------------------- for heuristic action from training loop -------------
 
+    @tf.function
     def train(self, state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch):
         # update critic network
         with tf.GradientTape() as tape:
@@ -155,25 +156,33 @@ class Agent:
         actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
         self._actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
-        self._update_target()
+        self.update_target(self._target_actor.variables, self.actor.variables)
+        self.update_target(self._target_critic.variables, self._critic.variables)
+
+        # self._update_target()
         action_quality = tf.math.reduce_mean(critic_value1) - tf.math.reduce_mean(critic_value)
         return critic_loss, tf.math.reduce_mean(reward_batch[0]), tf.math.reduce_mean(critic_value), action_quality
         # return critic_loss, tf.math.reduce_mean(reward_batch[0]), tf.math.reduce_mean(critic_value), 0
 
-    def _update_target(self):
-        # update target critic network
-        new_weights = []
-        target_critic_weights = self._target_critic.weights
-        for i, critic_weight in enumerate(self._critic.weights):
-            new_weights.append(self._tau * critic_weight + (1 - self._tau) * target_critic_weights[i])
-        self._target_critic.set_weights(new_weights)
+    @tf.function
+    def update_target(self, target_weights, weights):
+        for (a, b) in zip(target_weights, weights):
+            a.assign(b * self._tau + a * (1 - self._tau))
 
-        # update target actor network
-        new_weights = []
-        target_actor_weights = self._target_actor.weights
-        for i, actor_weight in enumerate(self.actor.weights):
-            new_weights.append(self._tau * actor_weight + (1 - self._tau) * target_actor_weights[i])
-        self._target_actor.set_weights(new_weights)
+    # def _update_target(self):
+    #     # update target critic network
+    #     new_weights = []
+    #     target_critic_weights = self._target_critic.weights
+    #     for i, critic_weight in enumerate(self._critic.weights):
+    #         new_weights.append(self._tau * critic_weight + (1 - self._tau) * target_critic_weights[i])
+    #     self._target_critic.set_weights(new_weights)
+    #
+    #     # update target actor network
+    #     new_weights = []
+    #     target_actor_weights = self._target_actor.weights
+    #     for i, actor_weight in enumerate(self.actor.weights):
+    #         new_weights.append(self._tau * actor_weight + (1 - self._tau) * target_actor_weights[i])
+    #     self._target_actor.set_weights(new_weights)
 
     def _actor_model(self):
         # bus -> MultiBinary(24)

@@ -11,7 +11,7 @@ from data_processor import DataProcessor
 from simulator_resorces import SimulatorResources, Generators
 
 
-gym.logger.set_level(25)
+gym.logger.set_level(50)
 np.set_printoptions(linewidth=300)
 power_path = "./assets/case24_ieee_rts.py"
 geo_path = "./configurations/configuration.json"
@@ -107,7 +107,7 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
     generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=geo_path, network_file=power_path,
-                        num_tunable_gen=num_of_generator, scaling_factor=1, seed=seed_value)
+                        num_tunable_gen=num_of_generator, scaling_factor=1, seed=50)
 
     state_spaces = get_state_spaces(env.observation_space)
     action_spaces = get_action_spaces(env.action_space)
@@ -147,7 +147,7 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
             env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
             next_state, reward, done, _ = env.step(env_action)
-            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+            # print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
             episodic_reward += reward[0]
             episodic_load_loss += reward[1]

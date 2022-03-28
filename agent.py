@@ -166,11 +166,11 @@ class Agent:
 
         # st_gen_combine = layers.Concatenate() ([st_gen_output, act_gen_injection])
         st_gen_layer1 = layers.Dense(64, "relu") (gen_inj_input)
-        # st_load_demand1 = layers.Dense(64, "relu") (load_demand_input)
+        st_load_demand1 = layers.Dense(64, "relu") (load_demand_input)
         st_line_flow_layer1 = layers.Dense(64, activation="relu") (line_flow_input)
 
-        st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_line_flow_layer1])
-        # st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_load_demand1, st_line_flow_layer1])
+        # st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_line_flow_layer1])
+        st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_load_demand1, st_line_flow_layer1])
         st_gen_line_flow_layer1 = layers.Dense(128, activation="relu") (st_gen_line_flow_combine)
 
         state = layers.Concatenate() ([st_bus_branch_fire_distance_comb_layer1, st_gen_line_flow_layer1])
@@ -265,11 +265,11 @@ class Agent:
         st_gen_combine = layers.Concatenate() ([st_gen_output, act_gen_injection])
         st_gen_layer1 = layers.Dense(64, "relu") (st_gen_combine)
 
-        # st_load_demand1 = layers.Dense(64, "relu") (st_load_demand)
+        st_load_demand1 = layers.Dense(64, "relu") (st_load_demand)
         st_line_flow_layer1 = layers.Dense(64, activation="relu") (st_line_flow)
 
-        st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_line_flow_layer1])
-        # st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_load_demand1, st_line_flow_layer1])
+        # st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_line_flow_layer1])
+        st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_load_demand1, st_line_flow_layer1])
         st_gen_line_flow_layer1 = layers.Dense(128, activation="relu") (st_gen_line_flow_combine)
 
         state = layers.Concatenate() ([st_bus_branch_fire_distance_comb_layer1, st_gen_line_flow_layer1])

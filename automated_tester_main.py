@@ -115,7 +115,7 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
     parameters = Parameters(base_path, load_model_version, geo_path)
     parameters.print_parameters()
 
-    agent = Agent(base_path, state_spaces, action_spaces)
+    agent = Agent(base_path, state_spaces, action_spaces, simulator_resources)
     agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
     result_writer = ResultWriter(base_path, load_model_version, load_episode_num)

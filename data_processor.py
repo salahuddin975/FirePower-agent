@@ -110,12 +110,17 @@ class DataProcessor:
 
         # generators_ramp = np.zeros(11, int)      # overwrite by dummy value (need to remove)
 
-        action = {
-            "bus_status": bus_status,
-            "branch_status": branch_status,
-            "generator_selector": self.generators.get_generators(),
-            "generator_injection": ramp,
-        }
+        # action = {
+        #     "bus_status": bus_status,
+        #     "branch_status": branch_status,
+        #     "generator_selector": self.generators.get_generators(),
+        #     "generator_injection": ramp,
+        # }
+
+        action = {"generator_injection": np.zeros(11, int),
+                  "branch_status": np.ones(34, int),
+                  "bus_status": np.ones(24, int),
+                  "generator_selector": np.array([24]*10)}
 
         return action
 

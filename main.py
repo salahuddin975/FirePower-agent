@@ -126,11 +126,11 @@ if __name__ == "__main__":
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
     # agent training
-    total_episode = 100001
+    total_episode = 100
     max_steps_per_episode = 300
     num_train_per_episode = 500         # canbe used by loading replay buffer
     episodic_rewards = []
-    train_network = True
+    train_network = False
     explore_network_flag = True
 
     for episode in range(total_episode):
@@ -140,19 +140,24 @@ if __name__ == "__main__":
         episodic_penalty = 0
         episodic_load_loss = 0
 
-        if not parameters.generator_max_output:
-            generators.set_max_outputs(state["generator_injection"])
+        # if not parameters.generator_max_output:
+        #     generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
-            if explore_network_flag == False:
-                print("load_demand:", np.sum(state["load_demand"]), ", generator_injection:", np.sum(state["generator_injection"]) )
+            # if explore_network_flag == False:
+            #     print("load_demand:", np.sum(state["load_demand"]), ", generator_injection:", np.sum(state["generator_injection"]) )
+            #
+            # tf_state = data_processor.get_tf_state(state)
+            # nn_action = agent.actor(tf_state)
+            # # print("NN generator output: ", nn_action[0])
+            #
+            # net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
+            # env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
-            tf_state = data_processor.get_tf_state(state)
-            nn_action = agent.actor(tf_state)
-            # print("NN generator output: ", nn_action[0])
-
-            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
-            env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
+            env_action = {"generator_injection": np.zeros(11, int),
+                      "branch_status": np.ones(34, int),
+                      "bus_status": np.ones(24, int),
+                      "generator_selector": np.array([24] * 11)}
 
             # print("ramp:", env_action['generator_injection'])
             next_state, reward, done, _ = env.step(env_action)
@@ -164,7 +169,7 @@ if __name__ == "__main__":
             #     print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", ", new:", new_reward[0])
             if explore_network_flag == False:
                 print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
-            buffer.add_record((state, net_action, reward, next_state, env_action, not done))
+            # buffer.add_record((state, net_action, reward, next_state, env_action, not done))
 
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]
@@ -197,18 +202,18 @@ if __name__ == "__main__":
         summary_writer.add_info(episode, max_reached_step, episodic_penalty, episodic_load_loss)
 
         # explore / Testing
-        if episode and (episode % parameters.test_after_episodes == 0):
-            print("Start testing network at: ", episode)
-            explore_network_flag = False
-        if episode and (episode % parameters.test_after_episodes == 4):
-            print("Start exploring network at: ", episode)
-            explore_network_flag = True
+        # if episode and (episode % parameters.test_after_episodes == 0):
+        #     print("Start testing network at: ", episode)
+        #     explore_network_flag = False
+        # if episode and (episode % parameters.test_after_episodes == 4):
+        #     print("Start exploring network at: ", episode)
+        #     explore_network_flag = True
 
         # save model weights
-        if (episode % parameters.test_after_episodes == 0) and save_model and episode:
-            agent.save_weight(version=save_model_version, episode_num=episode)
+        # if (episode % parameters.test_after_episodes == 0) and save_model and episode:
+        #     agent.save_weight(version=save_model_version, episode_num=episode)
 
         # save replay buffer
-        if (episode % parameters.test_after_episodes == 0) and save_replay_buffer and episode:
-            print(f"Saving replay buffer at: {episode}")
-            buffer.save_buffer(save_replay_buffer_version)
+        # if (episode % parameters.test_after_episodes == 0) and save_replay_buffer and episode:
+        #     print(f"Saving replay buffer at: {episode}")
+        #     buffer.save_buffer(save_replay_buffer_version)

@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
     set_seed(50)
     set_gpu_memory_limit()
-    base_path = "database_seed_" + str(seed_value)
+    base_path = "reactive_database_seed_" + str(seed_value)
 
     simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)
     generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)

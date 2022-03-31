@@ -84,7 +84,7 @@ if __name__ == "__main__":
     seed_value = args.seed
     print(args)
 
-    set_seed(seed_value)
+    set_seed(50)
     set_gpu_memory_limit()
     base_path = "database_seed_" + str(seed_value)
 
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     # generators.print_info()
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power,
-                        num_tunable_gen=generators.get_num_generators(), scaling_factor=1, seed=seed_value)
+                        num_tunable_gen=generators.get_num_generators(), scaling_factor=1, seed=50)
     state_spaces = get_state_spaces(env.observation_space)
     action_spaces = get_action_spaces(env.action_space)
 

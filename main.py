@@ -98,7 +98,7 @@ if __name__ == "__main__":
     action_spaces = get_action_spaces(env.action_space)
 
     # agent model
-    save_model = True
+    save_model = False
     load_model = False
     save_model_version = 0
     load_model_version = 0
@@ -113,7 +113,7 @@ if __name__ == "__main__":
         agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
     # replay buffer
-    save_replay_buffer = True
+    save_replay_buffer = False
     load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
@@ -197,18 +197,18 @@ if __name__ == "__main__":
         summary_writer.add_info(episode, max_reached_step, episodic_penalty, episodic_load_loss)
 
         # explore / Testing
-        if episode and (episode % parameters.test_after_episodes == 0):
-            print("Start testing network at: ", episode)
-            explore_network_flag = False
-        if episode and (episode % parameters.test_after_episodes == 4):
-            print("Start exploring network at: ", episode)
-            explore_network_flag = True
+        # if episode and (episode % parameters.test_after_episodes == 0):
+        #     print("Start testing network at: ", episode)
+        #     explore_network_flag = False
+        # if episode and (episode % parameters.test_after_episodes == 4):
+        #     print("Start exploring network at: ", episode)
+        #     explore_network_flag = True
 
         # save model weights
-        if (episode % parameters.test_after_episodes == 0) and save_model and episode:
-            agent.save_weight(version=save_model_version, episode_num=episode)
+        # if (episode % parameters.test_after_episodes == 0) and save_model and episode:
+        #     agent.save_weight(version=save_model_version, episode_num=episode)
 
         # save replay buffer
-        if (episode % parameters.test_after_episodes == 0) and save_replay_buffer and episode:
-            print(f"Saving replay buffer at: {episode}")
-            buffer.save_buffer(save_replay_buffer_version)
+        # if (episode % parameters.test_after_episodes == 0) and save_replay_buffer and episode:
+        #     print(f"Saving replay buffer at: {episode}")
+        #     buffer.save_buffer(save_replay_buffer_version)

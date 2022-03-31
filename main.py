@@ -98,7 +98,7 @@ if __name__ == "__main__":
     action_spaces = get_action_spaces(env.action_space)
 
     # agent model
-    save_model = True
+    save_model = False
     load_model = False
     save_model_version = 0
     load_model_version = 0
@@ -113,7 +113,7 @@ if __name__ == "__main__":
         agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
     # replay buffer
-    save_replay_buffer = True
+    save_replay_buffer = False
     load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     num_train_per_episode = 500         # canbe used by loading replay buffer
     episodic_rewards = []
     train_network = False
-    explore_network_flag = True
+    explore_network_flag = False
 
     for episode in range(total_episode):
         state = env.reset()

@@ -113,8 +113,8 @@ class DataProcessor:
         action = {
             "bus_status": bus_status,
             "branch_status": branch_status,
-            "generator_selector": self.generators.get_generators(),
-            "generator_injection": ramp,
+            "generator_selector": np.array([24] * 11),
+            "generator_injection": np.zeros(11, int),
         }
 
         return action

@@ -84,16 +84,16 @@ if __name__ == "__main__":
     seed_value = args.seed
     print(args)
 
-    set_seed(seed_value)
+    set_seed(50)
     set_gpu_memory_limit()
-    base_path = "database_seed_" + str(seed_value)
+    base_path = "myopic_database_seed_" + str(seed_value)
 
     simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)
     generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)
     # generators.print_info()
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power,
-                        num_tunable_gen=generators.get_num_generators(), scaling_factor=1, seed=seed_value)
+                        num_tunable_gen=generators.get_num_generators(), scaling_factor=1, seed=50)
     state_spaces = get_state_spaces(env.observation_space)
     action_spaces = get_action_spaces(env.action_space)
 
@@ -126,12 +126,12 @@ if __name__ == "__main__":
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
     # agent training
-    total_episode = 100001
+    total_episode = 100
     max_steps_per_episode = 300
     num_train_per_episode = 500         # canbe used by loading replay buffer
     episodic_rewards = []
-    train_network = True
-    explore_network_flag = True
+    train_network = False
+    explore_network_flag = False
 
     for episode in range(total_episode):
         state = env.reset()

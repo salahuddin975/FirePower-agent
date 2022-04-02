@@ -23,7 +23,10 @@ if __name__ == "__main__":
     result_writer = ResultWriter(base_path, model_version, seed_value, "_summary", True)
 
     df = pd.read_csv(path, header=0)
-    max_episode = len(df)
+    # max_episode = len(df)
+    bottom = df.tail(1)
+    max_episode = int(bottom['episode_number'])
+    print("max_episode: ", max_episode)
 
     flag = True
     for i in range(max_episode):

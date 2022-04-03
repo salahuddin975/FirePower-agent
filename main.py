@@ -84,7 +84,7 @@ if __name__ == "__main__":
     seed_value = args.seed
     print(args)
 
-    set_seed(seed_value)
+    set_seed(50)
     set_gpu_memory_limit()
     base_path = "database_seed_" + str(seed_value)
 
@@ -93,16 +93,16 @@ if __name__ == "__main__":
     # generators.print_info()
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power,
-                        num_tunable_gen=generators.get_num_generators(), scaling_factor=1, seed=seed_value)
+                        num_tunable_gen=generators.get_num_generators(), scaling_factor=1, seed=50)
     state_spaces = get_state_spaces(env.observation_space)
     action_spaces = get_action_spaces(env.action_space)
 
     # agent model
-    save_model = True
-    load_model = False
+    save_model = False
+    load_model = True
     save_model_version = 0
     load_model_version = 0
-    load_episode_num = 0
+    load_episode_num = 2040
 
     parameters = Parameters(base_path, save_model_version, args.path_geo)
     parameters.save_parameters()
@@ -113,7 +113,7 @@ if __name__ == "__main__":
         agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
     # replay buffer
-    save_replay_buffer = True
+    save_replay_buffer = False
     load_replay_buffer = False
     save_replay_buffer_version = 0
     load_replay_buffer_version = 0
@@ -122,16 +122,16 @@ if __name__ == "__main__":
                           buffer_capacity=1000000, batch_size=parameters.batch_size)
 
     tensorboard = Tensorboard(base_path)
-    summary_writer = SummaryWriter(base_path, save_model_version)
+    summary_writer = SummaryWriter(base_path, save_model_version, load_episode_num)
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
     # agent training
-    total_episode = 100001
+    total_episode = 100
     max_steps_per_episode = 300
     num_train_per_episode = 500         # canbe used by loading replay buffer
     episodic_rewards = []
-    train_network = True
-    explore_network_flag = True
+    train_network = False
+    explore_network_flag = False
 
     for episode in range(total_episode):
         state = env.reset()
@@ -202,7 +202,7 @@ if __name__ == "__main__":
             explore_network_flag = False
         if episode and (episode % parameters.test_after_episodes == 4):
             print("Start exploring network at: ", episode)
-            explore_network_flag = True
+            explore_network_flag = False
 
         # save model weights
         if (episode % parameters.test_after_episodes == 0) and save_model and episode:

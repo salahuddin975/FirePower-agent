@@ -202,11 +202,16 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
         self._critic_counter += 1
 
 
+
 class SummaryWriter:
-    def __init__(self, base_path, model_version):
+    def __init__(self, base_path, model_version, load_episode_num = 0, reactive_control = False):
         self._model_version = model_version
+        self._reactive_control = reactive_control
         self._dir_name = os.path.join(base_path, "test_result")
-        self._file_name = os.path.join(self._dir_name, "fire_power_reward_list")
+        if load_episode_num == 0:
+            self._file_name = os.path.join(self._dir_name, "fire_power_reward_list")
+        else:
+            self._file_name = os.path.join(self._dir_name, "fire_power_reward_list_ep_" + str(load_episode_num))
 
         self._create_dir()
         self._initialize()
@@ -220,9 +225,24 @@ class SummaryWriter:
     def _initialize(self):
         with open(f'{self._file_name}_v{self._model_version}.csv', 'w') as fd:
             writer = csv.writer(fd)
-            writer.writerow(["model_version", "episode_number", "max_reached_step", "total_penalty", "load_loss"])
+            writer.writerow(["model_version", "episode_number", "max_reached_step", "total_penalty", "load_loss",
+                             "active_line_removal", "no_action_penalty", "violation_penalty"])
 
     def add_info(self, episode, max_reached_step, episodic_penalty, load_loss):
+        active_line_removal_penalty = 0
+        no_action_penalty = 0
+        violation_penalty = 0
+
+        if max_reached_step < 299:
+            violation_penalty = -1653000
+
+        if self._reactive_control:
+            no_action_penalty = episodic_penalty - load_loss - violation_penalty
+        else:
+            active_line_removal_penalty = episodic_penalty - load_loss - violation_penalty
+
         with open(f'{self._file_name}_v{self._model_version}.csv', 'a') as fd:
             writer = csv.writer(fd)
-            writer.writerow([str(self._model_version), str(episode), str(max_reached_step), str(episodic_penalty), str(load_loss)])
+            writer.writerow([str(self._model_version), str(episode), str(max_reached_step), str(episodic_penalty),
+                             str(load_loss), str(active_line_removal_penalty), str(no_action_penalty), str(violation_penalty)])
+

@@ -19,7 +19,7 @@ if __name__ == "__main__":
     path = f"./database_seed_{seed_value}/test_result/fire_power_reward_list_v0.csv"
 
     base_path = "database_seed_" + str(seed_value)
-    result_writer = ResultWriter(base_path, model_version, seed_value, "_summary", True)
+    result_writer = ResultWriter(base_path, model_version, seed_value, "_summary_ep50", True)
 
     df = pd.read_csv(path, header=0)
     # max_episode = len(df)

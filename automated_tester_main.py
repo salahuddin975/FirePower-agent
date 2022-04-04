@@ -122,7 +122,7 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
     # agent training
-    total_episode = 7
+    total_episode = 50
     max_steps_per_episode = 300
     explore_network_flag = False
     episodic_rewards = []

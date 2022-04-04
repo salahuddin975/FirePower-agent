@@ -210,7 +210,7 @@ class SummaryWriter:
         if load_episode_num == 0:
             self._file_name = os.path.join(self._dir_name, "fire_power_reward_list")
         else:
-            self._file_name = os.path.join(self._dir_name, "fire_power_reward_list_" + str(load_episode_num))
+            self._file_name = os.path.join(self._dir_name, "fire_power_reward_list_ep_" + str(load_episode_num))
 
         self._create_dir()
         self._initialize()

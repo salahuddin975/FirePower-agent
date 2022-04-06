@@ -125,7 +125,7 @@ if __name__ == "__main__":
                           buffer_capacity=1000000, batch_size=parameters.batch_size)
 
     tensorboard = Tensorboard(base_path)
-    summary_writer = SummaryWriter(base_path, save_model_version)
+    summary_writer = SummaryWriter(base_path, save_model_version, reactive_control=True)
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
     # agent training

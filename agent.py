@@ -53,8 +53,7 @@ class Agent:
         actor_lr = 0.001
         self.mini_hidden_layer_size = 64
         self._save_weight_directory = os.path.join(base_path, "trained_model")
-        # self._load_weight_directory = os.path.join(base_path, "trained_model")
-        self._load_weight_directory = os.path.join("database_seed_3524", "trained_model")
+        self._load_weight_directory = os.path.join(base_path, "trained_model")
         # self._load_weight_directory = os.path.join("../../FirePower-agent-private", base_path, "trained_model")
         self._create_dir()
 

@@ -14,14 +14,14 @@ class Parameters:
         self._simulator_git_repo = git.Repo(path="./../gym-firepower/")
 
         # ------------ agent.py -------------
-        self.gamma = 0.99                        # False
-        self.tau = 0.01                         # False
+        self.gamma = 0.9                        # False
+        self.tau = 0.005                         # False
         self.hidden_layer = "450, 300"           # False
         self.obs_fields = "bus_input, branch_input, fire_distance_input, gen_inj_input, theta_input, line_flow_input (without: load_demand) "           # False
 
         # ------------ main training loop -----------
         self.generator_max_output = False           # True
-        self.batch_size = 256                      # True
+        self.batch_size = 128                      # True
         self.noise_rate = 0.5                       # True
         self.test_after_episodes = 20               # True
 

@@ -179,7 +179,7 @@ if __name__ == "__main__":
                 state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
                 critic_loss, reward_value, critic_value, action_quality = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
                 tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value, action_quality)
-                print("critic_value:", critic_value, ", critic_loss:", critic_loss, ", reward_value:", reward_value)
+                print("Episode:", episode, ", step: ", step, ", critic_value:", critic_value, ", critic_loss:", critic_loss, ", reward_value:", reward_value)
 
         # if train_network and episode > 5:
         #     print ("Train at episode: ", episode)

@@ -93,8 +93,8 @@ class Agent:
         # update actor network
         with tf.GradientTape() as tape:
             actor_actions = self.actor(state_batch)
-            critic_value1 = self._critic([state_batch, actor_actions])
-            # critic_value1 = self._critic([state_batch, actor_actions]) * -1650000 + total_generation * load_loss (1000)
+            # critic_value1 = self._critic([state_batch, actor_actions])
+            critic_value1 = self._critic([state_batch, actor_actions]) * -1650000 #+ total_generation * load_loss (1000)
             actor_loss = -1 * tf.math.reduce_mean(critic_value1)
         actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
         self._actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))

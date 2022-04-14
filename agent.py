@@ -1,5 +1,6 @@
 import os
 import copy
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers
 
@@ -52,6 +53,9 @@ class Agent:
         self._target_critic = self._critic_model()
         self._target_critic.set_weights(self._critic.get_weights())
 
+        self._max_power_gen = np.array([1.92, 1.92, 3.0, 5.91, 0.0, 2.15, 1.55, 1.9833, 1.9833, 3.0, 5.0833])
+        self._total_max_power_gen = 28.5  # tf.reduce_sum(self._max_power_gen)
+
     def _create_dir(self):
         try:
             os.makedirs(self._save_weight_directory)
@@ -94,7 +98,8 @@ class Agent:
         with tf.GradientTape() as tape:
             actor_actions = self.actor(state_batch)
             # critic_value1 = self._critic([state_batch, actor_actions])
-            critic_value1 = self._critic([state_batch, actor_actions]) * -1650000 #+ total_generation * load_loss (1000)
+            load_loss = self._total_max_power_gen - tf.reduce_sum(actor_actions * self._max_power_gen, axis=1)
+            critic_value1 = self._critic([state_batch, actor_actions]) * -1650000 + load_loss * -1000
             actor_loss = -1 * tf.math.reduce_mean(critic_value1)
         actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
         self._actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))

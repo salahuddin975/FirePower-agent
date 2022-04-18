@@ -251,3 +251,40 @@ class SummaryWriter:
             writer.writerow([str(self._model_version), str(episode), str(max_reached_step), str(episodic_penalty),
                              str(load_loss), str(active_line_removal_penalty), str(no_action_penalty), str(violation_penalty)])
 
+
+class SummaryWriterStep:
+    def __init__(self, base_path, reactive_control = False):
+        self._reactive_control = reactive_control
+        self._dir_name = os.path.join(base_path, "test_result")
+        self._file_name = os.path.join(self._dir_name, "step_by_step")
+
+        self._create_dir()
+        self._initialize()
+
+    def _create_dir(self):
+        try:
+            os.makedirs(self._dir_name)
+        except OSError as error:
+            print(error)
+
+    def _initialize(self):
+        with open(f'{self._file_name}.csv', 'w') as fd:
+            writer = csv.writer(fd)
+            writer.writerow(["episode_number", "step", "total_penalty", "load_loss",
+                             "active_line_removal", "wildfire"])
+
+    def add_info(self, episode, step, total_penalty, load_loss):
+        active_line_removal_penalty = 0
+        wildfire = 0
+
+        if self._reactive_control:
+            wildfire = total_penalty - load_loss
+        else:
+            active_line_removal_penalty = total_penalty - load_loss
+
+        with open(f'{self._file_name}.csv', 'a') as fd:
+            writer = csv.writer(fd)
+            writer.writerow([str(episode), str(step), str(total_penalty),
+                             str(load_loss), str(active_line_removal_penalty), str(wildfire)])
+
+

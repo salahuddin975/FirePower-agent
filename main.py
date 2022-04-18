@@ -8,7 +8,7 @@ import tensorflow as tf
 from parameters import Parameters
 from agent import Agent
 from replay_buffer import ReplayBuffer
-from data_processor import DataProcessor, Tensorboard, SummaryWriter
+from data_processor import DataProcessor, Tensorboard, SummaryWriter, SummaryWriterStep
 from simulator_resorces import SimulatorResources, Generators
 
 
@@ -126,6 +126,7 @@ if __name__ == "__main__":
 
     tensorboard = Tensorboard(base_path)
     summary_writer = SummaryWriter(base_path, save_model_version, reactive_control=True)
+    summary_writer_step = SummaryWriterStep(base_path, reactive_control=True)
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
     # agent training
@@ -164,6 +165,7 @@ if __name__ == "__main__":
 
             # print("ramp:", env_action['generator_injection'])
             next_state, reward, done, _ = env.step(env_action)
+            # summary_writer_step.add_info(episode, step, reward[0], reward[1])
 
             # if done:
             #     new_reward = reward

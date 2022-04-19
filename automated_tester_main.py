@@ -122,7 +122,7 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
     # agent training
-    total_episode = 50
+    total_episode = 20
     max_steps_per_episode = 300
     explore_network_flag = False
     episodic_rewards = []
@@ -162,8 +162,8 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
 
         result_writer.add_info(episode, max_reached_step, episodic_reward, episodic_load_loss)
 
-        if episode>1:
+        if max_reached_step == 299:
             episodic_rewards.append(episodic_reward)
             episodic_load_losses.append(episodic_load_loss)
 
-    return sum(episodic_rewards)/5, violation_count, sum(episodic_load_losses)/5
+    return sum(episodic_rewards)/len(episodic_rewards), violation_count, sum(episodic_load_losses)/len(episodic_load_losses)

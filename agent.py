@@ -3,6 +3,7 @@ import copy
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers
+from collections import namedtuple
 
 class MixFeaturesLayer(layers.Layer):
     def __init__(self, num_features, feature_len):
@@ -27,6 +28,10 @@ class SliceLayer(layers.Layer):
         for i in range(self.feature_len):
             all_sliced_inputs.append(inputs[:, self.num_features * i : self.num_features * (i+1)])
         return all_sliced_inputs
+
+TensorboardInfo = namedtuple("TensorboardInfo", ["reward_value", "target_critic_value", "return_y",
+                                                 "critic_value_with_original_action", "critic_loss",
+                                                 "critic_value_with_actor_action", "load_loss", "actor_loss"])
 
 class Agent:
     def __init__(self, base_path, state_spaces, action_spaces):
@@ -86,12 +91,12 @@ class Agent:
         with tf.GradientTape() as tape:
             target_actor_actions = self._target_actor(next_state_batch)
             target_critic_values = self._target_critic([next_state_batch, target_actor_actions]) * (1 - episode_end_flag_batch)
-            y = episode_end_flag_batch + self._gamma * target_critic_values
+            return_y = episode_end_flag_batch + self._gamma * target_critic_values
             # y = reward_batch[0] + self._gamma * self._target_critic([next_state_batch, target_actor_actions]) * (1 - episode_end_flag_batch)
             # y = reward_batch[0] + reward_batch[1] +  reward_batch[2] +  reward_batch[3] +  reward_batch[4]
 
             critic_value_with_original_actions = self._critic([state_batch, action_batch])
-            critic_loss = tf.math.reduce_mean(tf.math.square(y - critic_value_with_original_actions))
+            critic_loss = tf.math.reduce_mean(tf.math.square(return_y - critic_value_with_original_actions))
 
         critic_grad = tape.gradient(critic_loss, self._critic.trainable_variables)
         self._critic_optimizer.apply_gradients(zip(critic_grad, self._critic.trainable_variables))
@@ -103,8 +108,8 @@ class Agent:
 
             load_loss = self._total_max_power_gen - tf.reduce_sum(actor_actions * self._max_power_gen, axis=1)
             weighted_critic_value = critic_value_with_actor_actions * -1000 + load_loss * -1
-
             actor_loss = -1 * tf.math.reduce_mean(weighted_critic_value)
+
         actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
         self._actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
@@ -112,8 +117,9 @@ class Agent:
         self.update_target(self._target_actor.variables, self.actor.variables)
         self.update_target(self._target_critic.variables, self._critic.variables)
 
-        return critic_loss, tf.math.reduce_mean(reward_batch[0]),\
-               tf.math.reduce_mean(critic_value_with_original_actions), -1
+        return TensorboardInfo(tf.math.reduce_mean(episode_end_flag_batch), tf.math.reduce_mean(target_critic_values), tf.math.reduce_mean(return_y),
+               tf.math.reduce_mean(critic_value_with_original_actions), critic_loss,
+               tf.math.reduce_mean(critic_value_with_actor_actions), tf.math.reduce_mean(load_loss), actor_loss)
 
     # @tf.function
     def update_target(self, target_weights, weights):

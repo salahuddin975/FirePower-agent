@@ -164,7 +164,7 @@ if __name__ == "__main__":
             #     print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", ", new:", new_reward[0])
             if explore_network_flag == False:
                 print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
-            buffer.add_record((state, net_action, reward, next_state, env_action, not done))
+            buffer.add_record((state, net_action, reward, next_state, env_action, done))
 
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]

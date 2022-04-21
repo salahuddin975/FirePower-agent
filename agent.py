@@ -61,6 +61,10 @@ class Agent:
         self._max_power_gen = np.array([1.92, 1.92, 3.0, 5.91, 0.0, 2.15, 1.55, 1.9833, 1.9833, 3.0, 5.0833])
         self._total_max_power_gen = 28.5  # tf.reduce_sum(self._max_power_gen)
 
+    def get_critic_value(self, state, action):
+        value = self._critic([state, action])
+        return  np.array(value)[0][0]
+
     def _create_dir(self):
         try:
             os.makedirs(self._save_weight_directory)

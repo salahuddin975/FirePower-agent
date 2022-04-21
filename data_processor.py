@@ -179,14 +179,26 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
     def __init__(self, base_path):
         current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
+        self._main_loop_counter = 0
         self._agent_counter = 0
         self._critic_counter = 0
 
+        main_loop_log_dir = os.path.join(base_path, 'logs', current_time, 'main_loop')
         agent_log_dir = os.path.join(base_path, 'logs', current_time, 'agent')
         citic_log_dir = os.path.join(base_path, 'logs', current_time, 'critic')
 
+        self._main_loop_summary_writer = tf.summary.create_file_writer(main_loop_log_dir)
         self._agent_summary_writer = tf.summary.create_file_writer(agent_log_dir)
         self._critic_summary_writer = tf.summary.create_file_writer(citic_log_dir)
+
+    def add_main_loop_info(self, info):
+        with self._main_loop_summary_writer.as_default():
+            tf.summary.scalar("nn_critic_value", info.nn_critic_value, step=self._main_loop_counter)
+            tf.summary.scalar("nn_noise_critic_value", info.nn_noise_critic_value, step=self._main_loop_counter)
+            tf.summary.scalar("env_critic_value", info.env_critic_value, step=self._main_loop_counter)
+            tf.summary.scalar("original_reward", info.original_reward, step=self._main_loop_counter)
+            tf.summary.scalar("done", info.done, step=self._main_loop_counter)
+        self._main_loop_counter += 1
 
     def add_episodic_info(self, episodic_reward):
         with self._agent_summary_writer.as_default():

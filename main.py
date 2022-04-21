@@ -10,6 +10,7 @@ from agent import Agent
 from replay_buffer import ReplayBuffer
 from data_processor import DataProcessor, Tensorboard, SummaryWriter
 from simulator_resorces import SimulatorResources, Generators
+from collections import namedtuple
 
 
 gym.logger.set_level(50)
@@ -77,6 +78,9 @@ def get_action_spaces(action_space):
     #         f"num generator injection: {num_generator_injection}")
 
     return action_spaces
+
+
+MainLoopInfo = namedtuple("MainLoopInfo", ["nn_critic_value", "nn_noise_critic_value", "env_critic_value", "original_reward", "done"])
 
 
 if __name__ == "__main__":
@@ -150,12 +154,22 @@ if __name__ == "__main__":
             tf_state = data_processor.get_tf_state(state)
             nn_action = agent.actor(tf_state)
             # print("NN generator output: ", nn_action[0])
+            # print("original:", agent.get_critic_value(tf_state, nn_action))
 
-            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
-            env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
+            nn_noise_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
+            # print("original+noise:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)))
+
+            env_action = data_processor.check_violations(nn_noise_action, state["fire_distance"], state["generator_injection"])
+            # print("original+noise+violation_check:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]),0)))
 
             # print("ramp:", env_action['generator_injection'])
             next_state, reward, done, _ = env.step(env_action)
+
+            main_loop_info = MainLoopInfo(agent.get_critic_value(tf_state, nn_action),
+                                          agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
+                                          agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]),0)),
+                                          reward[0], done)
+            tensorboard.add_main_loop_info(main_loop_info)
 
             # if done:
             #     new_reward = reward
@@ -164,7 +178,7 @@ if __name__ == "__main__":
             #     print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", ", new:", new_reward[0])
             if explore_network_flag == False:
                 print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
-            buffer.add_record((state, net_action, reward, next_state, env_action, done))
+            buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))
 
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]

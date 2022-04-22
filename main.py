@@ -178,7 +178,11 @@ if __name__ == "__main__":
             if explore_network_flag == False:
                 print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
-            buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))
+            random_done = False
+            if random.random() < 0.1:
+                random_done = True
+
+            buffer.add_record((state, nn_noise_action, reward, next_state, env_action, random_done))
 
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]

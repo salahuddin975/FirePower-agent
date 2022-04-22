@@ -80,8 +80,10 @@ def get_action_spaces(action_space):
     return action_spaces
 
 
-MainLoopInfo = namedtuple("MainLoopInfo", ["nn_critic_value", "nn_noise_critic_value", "env_critic_value", "original_reward", "done"])
-
+MainLoopInfo = namedtuple("MainLoopInfo", ["nn_actions", "nn_critic_value",
+                                           "nn_actions_with_noise", "nn_noise_critic_value",
+                                           "env_actions", "env_critic_value",
+                                           "original_reward", "done"])
 
 if __name__ == "__main__":
     args = get_arguments()
@@ -165,8 +167,10 @@ if __name__ == "__main__":
             # print("ramp:", env_action['generator_injection'])
             next_state, reward, done, _ = env.step(env_action)
 
-            main_loop_info = MainLoopInfo(agent.get_critic_value(tf_state, nn_action),
+            main_loop_info = MainLoopInfo(tf.math.reduce_mean(nn_action), agent.get_critic_value(tf_state, nn_action),
+                                          tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
                                           agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
+                                          tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)),
                                           agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]),0)),
                                           reward[0], done)
             tensorboard.add_main_loop_info(main_loop_info)

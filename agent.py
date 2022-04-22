@@ -29,9 +29,10 @@ class SliceLayer(layers.Layer):
             all_sliced_inputs.append(inputs[:, self.num_features * i : self.num_features * (i+1)])
         return all_sliced_inputs
 
-TensorboardInfo = namedtuple("TensorboardInfo", ["reward_value", "target_critic_value", "return_y",
-                                                 "critic_value_with_original_action", "critic_loss",
-                                                 "critic_value_with_actor_action", "load_loss", "actor_loss"])
+TensorboardInfo = namedtuple("TensorboardInfo",
+                             ["reward_value", "target_actor_actions", "target_critic_value_with_target_actor_actions",
+                              "return_y", "original_actions", "critic_value_with_original_actions", "critic_loss",
+                              "actor_actions", "critic_value_with_actor_actions", "load_loss", "actor_loss"])
 
 class Agent:
     def __init__(self, base_path, state_spaces, action_spaces):
@@ -121,9 +122,11 @@ class Agent:
         self.update_target(self._target_actor.variables, self.actor.variables)
         self.update_target(self._target_critic.variables, self._critic.variables)
 
-        return TensorboardInfo(tf.math.reduce_mean(episode_end_flag_batch), tf.math.reduce_mean(target_critic_values), tf.math.reduce_mean(return_y),
-               tf.math.reduce_mean(critic_value_with_original_actions), critic_loss,
-               tf.math.reduce_mean(critic_value_with_actor_actions), tf.math.reduce_mean(load_loss), actor_loss)
+        return TensorboardInfo(tf.math.reduce_mean(episode_end_flag_batch), tf.math.reduce_mean(target_actor_actions),
+                tf.math.reduce_mean(target_critic_values), tf.math.reduce_mean(return_y),
+                tf.math.reduce_mean(action_batch), tf.math.reduce_mean(critic_value_with_original_actions), critic_loss,
+                tf.math.reduce_mean(actor_actions), tf.math.reduce_mean(critic_value_with_actor_actions),
+                tf.math.reduce_mean(load_loss), actor_loss)
 
     # @tf.function
     def update_target(self, target_weights, weights):

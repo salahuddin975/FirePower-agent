@@ -185,7 +185,7 @@ if __name__ == "__main__":
                 max_reached_step = step
                 break
 
-            if train_network and episode > 2:
+            if train_network and episode >= 3:
                 state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
                 tensorboard_info = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
                 tensorboard.add_train_info(tensorboard_info)

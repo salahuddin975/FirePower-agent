@@ -207,14 +207,17 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
 
     def add_train_info(self, info):
         with self._critic_summary_writer.as_default():
-            tf.summary.scalar('ti_1_reward_value', info.reward_value, step=self._critic_counter)
-            tf.summary.scalar('ti_2_target_critic_value', info.target_critic_value, step=self._critic_counter)
-            tf.summary.scalar('ti_3_return_y', info.return_y, step=self._critic_counter)
-            tf.summary.scalar('ti_4_critic_value_with_original_action', info.critic_value_with_original_action, step=self._critic_counter)
-            tf.summary.scalar('ti_5_critic_loss', info.critic_loss, step=self._critic_counter)
-            tf.summary.scalar('ti_6_critic_value_with_actor_actions', info.critic_value_with_actor_action, step=self._critic_counter)
-            tf.summary.scalar('ti_7_load_loss', info.load_loss, step=self._critic_counter)
-            tf.summary.scalar('ti_8_actor_loss', info.actor_loss, step=self._critic_counter)
+            tf.summary.scalar('ti_11_reward_value', info.reward_value, step=self._critic_counter)
+            tf.summary.scalar('ti_12_target_actor_actions', info.target_actor_actions, step=self._critic_counter)
+            tf.summary.scalar('ti_13_target_critic_value_with_target_actor_actions', info.target_critic_value_with_target_actor_actions, step=self._critic_counter)
+            tf.summary.scalar('ti_14_return_y', info.return_y, step=self._critic_counter)
+            tf.summary.scalar('ti_21_original_actions', info.original_actions, step=self._critic_counter)
+            tf.summary.scalar('ti_22_critic_value_with_original_actions', info.critic_value_with_original_actions, step=self._critic_counter)
+            tf.summary.scalar('ti_31_critic_loss', info.critic_loss, step=self._critic_counter)
+            tf.summary.scalar('ti_41_actor_actions', info.actor_actions, step=self._critic_counter)
+            tf.summary.scalar('ti_42_critic_value_with_actor_actions', info.critic_value_with_actor_actions, step=self._critic_counter)
+            tf.summary.scalar('ti_43_load_loss', info.load_loss, step=self._critic_counter)
+            tf.summary.scalar('ti_44_actor_loss', info.actor_loss, step=self._critic_counter)
         self._critic_counter += 1
 
 

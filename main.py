@@ -171,13 +171,9 @@ if __name__ == "__main__":
                                           reward[0], done)
             tensorboard.add_main_loop_info(main_loop_info)
 
-            # if done:
-            #     new_reward = reward
-            # else:
-            #     new_reward = (reward[0] + (28.5-np.sum(state["load_demand"])) * 100, reward[1])
-            #     print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", ", new:", new_reward[0])
             if explore_network_flag == False:
                 print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))
 
             episodic_penalty += reward[0]
@@ -192,7 +188,7 @@ if __name__ == "__main__":
             if train_network and episode > 2:
                 state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
                 tensorboard_info = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
-                tensorboard.add_critic_network_info(tensorboard_info)
+                tensorboard.add_train_info(tensorboard_info)
                 # print("Episode:", episode, ", step: ", step, ", critic_value:", tensorboard_info.critic_value_with_original_action, ", critic_loss:", tensorboard_info.critic_loss)
 
         # if train_network and episode > 5:

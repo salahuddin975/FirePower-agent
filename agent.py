@@ -38,8 +38,8 @@ class Agent:
     def __init__(self, base_path, state_spaces, action_spaces):
         self._gamma = 0.0      # discount factor
         self._tau = 0.005       # used to update target network
-        actor_lr = 0.0001
-        critic_lr = 0.0002
+        actor_lr = 0.001
+        critic_lr = 0.002
         self._save_weight_directory = os.path.join(base_path, "trained_model")
         self._load_weight_directory = os.path.join(base_path, "trained_model")
         # self._load_weight_directory = os.path.join("../../FirePower-agent-private", base_path, "trained_model")

@@ -179,7 +179,7 @@ if __name__ == "__main__":
                 print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
             random_done = False
-            if random.random() < 0.005:
+            if random.random() < 0.1:
                 random_done = True
 
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, random_done))

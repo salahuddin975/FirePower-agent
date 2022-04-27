@@ -193,14 +193,14 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
 
     def add_main_loop_info(self, info):
         with self._main_loop_summary_writer.as_default():
-            tf.summary.scalar("mli_11_nn_actions", info.nn_actions, step=self._main_loop_counter)
-            tf.summary.scalar("mli_12_nn_critic_value", info.nn_critic_value, step=self._main_loop_counter)
-            tf.summary.scalar("mli_13_nn_actions_with_noise", info.nn_actions_with_noise, step=self._main_loop_counter)
-            tf.summary.scalar("mli_14_nn_noise_critic_value", info.nn_noise_critic_value, step=self._main_loop_counter)
-            tf.summary.scalar("mli_15_env_actions", info.env_actions, step=self._main_loop_counter)
-            tf.summary.scalar("mli_16_env_critic_value", info.env_critic_value, step=self._main_loop_counter)
-            tf.summary.scalar("mli_2_original_reward", info.original_reward, step=self._main_loop_counter)
-            tf.summary.scalar("mli_3_done", info.done, step=self._main_loop_counter)
+            tf.summary.scalar("mli_1/1_nn_actions", info.nn_actions, step=self._main_loop_counter)
+            tf.summary.scalar("mli_1/2_nn_actions_with_noise", info.nn_actions_with_noise, step=self._main_loop_counter)
+            tf.summary.scalar("mli_1/3_env_actions", info.env_actions, step=self._main_loop_counter)
+            tf.summary.scalar("mli_2/1_nn_critic_value", info.nn_critic_value, step=self._main_loop_counter)
+            tf.summary.scalar("mli_2/2_nn_noise_critic_value", info.nn_noise_critic_value, step=self._main_loop_counter)
+            tf.summary.scalar("mli_2/3_env_critic_value", info.env_critic_value, step=self._main_loop_counter)
+            tf.summary.scalar("mli_3/1_original_reward", info.original_reward, step=self._main_loop_counter)
+            tf.summary.scalar("mli_3/2_done", info.done, step=self._main_loop_counter)
         self._main_loop_counter += 1
 
     def add_episodic_info(self, episodic_reward):
@@ -216,11 +216,11 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
             tf.summary.scalar('ti_1/4_return_y', info.return_y, step=self._critic_counter)
             tf.summary.scalar('ti_2/1_original_actions', info.original_actions, step=self._critic_counter)
             tf.summary.scalar('ti_2/2_critic_value_with_original_actions', info.critic_value_with_original_actions, step=self._critic_counter)
-            tf.summary.scalar('ti_3/1_critic_loss', info.critic_loss, step=self._critic_counter)
-            tf.summary.scalar('ti_4/1_actor_actions', info.actor_actions, step=self._critic_counter)
-            tf.summary.scalar('ti_4/2_critic_value_with_actor_actions', info.critic_value_with_actor_actions, step=self._critic_counter)
-            tf.summary.scalar('ti_4/3_load_loss', info.load_loss, step=self._critic_counter)
-            tf.summary.scalar('ti_4/4_actor_loss', info.actor_loss, step=self._critic_counter)
+            tf.summary.scalar('ti_2/3_critic_loss', info.critic_loss, step=self._critic_counter)
+            tf.summary.scalar('ti_3/1_actor_actions', info.actor_actions, step=self._critic_counter)
+            tf.summary.scalar('ti_3/2_critic_value_with_actor_actions', info.critic_value_with_actor_actions, step=self._critic_counter)
+            tf.summary.scalar('ti_3/3_load_loss', info.load_loss, step=self._critic_counter)
+            tf.summary.scalar('ti_3/4_actor_loss', info.actor_loss, step=self._critic_counter)
         self._critic_counter += 1
 
 

@@ -140,8 +140,12 @@ class DataProcessor:
         nn_output = np.clip(nn_output, 0, 1)
         # print("nn output: ", nn_output)
 
+        # action = {
+        #     "generator_injection": nn_output,
+        # }
+
         action = {
-            "generator_injection": nn_output,
+            "generator_injection": np.zeros(11, int),
         }
 
         return action

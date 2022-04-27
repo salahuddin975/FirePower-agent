@@ -207,8 +207,8 @@ class Agent:
         # state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1,
         #                                act_bus1, act_branch1, act_gen_injection1])
 
-        hidden = layers.Dense(256, activation="relu") (state)
-        # hidden = layers.Dense(512, activation="relu") (hidden)
+        hidden = layers.Dense(128, activation="relu") (state)
+        hidden = layers.Dense(128, activation="relu") (hidden)
         # reward = layers.Dense(1, activation="linear") (hidden)
 
 #----------------------------------------
@@ -306,8 +306,8 @@ class Agent:
         # state = layers.Concatenate() ([st_bus1, st_branch1, st_fire_distance1, st_gen_output1, st_load_demand1, st_theta1,
         #                                act_bus1, act_branch1, act_gen_injection1])
 
-        hidden = layers.Dense(256, activation="relu") (state)
-        # hidden = layers.Dense(512, activation="relu") (hidden)
+        hidden = layers.Dense(128, activation="relu") (state)
+        hidden = layers.Dense(128, activation="relu") (hidden)
         reward = layers.Dense(1, activation="linear") (hidden)
         # reward = layers.Dense(1, activation="sigmoid") (hidden)
 

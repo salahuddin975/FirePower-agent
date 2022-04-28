@@ -201,8 +201,8 @@ class Agent:
                                        theta_input, line_flow_input])
         # -------------------------------------
 
-        hidden = layers.Dense(128, activation="relu") (state)
-        hidden = layers.Dense(128, activation="relu") (hidden)
+        hidden = layers.Dense(256, activation="relu") (state)
+        hidden = layers.Dense(256, activation="relu") (hidden)
         gen_inj_output = layers.Dense(self._action_spaces[3], activation="sigmoid") (hidden)
 
         model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input],
@@ -273,8 +273,8 @@ class Agent:
                                        st_line_flow, act_gen_injection])
         # -------------------------------------
 
-        hidden = layers.Dense(128, activation="relu") (state)
-        hidden = layers.Dense(128, activation="relu") (hidden)
+        hidden = layers.Dense(256, activation="relu") (state)
+        hidden = layers.Dense(256, activation="relu") (hidden)
         reward = layers.Dense(1, activation="linear") (hidden)
 
         model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,

@@ -6,6 +6,28 @@ import numpy as np
 import tensorflow as tf
 from pypower.idx_brch import *
 
+class OUActionNoise:
+    def __init__(self, mean, std_deviation, theta=0.15, dt=1e-2, x_initial=None):
+        self.theta = theta
+        self.mean = mean
+        self.std_dev = std_deviation
+        self.dt = dt
+        self.x_initial = x_initial
+        self.reset()
+
+    def __call__(self):
+        # Formula taken from https://www.wikipedia.org/wiki/Ornstein-Uhlenbeck_process.
+        x = (self.x_prev + self.theta * (self.mean - self.x_prev) * self.dt
+            + self.std_dev * np.sqrt(self.dt) * np.random.normal(size=self.mean.shape))
+        self.x_prev = x  # make next noise depended on current one
+        return x
+
+    def reset(self):
+        if self.x_initial is not None:
+            self.x_prev = self.x_initial
+        else:
+            self.x_prev = np.zeros_like(self.mean)
+
 
 class DataProcessor:
     def __init__(self, simulator_resources, generators, state_spaces, action_spaces):
@@ -13,6 +35,9 @@ class DataProcessor:
         self.generators = generators
         self._state_spaces = state_spaces
         self._action_spaces = action_spaces
+
+        std_dev = 0.2
+        self._ou_noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(std_dev) * np.ones(1))
 
     def _check_network_violations(self, bus_status, branch_status):
         from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
@@ -136,7 +161,7 @@ class DataProcessor:
         nn_output = np.array(tf.squeeze(nn_action[0]))
         for i in range(nn_output.size):
             if explore_network:
-                nn_output[i] = nn_output[i] + random.uniform(-noise_range, noise_range)
+                nn_output[i] = nn_output[i] + self._ou_noise() # random.uniform(-noise_range, noise_range)
         nn_output = np.clip(nn_output, 0, 1)
         # print("nn output: ", nn_output)
 

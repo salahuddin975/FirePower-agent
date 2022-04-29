@@ -177,6 +177,10 @@ class DataProcessor:
         return action
 
     def preprocess(self, state):
+        load_preprocessor = 10
+
+        # state["generator_injection"] = np.array([load/load_preprocessor for load in state["generator_injection"]])
+        # state["load_demand"] = np.array([load/load_preprocessor for load in state["load_demand"]])
         state["fire_distance"] = [dist/self._grid_len for dist in state["fire_distance"]]
 
         # print("bus_status:", state["bus_status"])

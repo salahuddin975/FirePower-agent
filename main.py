@@ -146,6 +146,7 @@ if __name__ == "__main__":
         episodic_penalty = 0
         episodic_load_loss = 0
 
+        state = data_processor.preprocess(state)
         if not parameters.generator_max_output:
             generators.set_max_outputs(state["generator_injection"])
 
@@ -153,7 +154,6 @@ if __name__ == "__main__":
             if explore_network_flag == False:
                 print("load_demand:", np.sum(state["load_demand"]), ", generator_injection:", np.sum(state["generator_injection"]) )
 
-            state = data_processor.preprocess(state)
             tf_state = data_processor.get_tf_state(state)
             nn_action = agent.actor(tf_state)
             # print("NN generator output: ", nn_action[0])
@@ -183,6 +183,7 @@ if __name__ == "__main__":
             if random.random() < 0.1:
                 random_done = True
 
+            next_state = data_processor.preprocess(next_state)
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))
 
             episodic_penalty += reward[0]

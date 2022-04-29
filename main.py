@@ -183,7 +183,7 @@ if __name__ == "__main__":
             if random.random() < 0.1:
                 random_done = True
 
-            buffer.add_record((state, nn_noise_action, reward, next_state, env_action, random_done))
+            buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))
 
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]

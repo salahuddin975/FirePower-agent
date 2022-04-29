@@ -153,6 +153,7 @@ if __name__ == "__main__":
             if explore_network_flag == False:
                 print("load_demand:", np.sum(state["load_demand"]), ", generator_injection:", np.sum(state["generator_injection"]) )
 
+            state = data_processor.preprocess(state)
             tf_state = data_processor.get_tf_state(state)
             nn_action = agent.actor(tf_state)
             # print("NN generator output: ", nn_action[0])

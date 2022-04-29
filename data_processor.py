@@ -35,6 +35,7 @@ class DataProcessor:
         self.generators = generators
         self._state_spaces = state_spaces
         self._action_spaces = action_spaces
+        self._grid_len = 350
 
         std_dev = 0.2
         self._ou_noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(std_dev) * np.ones(1))
@@ -116,12 +117,12 @@ class DataProcessor:
     def check_violations(self, np_action, fire_distance, generators_current_output, bus_threshold=0.1, branch_threshold=0.1):
         bus_status = np.ones(self._state_spaces[0])
         for i in range(self._state_spaces[0]):
-            if fire_distance[i] < 2.0:
+            if fire_distance[i] < (2.0/self._grid_len):
                 bus_status[i] = 0
 
         branch_status = np.ones(self._state_spaces[1])
         for i in range(self._state_spaces[1]):
-            if fire_distance[self._state_spaces[0] + i] < 2.0:
+            if fire_distance[self._state_spaces[0] + i] < (2.0/self._grid_len):
                 branch_status[i] = 0
 
         branch_status = self._check_network_violations(bus_status, branch_status)
@@ -174,6 +175,21 @@ class DataProcessor:
         # }
 
         return action
+
+    def preprocess(self, state):
+        state["fire_distance"] = [dist/self._grid_len for dist in state["fire_distance"]]
+
+        # print("bus_status:", state["bus_status"])
+        # print("branch_status:", state["branch_status"])
+        # print("generator_output:", state["generator_injection"])
+        # print("load_demand:", state["load_demand"])
+        # print("line_flow:", state["line_flow"])
+        # print("theta:", state["theta"])
+        # print("fire_distance:", state["fire_distance"])
+        # print("fire_state:", state["fire_state"])
+
+        return state
+
 
     def get_tf_state(self, state):
         tf_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)

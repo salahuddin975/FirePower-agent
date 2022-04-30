@@ -94,8 +94,9 @@ if __name__ == "__main__":
     set_gpu_memory_limit()
     base_path = "database_seed_" + str(seed_value)
 
+    load_preprocess_scale = 10
     simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)
-    generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)
+    generators = Generators(ppc=simulator_resources.ppc, load_preprocess_scale=load_preprocess_scale, ramp_frequency_in_hour=6)
     # generators.print_info()
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power,
@@ -146,13 +147,13 @@ if __name__ == "__main__":
         episodic_penalty = 0
         episodic_load_loss = 0
 
-        state = data_processor.preprocess(state)
+        state = data_processor.preprocess(state, load_preprocess_scale)
         if not parameters.generator_max_output:
             generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
-            if explore_network_flag == False:
-                print("load_demand:", np.sum(state["load_demand"]), ", generator_injection:", np.sum(state["generator_injection"]) )
+            # if explore_network_flag == False:
+            print("load_demand:", np.sum(state["load_demand"]), ", generator_injection:", np.sum(state["generator_injection"]) )
 
             tf_state = data_processor.get_tf_state(state)
             nn_action = agent.actor(tf_state)
@@ -162,10 +163,10 @@ if __name__ == "__main__":
             nn_noise_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
             # print("original+noise:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)))
 
-            env_action = data_processor.check_violations(nn_noise_action, state["fire_distance"], state["generator_injection"])
+            env_action = data_processor.check_violations(nn_noise_action, state["fire_distance"], state["generator_injection"], ramp_scale=load_preprocess_scale)
             # print("original+noise+violation_check:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]),0)))
 
-            # print("ramp:", env_action['generator_injection'])
+            print("ramp:", env_action['generator_injection'])
             next_state, reward, done, _ = env.step(env_action)
 
             main_loop_info = MainLoopInfo(tf.math.reduce_mean(nn_action), agent.get_critic_value(tf_state, nn_action),
@@ -176,14 +177,14 @@ if __name__ == "__main__":
                                           reward[0], done)
             tensorboard.add_main_loop_info(main_loop_info)
 
-            if explore_network_flag == False:
-                print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+            # if explore_network_flag == False:
+            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
             random_done = False
             if random.random() < 0.1:
                 random_done = True
 
-            next_state = data_processor.preprocess(next_state)
+            next_state = data_processor.preprocess(next_state, load_preprocess_scale)
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))
 
             episodic_penalty += reward[0]

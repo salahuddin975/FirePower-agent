@@ -6,12 +6,12 @@ from pypower.ext2int import ext2int
 
 
 class Generators:
-    def __init__(self, ppc, ramp_frequency_in_hour = 6):
+    def __init__(self, ppc, load_preprocess_scale, ramp_frequency_in_hour = 6):
         self._generators = np.copy(ppc["gen"][:, GEN_BUS].astype("int"))
         self._num_generators = self._generators.size
-        self._generators_min_output = np.copy(ppc["gen"][:, PMIN] / ppc["baseMVA"])
-        self._generators_max_output = np.copy(ppc["gen"][:, PMAX] / ppc["baseMVA"])
-        self._generators_max_ramp = np.copy((ppc["gen"][:, RAMP_10] / ppc["baseMVA"]) * (1 / ramp_frequency_in_hour))
+        self._generators_min_output = np.copy(ppc["gen"][:, PMIN] / (load_preprocess_scale * ppc["baseMVA"]))
+        self._generators_max_output = np.copy(ppc["gen"][:, PMAX] / (load_preprocess_scale * ppc["baseMVA"]))
+        self._generators_max_ramp = np.copy(ppc["gen"][:, RAMP_10] / (load_preprocess_scale * ppc["baseMVA"] * 1 / ramp_frequency_in_hour))
 
     def get_generators(self):
         return self._generators

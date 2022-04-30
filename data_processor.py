@@ -96,7 +96,7 @@ class DataProcessor:
                 ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[i] else -generators_max_ramp[i]
                 ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] > generators_min_output[i] else generators_min_output[i] - generators_current_output[i]
 
-            if abs(ramp[i]) < 0.0001:
+            if abs(ramp[i]) < 0.00001:
                 ramp[i] = 0.0
 
         # print("generators set ramp: ", ramp)
@@ -114,7 +114,7 @@ class DataProcessor:
 
         return generators_ramp
 
-    def check_violations(self, np_action, fire_distance, generators_current_output, bus_threshold=0.1, branch_threshold=0.1):
+    def check_violations(self, np_action, fire_distance, generators_current_output, ramp_scale):
         bus_status = np.ones(self._state_spaces[0])
         for i in range(self._state_spaces[0]):
             if fire_distance[i] < (2.0/self._grid_len):
@@ -140,7 +140,7 @@ class DataProcessor:
             "bus_status": bus_status,
             "branch_status": branch_status,
             "generator_selector": self.generators.get_generators(),
-            "generator_injection": ramp,
+            "generator_injection": ramp * ramp_scale,
         }
 
         return action
@@ -176,11 +176,9 @@ class DataProcessor:
 
         return action
 
-    def preprocess(self, state):
-        load_preprocessor = 10
-
-        # state["generator_injection"] = np.array([load/load_preprocessor for load in state["generator_injection"]])
-        # state["load_demand"] = np.array([load/load_preprocessor for load in state["load_demand"]])
+    def preprocess(self, state, load_preprocess_scale):
+        state["generator_injection"] = np.array([load / load_preprocess_scale for load in state["generator_injection"]])
+        state["load_demand"] = np.array([load / load_preprocess_scale for load in state["load_demand"]])
         state["fire_distance"] = [dist/self._grid_len for dist in state["fire_distance"]]
 
         # print("bus_status:", state["bus_status"])

@@ -177,8 +177,8 @@ if __name__ == "__main__":
                                           reward[0], done)
             tensorboard.add_main_loop_info(main_loop_info)
 
-            # if explore_network_flag == False:
-            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+            if explore_network_flag == False:
+                print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
 
             next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale)
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))

@@ -6,6 +6,28 @@ import numpy as np
 import tensorflow as tf
 from pypower.idx_brch import *
 
+class OUActionNoise:
+    def __init__(self, mean, std_deviation, theta=0.15, dt=1e-2, x_initial=None):
+        self.theta = theta
+        self.mean = mean
+        self.std_dev = std_deviation
+        self.dt = dt
+        self.x_initial = x_initial
+        self.reset()
+
+    def __call__(self):
+        # Formula taken from https://www.wikipedia.org/wiki/Ornstein-Uhlenbeck_process.
+        x = (self.x_prev + self.theta * (self.mean - self.x_prev) * self.dt
+            + self.std_dev * np.sqrt(self.dt) * np.random.normal(size=self.mean.shape))
+        self.x_prev = x  # make next noise depended on current one
+        return x
+
+    def reset(self):
+        if self.x_initial is not None:
+            self.x_prev = self.x_initial
+        else:
+            self.x_prev = np.zeros_like(self.mean)
+
 
 class DataProcessor:
     def __init__(self, simulator_resources, generators, state_spaces, action_spaces):
@@ -13,6 +35,10 @@ class DataProcessor:
         self.generators = generators
         self._state_spaces = state_spaces
         self._action_spaces = action_spaces
+        self._considerable_fire_distance = 15
+
+        std_dev = 0.2
+        self._ou_noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(std_dev) * np.ones(1))
 
     def _check_network_violations(self, bus_status, branch_status):
         from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
@@ -88,15 +114,15 @@ class DataProcessor:
 
         return generators_ramp
 
-    def check_violations(self, np_action, fire_distance, generators_current_output, bus_threshold=0.1, branch_threshold=0.1):
+    def check_violations(self, np_action, fire_distance, generators_current_output, ramp_scale):
         bus_status = np.ones(self._state_spaces[0])
         for i in range(self._state_spaces[0]):
-            if fire_distance[i] < 2.0:
+            if fire_distance[i] == 1:
                 bus_status[i] = 0
 
         branch_status = np.ones(self._state_spaces[1])
         for i in range(self._state_spaces[1]):
-            if fire_distance[self._state_spaces[0] + i] < 2.0:
+            if fire_distance[self._state_spaces[0] + i] == 1:
                 branch_status[i] = 0
 
         branch_status = self._check_network_violations(bus_status, branch_status)
@@ -114,7 +140,7 @@ class DataProcessor:
             "bus_status": bus_status,
             "branch_status": branch_status,
             "generator_selector": self.generators.get_generators(),
-            "generator_injection": ramp,
+            "generator_injection": ramp * ramp_scale,
         }
 
         return action
@@ -136,7 +162,7 @@ class DataProcessor:
         nn_output = np.array(tf.squeeze(nn_action[0]))
         for i in range(nn_output.size):
             if explore_network:
-                nn_output[i] = nn_output[i] + random.uniform(-noise_range, noise_range)
+                nn_output[i] = nn_output[i] + self._ou_noise() # random.uniform(-noise_range, noise_range)
         nn_output = np.clip(nn_output, 0, 1)
         # print("nn output: ", nn_output)
 
@@ -145,6 +171,36 @@ class DataProcessor:
         }
 
         return action
+
+    def preprocess(self, state, power_generation_scale):
+        state["generator_injection"] = np.array([output / power_generation_scale for output in state["generator_injection"]])
+        state["load_demand"] = np.array([load_output / power_generation_scale for load_output in state["load_demand"]])
+
+        # state["fire_distance"] = [1 - dist/self._considerable_fire_distance if dist < self._considerable_fire_distance else 0 for dist in state["fire_distance"]]
+
+        fire_distance = []
+        for dist in state["fire_distance"]:
+            if dist < self._considerable_fire_distance:
+                val = 1 - dist/self._considerable_fire_distance
+                if dist < 2.0:
+                    val = 1
+                fire_distance.append(val)
+            else:
+                fire_distance.append(0)
+
+        state["fire_distance"] = fire_distance
+
+        # print("bus_status:", state["bus_status"])
+        # print("branch_status:", state["branch_status"])
+        # print("generator_output:", state["generator_injection"])
+        # print("load_demand:", state["load_demand"])
+        # print("line_flow:", state["line_flow"])
+        # print("theta:", state["theta"])
+        # print("fire_distance:", state["fire_distance"])
+        # print("fire_state:", state["fire_state"])
+
+        return state
+
 
     def get_tf_state(self, state):
         tf_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
@@ -179,28 +235,48 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
     def __init__(self, base_path):
         current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
+        self._main_loop_counter = 0
         self._agent_counter = 0
         self._critic_counter = 0
 
+        main_loop_log_dir = os.path.join(base_path, 'logs', current_time, 'main_loop')
         agent_log_dir = os.path.join(base_path, 'logs', current_time, 'agent')
         citic_log_dir = os.path.join(base_path, 'logs', current_time, 'critic')
 
+        self._main_loop_summary_writer = tf.summary.create_file_writer(main_loop_log_dir)
         self._agent_summary_writer = tf.summary.create_file_writer(agent_log_dir)
         self._critic_summary_writer = tf.summary.create_file_writer(citic_log_dir)
+
+    def add_main_loop_info(self, info):
+        with self._main_loop_summary_writer.as_default():
+            tf.summary.scalar("mli_1/1_nn_actions", info.nn_actions, step=self._main_loop_counter)
+            tf.summary.scalar("mli_1/2_nn_actions_with_noise", info.nn_actions_with_noise, step=self._main_loop_counter)
+            tf.summary.scalar("mli_1/3_env_actions", info.env_actions, step=self._main_loop_counter)
+            tf.summary.scalar("mli_2/1_nn_critic_value", info.nn_critic_value, step=self._main_loop_counter)
+            tf.summary.scalar("mli_2/2_nn_noise_critic_value", info.nn_noise_critic_value, step=self._main_loop_counter)
+            tf.summary.scalar("mli_2/3_env_critic_value", info.env_critic_value, step=self._main_loop_counter)
+            tf.summary.scalar("mli_3/1_original_reward", info.original_reward, step=self._main_loop_counter)
+            tf.summary.scalar("mli_3/2_done", info.done, step=self._main_loop_counter)
+        self._main_loop_counter += 1
 
     def add_episodic_info(self, episodic_reward):
         with self._agent_summary_writer.as_default():
             tf.summary.scalar("episodic_reward", episodic_reward, step=self._agent_counter)
         self._agent_counter += 1
 
-    def add_critic_network_info(self, critic_loss, reward_value, critic_value, action_quality):
+    def add_train_info(self, info):
         with self._critic_summary_writer.as_default():
-            tf.summary.scalar('critic_loss', critic_loss, step=self._critic_counter)
-            tf.summary.scalar('reward_value', reward_value, step=self._critic_counter)
-            tf.summary.scalar('critic_value', critic_value, step=self._critic_counter)
-            tf.summary.scalar('action_quality', action_quality, step=self._critic_counter)
+            tf.summary.scalar('ti_1/1_reward_value', info.reward_value, step=self._critic_counter)
+            tf.summary.scalar('ti_1/2_target_actor_actions', info.target_actor_actions, step=self._critic_counter)
+            tf.summary.scalar('ti_1/3_target_critic_value_with_target_actor_actions', info.target_critic_value_with_target_actor_actions, step=self._critic_counter)
+            tf.summary.scalar('ti_1/4_return_y', info.return_y, step=self._critic_counter)
+            tf.summary.scalar('ti_2/1_original_actions', info.original_actions, step=self._critic_counter)
+            tf.summary.scalar('ti_2/2_critic_value_with_original_actions', info.critic_value_with_original_actions, step=self._critic_counter)
+            tf.summary.scalar('ti_2/3_critic_loss', info.critic_loss, step=self._critic_counter)
+            tf.summary.scalar('ti_3/1_actor_actions', info.actor_actions, step=self._critic_counter)
+            tf.summary.scalar('ti_3/2_critic_value_with_actor_actions', info.critic_value_with_actor_actions, step=self._critic_counter)
+            tf.summary.scalar('ti_3/4_actor_loss', info.actor_loss, step=self._critic_counter)
         self._critic_counter += 1
-
 
 
 class SummaryWriter:
@@ -246,38 +322,3 @@ class SummaryWriter:
             writer.writerow([str(self._model_version), str(episode), str(max_reached_step), str(episodic_penalty),
                              str(load_loss), str(active_line_removal_penalty), str(no_action_penalty), str(violation_penalty)])
 
-
-class SummaryWriterStep:
-    def __init__(self, base_path, reactive_control = False):
-        self._reactive_control = reactive_control
-        self._dir_name = os.path.join(base_path, "test_result")
-        self._file_name = os.path.join(self._dir_name, "step_by_step")
-
-        self._create_dir()
-        self._initialize()
-
-    def _create_dir(self):
-        try:
-            os.makedirs(self._dir_name)
-        except OSError as error:
-            print(error)
-
-    def _initialize(self):
-        with open(f'{self._file_name}.csv', 'w') as fd:
-            writer = csv.writer(fd)
-            writer.writerow(["episode_number", "step", "total_penalty", "load_loss",
-                             "active_line_removal", "wildfire"])
-
-    def add_info(self, episode, step, total_penalty, load_loss):
-        active_line_removal_penalty = 0
-        wildfire = 0
-
-        if self._reactive_control:
-            wildfire = total_penalty - load_loss
-        else:
-            active_line_removal_penalty = total_penalty - load_loss
-
-        with open(f'{self._file_name}.csv', 'a') as fd:
-            writer = csv.writer(fd)
-            writer.writerow([str(episode), str(step), str(total_penalty),
-                             str(load_loss), str(active_line_removal_penalty), str(wildfire)])

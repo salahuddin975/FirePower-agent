@@ -8,8 +8,9 @@ import tensorflow as tf
 from parameters import Parameters
 from agent import Agent
 from replay_buffer import ReplayBuffer
-from data_processor import DataProcessor, Tensorboard, SummaryWriter, SummaryWriterStep
+from data_processor import DataProcessor, Tensorboard, SummaryWriter
 from simulator_resorces import SimulatorResources, Generators
+from collections import namedtuple
 
 
 gym.logger.set_level(50)
@@ -79,6 +80,11 @@ def get_action_spaces(action_space):
     return action_spaces
 
 
+MainLoopInfo = namedtuple("MainLoopInfo", ["nn_actions", "nn_critic_value",
+                                           "nn_actions_with_noise", "nn_noise_critic_value",
+                                           "env_actions", "env_critic_value",
+                                           "original_reward", "done"])
+
 if __name__ == "__main__":
     args = get_arguments()
     seed_value = args.seed
@@ -88,8 +94,9 @@ if __name__ == "__main__":
     set_gpu_memory_limit()
     base_path = "database_seed_" + str(seed_value)
 
+    power_generation_preprocess_scale = 10
     simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)
-    generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)
+    generators = Generators(ppc=simulator_resources.ppc, power_generation_preprocess_scale=power_generation_preprocess_scale, ramp_frequency_in_hour=6)
     # generators.print_info()
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power,
@@ -123,7 +130,6 @@ if __name__ == "__main__":
 
     tensorboard = Tensorboard(base_path)
     summary_writer = SummaryWriter(base_path, save_model_version, load_episode_num)
-    summary_writer_step = SummaryWriterStep(base_path)
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
     # agent training
@@ -141,6 +147,7 @@ if __name__ == "__main__":
         episodic_penalty = 0
         episodic_load_loss = 0
 
+        state = data_processor.preprocess(state, power_generation_preprocess_scale)
         if not parameters.generator_max_output:
             generators.set_max_outputs(state["generator_injection"])
 
@@ -151,22 +158,30 @@ if __name__ == "__main__":
             tf_state = data_processor.get_tf_state(state)
             nn_action = agent.actor(tf_state)
             # print("NN generator output: ", nn_action[0])
+            # print("original:", agent.get_critic_value(tf_state, nn_action))
 
-            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
-            env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
+            nn_noise_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
+            # print("original+noise:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)))
+
+            env_action = data_processor.check_violations(nn_noise_action, state["fire_distance"], state["generator_injection"], ramp_scale=power_generation_preprocess_scale)
+            # print("original+noise+violation_check:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]),0)))
 
             # print("ramp:", env_action['generator_injection'])
             next_state, reward, done, _ = env.step(env_action)
 
-            # if done:
-            #     new_reward = reward
-            # else:
-            #     new_reward = (reward[0] + (28.5-np.sum(state["load_demand"])) * 100, reward[1])
-            #     print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", ", new:", new_reward[0])
-            if explore_network_flag == False:
-                print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
-            buffer.add_record((state, net_action, reward, next_state, env_action, not done))
-            # summary_writer_step.add_info(episode, step, reward[0], reward[1])
+            main_loop_info = MainLoopInfo(tf.math.reduce_mean(nn_action), agent.get_critic_value(tf_state, nn_action),
+                                          tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
+                                          agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
+                                          tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)),
+                                          agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]),0)),
+                                          reward[0], done)
+            tensorboard.add_main_loop_info(main_loop_info)
+
+            # if explore_network_flag == False:
+            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+
+            next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale)
+            buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))
 
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]
@@ -177,10 +192,11 @@ if __name__ == "__main__":
                 max_reached_step = step
                 break
 
-            if train_network and episode > 2:
+            if train_network and episode >= 3:
                 state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
-                critic_loss, reward_value, critic_value, action_quality = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
-                tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value, action_quality)
+                tensorboard_info = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
+                tensorboard.add_train_info(tensorboard_info)
+                # print("Episode:", episode, ", step: ", step, ", critic_value:", tensorboard_info.critic_value_with_original_action, ", critic_loss:", tensorboard_info.critic_loss)
 
         # if train_network and episode > 5:
         #     print ("Train at episode: ", episode)

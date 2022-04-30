@@ -122,7 +122,6 @@ class ReplayBuffer:
         self.st_bus[index] = np.copy(record[0]["bus_status"])
         self.st_branch[index] = np.copy(record[0]["branch_status"])
         self.st_fire_distance[index] = np.copy(record[0]["fire_distance"])
-        self.st_fire_distance[index] = self.st_fire_distance[index] / 100
         self.st_gen_output[index] = np.copy(record[0]["generator_injection"])
         self.st_load_demand[index] = np.copy(record[0]["load_demand"])
         self.st_theta[index] = np.copy(record[0]["theta"])
@@ -140,7 +139,6 @@ class ReplayBuffer:
         self.next_st_bus[index] = np.copy(record[3]["bus_status"])
         self.next_st_branch[index] = np.copy(record[3]["branch_status"])
         self.next_st_fire_distance[index] = np.copy(record[3]["fire_distance"])
-        self.next_st_fire_distance[index] = self.next_st_fire_distance[index] / 100
         self.next_st_gen_output[index] = np.copy(record[3]["generator_injection"])
         self.next_st_load_demand[index] = np.copy(record[3]["load_demand"])
         self.next_st_theta[index] = np.copy(record[3]["theta"])

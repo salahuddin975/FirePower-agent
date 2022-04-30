@@ -35,7 +35,7 @@ class DataProcessor:
         self.generators = generators
         self._state_spaces = state_spaces
         self._action_spaces = action_spaces
-        self._grid_len = 350
+        self._considerable_fire_distance = 15
 
         std_dev = 0.2
         self._ou_noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(std_dev) * np.ones(1))
@@ -117,12 +117,12 @@ class DataProcessor:
     def check_violations(self, np_action, fire_distance, generators_current_output, ramp_scale):
         bus_status = np.ones(self._state_spaces[0])
         for i in range(self._state_spaces[0]):
-            if fire_distance[i] < (2.0/self._grid_len):
+            if fire_distance[i] == 1:
                 bus_status[i] = 0
 
         branch_status = np.ones(self._state_spaces[1])
         for i in range(self._state_spaces[1]):
-            if fire_distance[self._state_spaces[0] + i] < (2.0/self._grid_len):
+            if fire_distance[self._state_spaces[0] + i] == 1:
                 branch_status[i] = 0
 
         branch_status = self._check_network_violations(bus_status, branch_status)
@@ -176,10 +176,23 @@ class DataProcessor:
 
         return action
 
-    def preprocess(self, state, load_preprocess_scale):
-        state["generator_injection"] = np.array([load / load_preprocess_scale for load in state["generator_injection"]])
-        state["load_demand"] = np.array([load / load_preprocess_scale for load in state["load_demand"]])
-        state["fire_distance"] = [dist/self._grid_len for dist in state["fire_distance"]]
+    def preprocess(self, state, power_generation_scale):
+        state["generator_injection"] = np.array([output / power_generation_scale for output in state["generator_injection"]])
+        state["load_demand"] = np.array([load_output / power_generation_scale for load_output in state["load_demand"]])
+
+        # state["fire_distance"] = [1 - dist/self._considerable_fire_distance if dist < self._considerable_fire_distance else 0 for dist in state["fire_distance"]]
+
+        fire_distance = []
+        for dist in state["fire_distance"]:
+            if dist < self._considerable_fire_distance:
+                val = 1 - dist/self._considerable_fire_distance
+                if dist < 2.0:
+                    val = 1
+                fire_distance.append(val)
+            else:
+                fire_distance.append(0)
+
+        state["fire_distance"] = fire_distance
 
         # print("bus_status:", state["bus_status"])
         # print("branch_status:", state["branch_status"])

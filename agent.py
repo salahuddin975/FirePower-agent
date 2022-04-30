@@ -197,8 +197,12 @@ class Agent:
         # -------------------------------------
         # state = layers.Concatenate() ([st_bus_branch_fire_distance_comb_layer1, st_gen_line_flow_layer1])
 
-        state = layers.Concatenate() ([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input,
-                                       theta_input, line_flow_input])
+        state = layers.Concatenate() ([fire_distance_input, gen_inj_input])
+        # state = layers.Concatenate() ([fire_distance_input, gen_inj_input, load_demand_input])
+        # state = layers.Concatenate() ([fire_distance_input, gen_inj_input, line_flow_input])
+        # state = layers.Concatenate() ([fire_distance_input, gen_inj_input, load_demand_input, line_flow_input])
+        # state = layers.Concatenate() ([fire_distance_input, gen_inj_input, load_demand_input, line_flow_input, theta_input])
+
         # -------------------------------------
 
         hidden = layers.Dense(256, activation="relu") (state)
@@ -269,8 +273,13 @@ class Agent:
 
         # -------------------------------------
         # state = layers.Concatenate() ([st_bus_branch_fire_distance_comb_layer1, st_gen_line_flow_layer1])
-        state = layers.Concatenate() ([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta,
-                                       st_line_flow, act_gen_injection])
+
+        state = layers.Concatenate() ([st_fire_distance, st_gen_output, act_gen_injection])
+        # state = layers.Concatenate() ([st_fire_distance, st_gen_output, st_load_demand, act_gen_injection])
+        # state = layers.Concatenate() ([st_fire_distance, st_gen_output, st_line_flow, act_gen_injection])
+        # state = layers.Concatenate() ([st_fire_distance, st_gen_output, st_load_demand, st_line_flow, act_gen_injection])
+        # state = layers.Concatenate() ([st_fire_distance, st_gen_output, st_load_demand, st_line_flow, st_theta, act_gen_injection])
+
         # -------------------------------------
 
         hidden = layers.Dense(256, activation="relu") (state)

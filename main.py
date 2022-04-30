@@ -163,7 +163,7 @@ if __name__ == "__main__":
             nn_noise_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
             # print("original+noise:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)))
 
-            env_action = data_processor.check_violations(nn_noise_action, state["fire_distance"], state["generator_injection"], ramp_scale=load_preprocess_scale)
+            env_action = data_processor.check_violations(nn_noise_action, state["fire_distance"], state["generator_injection"], ramp_scale=power_generation_preprocess_scale)
             # print("original+noise+violation_check:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]),0)))
 
             # print("ramp:", env_action['generator_injection'])

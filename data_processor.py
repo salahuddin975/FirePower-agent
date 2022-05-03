@@ -299,7 +299,7 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
             tf.summary.scalar('generator_output/generator_1', info[1] * 10, step=self._generator_output_counter)
             tf.summary.scalar('generator_output/generator_6', info[6] * 10, step=self._generator_output_counter)
             tf.summary.scalar('generator_output/generator_12', info[12] * 10, step=self._generator_output_counter)
-            tf.summary.scalar('generator_output/generator_13', info[13] * 10, step=self._generator_output_counter)
+            # tf.summary.scalar('generator_output/generator_13', info[13] * 10, step=self._generator_output_counter)
             tf.summary.scalar('generator_output/generator_14', info[14] * 10, step=self._generator_output_counter)
             tf.summary.scalar('generator_output/generator_15', info[15] * 10, step=self._generator_output_counter)
             tf.summary.scalar('generator_output/generator_17', info[17] * 10, step=self._generator_output_counter)

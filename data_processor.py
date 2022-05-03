@@ -239,50 +239,102 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
     def __init__(self, base_path):
         current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
-        self._main_loop_counter = 0
-        self._agent_counter = 0
-        self._critic_counter = 0
+        self._train_info_counter = 0
+        self._step_info_counter = 0
+        self._episodic_info_counter = 0
+        self._generator_output_counter = 0
+        self._load_demand_counter = 0
 
-        main_loop_log_dir = os.path.join(base_path, 'logs', current_time, 'main_loop')
-        agent_log_dir = os.path.join(base_path, 'logs', current_time, 'agent')
-        citic_log_dir = os.path.join(base_path, 'logs', current_time, 'critic')
+        train_info_dir = os.path.join(base_path, 'logs', current_time, '1_train_info')
+        step_info_log_dir = os.path.join(base_path, 'logs', current_time, '2_step_info')
+        episodic_info_dir = os.path.join(base_path, 'logs', current_time, '3_episodic_info')
+        generator_output_log_dir = os.path.join(base_path, 'logs', current_time, '4_generator_output')
+        load_demand_log_dir = os.path.join(base_path, 'logs', current_time, '5_load_demand')
 
-        self._main_loop_summary_writer = tf.summary.create_file_writer(main_loop_log_dir)
-        self._agent_summary_writer = tf.summary.create_file_writer(agent_log_dir)
-        self._critic_summary_writer = tf.summary.create_file_writer(citic_log_dir)
+        self._train_info_writer = tf.summary.create_file_writer(train_info_dir)
+        self._step_info_summary_writer = tf.summary.create_file_writer(step_info_log_dir)
+        self._episodic_info_summary_writer = tf.summary.create_file_writer(episodic_info_dir)
+        self._generator_output_summary_writer = tf.summary.create_file_writer(generator_output_log_dir)
+        self._load_demand_summary_writer = tf.summary.create_file_writer(load_demand_log_dir)
 
-    def add_main_loop_info(self, info):
-        with self._main_loop_summary_writer.as_default():
-            tf.summary.scalar("mli_1/1_nn_actions", info.nn_actions, step=self._main_loop_counter)
-            tf.summary.scalar("mli_1/2_nn_actions_with_noise", info.nn_actions_with_noise, step=self._main_loop_counter)
-            tf.summary.scalar("mli_1/3_env_actions", info.env_actions, step=self._main_loop_counter)
-            tf.summary.scalar("mli_2/1_nn_critic_value", info.nn_critic_value, step=self._main_loop_counter)
-            tf.summary.scalar("mli_2/2_nn_noise_critic_value", info.nn_noise_critic_value, step=self._main_loop_counter)
-            tf.summary.scalar("mli_2/3_env_critic_value", info.env_critic_value, step=self._main_loop_counter)
-            tf.summary.scalar("mli_3/1_original_reward", info.original_reward, step=self._main_loop_counter)
-            tf.summary.scalar("mli_3/2_done", info.done, step=self._main_loop_counter)
-        self._main_loop_counter += 1
+    def train_info(self, info):
+        with self._train_info_writer.as_default():
+            tf.summary.scalar('train_info_1/1_reward_value', info.reward_value, step=self._train_info_counter)
+            tf.summary.scalar('train_info_1/2_target_actor_actions', info.target_actor_actions, step=self._train_info_counter)
+            tf.summary.scalar('train_info_1/3_target_critic_value_with_target_actor_actions', info.target_critic_value_with_target_actor_actions, step=self._train_info_counter)
+            tf.summary.scalar('train_info_1/4_return_y', info.return_y, step=self._train_info_counter)
+            tf.summary.scalar('train_info_2/1_original_actions', info.original_actions, step=self._train_info_counter)
+            tf.summary.scalar('train_info_2/2_critic_value_with_original_actions', info.critic_value_with_original_actions, step=self._train_info_counter)
+            tf.summary.scalar('train_info_2/3_critic_loss', info.critic_loss, step=self._train_info_counter)
+            tf.summary.scalar('train_info_3/1_actor_actions', info.actor_actions, step=self._train_info_counter)
+            tf.summary.scalar('train_info_3/2_critic_value_with_actor_actions', info.critic_value_with_actor_actions, step=self._train_info_counter)
+            tf.summary.scalar('train_info_3/3_load_loss', info.load_loss, step=self._train_info_counter)
+            tf.summary.scalar('train_info_3/4_actor_loss', info.actor_loss, step=self._train_info_counter)
+        self._train_info_counter += 1
 
-    def add_episodic_info(self, episodic_reward):
-        with self._agent_summary_writer.as_default():
-            tf.summary.scalar("episodic_reward", episodic_reward, step=self._agent_counter)
-        self._agent_counter += 1
+    def step_info(self, info, reward_info):
+        with self._step_info_summary_writer.as_default():
+            tf.summary.scalar("step_info_1/1_nn_actions", info.nn_actions, step=self._step_info_counter)
+            tf.summary.scalar("step_info_1/2_nn_actions_with_noise", info.nn_actions_with_noise, step=self._step_info_counter)
+            tf.summary.scalar("step_info_1/3_env_actions", info.env_actions, step=self._step_info_counter)
 
-    def add_train_info(self, info):
-        with self._critic_summary_writer.as_default():
-            tf.summary.scalar('ti_1/1_reward_value', info.reward_value, step=self._critic_counter)
-            tf.summary.scalar('ti_1/2_target_actor_actions', info.target_actor_actions, step=self._critic_counter)
-            tf.summary.scalar('ti_1/3_target_critic_value_with_target_actor_actions', info.target_critic_value_with_target_actor_actions, step=self._critic_counter)
-            tf.summary.scalar('ti_1/4_return_y', info.return_y, step=self._critic_counter)
-            tf.summary.scalar('ti_2/1_original_actions', info.original_actions, step=self._critic_counter)
-            tf.summary.scalar('ti_2/2_critic_value_with_original_actions', info.critic_value_with_original_actions, step=self._critic_counter)
-            tf.summary.scalar('ti_2/3_critic_loss', info.critic_loss, step=self._critic_counter)
-            tf.summary.scalar('ti_3/1_actor_actions', info.actor_actions, step=self._critic_counter)
-            tf.summary.scalar('ti_3/2_critic_value_with_actor_actions', info.critic_value_with_actor_actions, step=self._critic_counter)
-            tf.summary.scalar('ti_3/3_load_loss', info.load_loss, step=self._critic_counter)
-            tf.summary.scalar('ti_3/4_actor_loss', info.actor_loss, step=self._critic_counter)
-        self._critic_counter += 1
+            tf.summary.scalar("step_info_2/1_nn_critic_value", info.nn_critic_value, step=self._step_info_counter)
+            tf.summary.scalar("step_info_2/2_nn_noise_critic_value", info.nn_noise_critic_value, step=self._step_info_counter)
+            tf.summary.scalar("step_info_2/3_env_critic_value", info.env_critic_value, step=self._step_info_counter)
 
+            tf.summary.scalar('step_info_3/1_total_load_demand', reward_info[0] * 10, step=self._step_info_counter)
+            tf.summary.scalar('step_info_3/2_total_generator_output', reward_info[1] * 10, step=self._step_info_counter)
+            tf.summary.scalar('step_info_3/3_reward', reward_info[2] * 10, step=self._step_info_counter)
+            tf.summary.scalar("step_info_3/2_done", reward_info[3], step=self._step_info_counter)
+        self._step_info_counter += 1
+
+    def episodic_info(self, episodic_reward):
+        with self._episodic_info_summary_writer.as_default():
+            tf.summary.scalar("episodic_info/episodic_reward", episodic_reward, step=self._episodic_info_counter)
+        self._episodic_info_counter += 1
+
+    def generator_output_info(self, info):
+        with self._generator_output_summary_writer.as_default():
+            tf.summary.scalar('generator_output/generator_0', info[0] * 10, step=self._generator_output_counter)
+            tf.summary.scalar('generator_output/generator_1', info[1] * 10, step=self._generator_output_counter)
+            tf.summary.scalar('generator_output/generator_6', info[6] * 10, step=self._generator_output_counter)
+            tf.summary.scalar('generator_output/generator_12', info[12] * 10, step=self._generator_output_counter)
+            tf.summary.scalar('generator_output/generator_13', info[13] * 10, step=self._generator_output_counter)
+            tf.summary.scalar('generator_output/generator_14', info[14] * 10, step=self._generator_output_counter)
+            tf.summary.scalar('generator_output/generator_15', info[15] * 10, step=self._generator_output_counter)
+            tf.summary.scalar('generator_output/generator_17', info[17] * 10, step=self._generator_output_counter)
+            tf.summary.scalar('generator_output/generator_20', info[20] * 10, step=self._generator_output_counter)
+            tf.summary.scalar('generator_output/generator_21', info[21] * 10, step=self._generator_output_counter)
+            tf.summary.scalar('generator_output/generator_22', info[22] * 10, step=self._generator_output_counter)
+        self._generator_output_counter += 1
+
+    def load_demand_info(self, info):
+        with self._load_demand_summary_writer.as_default():
+            tf.summary.scalar('load_demand/generator_0', info[0] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_1', info[1] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_2', info[2] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_3', info[3] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_4', info[4] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_5', info[5] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_6', info[6] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_7', info[7] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_8', info[8] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_9', info[9] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_10', info[10] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_11', info[11] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_12', info[12] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_13', info[13] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_14', info[14] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_15', info[15] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_16', info[16] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_17', info[17] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_18', info[18] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_19', info[19] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_20', info[20] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_21', info[21] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_22', info[22] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/generator_23', info[23] * 10, step=self._load_demand_counter)
+        self._load_demand_counter += 1
 
 class SummaryWriter:
     def __init__(self, base_path, model_version, load_episode_num = 0, reactive_control = False):

@@ -82,8 +82,7 @@ def get_action_spaces(action_space):
 
 MainLoopInfo = namedtuple("MainLoopInfo", ["nn_actions", "nn_critic_value",
                                            "nn_actions_with_noise", "nn_noise_critic_value",
-                                           "env_actions", "env_critic_value",
-                                           "original_reward", "done"])
+                                           "env_actions", "env_critic_value"])
 
 if __name__ == "__main__":
     args = get_arguments()
@@ -155,6 +154,9 @@ if __name__ == "__main__":
             if explore_network_flag == False:
                 print("load_demand:", np.sum(state["load_demand"]), ", generator_injection:", np.sum(state["generator_injection"]) )
 
+            tensorboard.generator_output_info(state["generator_injection"])
+            tensorboard.load_demand_info(state["load_demand"])
+
             tf_state = data_processor.get_tf_state(state)
             nn_action = agent.actor(tf_state)
             # print("NN generator output: ", nn_action[0])
@@ -173,9 +175,9 @@ if __name__ == "__main__":
                                           tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
                                           agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
                                           tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)),
-                                          agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]),0)),
-                                          reward[0], done)
-            tensorboard.add_main_loop_info(main_loop_info)
+                                          agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]),0)))
+            reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), reward[0], done)
+            tensorboard.step_info(main_loop_info, reward_info)
 
             if explore_network_flag == False:
                 print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
@@ -199,7 +201,7 @@ if __name__ == "__main__":
             if train_network and episode >= 3:
                 state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
                 tensorboard_info = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
-                tensorboard.add_train_info(tensorboard_info)
+                tensorboard.train_info(tensorboard_info)
                 # print("Episode:", episode, ", step: ", step, ", critic_value:", tensorboard_info.critic_value_with_original_action, ", critic_loss:", tensorboard_info.critic_loss)
 
         # if train_network and episode > 5:
@@ -215,7 +217,7 @@ if __name__ == "__main__":
         #     computation_time = (datetime.now() - start_time).total_seconds()
         #     print("Training_computation_time:", computation_time)
 
-        tensorboard.add_episodic_info(episodic_penalty)
+        tensorboard.episodic_info(episodic_penalty)
         summary_writer.add_info(episode, max_reached_step, episodic_penalty, episodic_load_loss)
 
         # explore / Testing

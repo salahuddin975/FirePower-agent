@@ -155,8 +155,9 @@ if __name__ == "__main__":
             if explore_network_flag == False:
                 print("load_demand:", np.sum(state["load_demand"]), ", generator_injection:", np.sum(state["generator_injection"]) )
 
-            tensorboard.generator_output_info(state["generator_injection"])
-            tensorboard.load_demand_info(state["load_demand"])
+            # tensorboard.generator_output_info(state["generator_injection"])
+            # tensorboard.load_demand_info(state["load_demand"])
+            # tensorboard.line_flow_info(state["line_flow"])
 
             tf_state = data_processor.get_tf_state(state)
             nn_action = agent.actor(tf_state)

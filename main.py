@@ -89,7 +89,7 @@ if __name__ == "__main__":
     seed_value = args.seed
     print(args)
 
-    train_network = False
+    train_network = True      # change during testing
 
     set_seed(seed_value if train_network else 50)
     set_gpu_memory_limit()

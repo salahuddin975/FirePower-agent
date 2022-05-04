@@ -96,7 +96,7 @@ class DataProcessor:
                 ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[i] else -generators_max_ramp[i]
                 ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] > generators_min_output[i] else generators_min_output[i] - generators_current_output[i]
 
-            if abs(ramp[i]) < 0.0001:
+            if abs(ramp[i]) < 0.00001:
                 ramp[i] = 0.0
 
         # print("generators set ramp: ", ramp)
@@ -240,18 +240,21 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
         self._episodic_info_counter = 0
         self._generator_output_counter = 0
         self._load_demand_counter = 0
+        self._line_flow_counter = 0
 
         train_info_dir = os.path.join(base_path, 'logs', current_time, '1_train_info')
         step_info_log_dir = os.path.join(base_path, 'logs', current_time, '2_step_info')
         episodic_info_dir = os.path.join(base_path, 'logs', current_time, '3_episodic_info')
         generator_output_log_dir = os.path.join(base_path, 'logs', current_time, '4_generator_output')
         load_demand_log_dir = os.path.join(base_path, 'logs', current_time, '5_load_demand')
+        line_flow_log_dir = os.path.join(base_path, 'logs', current_time, '6_line_flow')
 
         self._train_info_writer = tf.summary.create_file_writer(train_info_dir)
         self._step_info_summary_writer = tf.summary.create_file_writer(step_info_log_dir)
         self._episodic_info_summary_writer = tf.summary.create_file_writer(episodic_info_dir)
         self._generator_output_summary_writer = tf.summary.create_file_writer(generator_output_log_dir)
         self._load_demand_summary_writer = tf.summary.create_file_writer(load_demand_log_dir)
+        self._line_flow_summary_writer = tf.summary.create_file_writer(line_flow_log_dir)
 
     def train_info(self, info):
         with self._train_info_writer.as_default():
@@ -306,32 +309,69 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
 
     def load_demand_info(self, info):
         with self._load_demand_summary_writer.as_default():
-            tf.summary.scalar('load_demand/generator_0', info[0] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_1', info[1] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_2', info[2] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_3', info[3] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_4', info[4] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_5', info[5] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_6', info[6] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_7', info[7] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_8', info[8] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_9', info[9] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_10', info[10] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_11', info[11] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_12', info[12] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_13', info[13] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_14', info[14] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_15', info[15] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_16', info[16] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_17', info[17] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_18', info[18] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_19', info[19] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_20', info[20] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_21', info[21] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_22', info[22] * 10, step=self._load_demand_counter)
-            tf.summary.scalar('load_demand/generator_23', info[23] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_0', info[0] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_1', info[1] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_2', info[2] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_3', info[3] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_4', info[4] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_5', info[5] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_6', info[6] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_7', info[7] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_8', info[8] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_9', info[9] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_10', info[10] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_11', info[11] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_12', info[12] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_13', info[13] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_14', info[14] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_15', info[15] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_16', info[16] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_17', info[17] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_18', info[18] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_19', info[19] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_20', info[20] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_21', info[21] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_22', info[22] * 10, step=self._load_demand_counter)
+            tf.summary.scalar('load_demand/bus_23', info[23] * 10, step=self._load_demand_counter)
         self._load_demand_counter += 1
 
+    def line_flow_info(self, info):
+        with self._line_flow_summary_writer.as_default():
+            tf.summary.scalar('line_flow/branch_0', info[0], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_1', info[1], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_2', info[2], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_3', info[3], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_4', info[4], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_5', info[5], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_6', info[6], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_7', info[7], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_8', info[8], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_9', info[9], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_10', info[10], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_11', info[11], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_12', info[12], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_13', info[13], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_14', info[14], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_15', info[15], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_16', info[16], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_17', info[17], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_18', info[18], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_19', info[19], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_20', info[20], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_21', info[21], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_22', info[22], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_23', info[23], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_24', info[24], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_25', info[25], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_26', info[26], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_27', info[27], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_28', info[28], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_29', info[29], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_30', info[30], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_31', info[31], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_32', info[32], step=self._line_flow_counter)
+            tf.summary.scalar('line_flow/branch_33', info[33], step=self._line_flow_counter)
+        self._line_flow_counter += 1
 
 class SummaryWriter:
     def __init__(self, base_path, model_version, load_episode_num = 0, reactive_control = False):

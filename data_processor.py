@@ -200,7 +200,7 @@ class DataProcessor:
         # print("load_demand:", state["load_demand"])
         # print("line_flow:", state["line_flow"])
         # print("theta:", state["theta"])
-        print("fire_distance:", state["fire_distance"])
+        # print("fire_distance:", state["fire_distance"])
         # print("fire_state:", state["fire_state"])
 
         return state

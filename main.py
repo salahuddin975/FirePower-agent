@@ -147,14 +147,11 @@ if __name__ == "__main__":
         episodic_penalty = 0
         episodic_load_loss = 0
 
-        state = data_processor.preprocess(state, power_generation_preprocess_scale)
+        state = data_processor.preprocess(state, power_generation_preprocess_scale, explore_network_flag)
         if not parameters.generator_max_output:
             generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
-            if explore_network_flag == False:
-                print("load_demand:", np.sum(state["load_demand"]), ", generator_injection:", np.sum(state["generator_injection"]) )
-
             # tensorboard.generator_output_info(state["generator_injection"])
             # tensorboard.load_demand_info(state["load_demand"])
             # tensorboard.line_flow_info(state["line_flow"])
@@ -182,9 +179,10 @@ if __name__ == "__main__":
             tensorboard.step_info(main_loop_info, reward_info)
 
             if explore_network_flag == False:
-                print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+                print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
+                      f" generator_injection: {np.sum(state['generator_injection'])}, reward: {reward[0]}")
 
-            next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale)
+            next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale, explore_network_flag)
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))
 
             episodic_penalty += reward[0]

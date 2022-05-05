@@ -200,7 +200,7 @@ class DataProcessor:
         # print("theta:", state["theta"])
         # print("fire_distance:", state["fire_distance"])
         # print("fire_state:", state["fire_state"])
-        # print("vulnerable equipment: ", vulnerable_equipment)
+        print("vulnerable equipment: ", vulnerable_equipment)
 
         return state
 

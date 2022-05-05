@@ -172,7 +172,7 @@ class DataProcessor:
 
         return action
 
-    def preprocess(self, state, power_generation_scale):
+    def preprocess(self, state, power_generation_scale, explore_network_flag):
         state["generator_injection"] = np.array([output / power_generation_scale for output in state["generator_injection"]])
         state["load_demand"] = np.array([load_output / power_generation_scale for load_output in state["load_demand"]])
 
@@ -200,7 +200,9 @@ class DataProcessor:
         # print("theta:", state["theta"])
         # print("fire_distance:", state["fire_distance"])
         # print("fire_state:", state["fire_state"])
-        print("vulnerable equipment: ", vulnerable_equipment)
+
+        if explore_network_flag == False:
+            print("vulnerable equipment: ", vulnerable_equipment)
 
         return state
 

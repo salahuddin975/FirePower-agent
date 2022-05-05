@@ -147,7 +147,7 @@ if __name__ == "__main__":
         episodic_penalty = 0
         episodic_load_loss = 0
 
-        state = data_processor.preprocess(state, power_generation_preprocess_scale)
+        state = data_processor.preprocess(state, power_generation_preprocess_scale, explore_network_flag)
         if not parameters.generator_max_output:
             generators.set_max_outputs(state["generator_injection"])
 
@@ -188,7 +188,7 @@ if __name__ == "__main__":
             if random.random() < 0.1:
                 random_done = True
 
-            next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale)
+            next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale, explore_network_flag)
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))
 
             episodic_penalty += reward[0]

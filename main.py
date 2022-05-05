@@ -152,9 +152,6 @@ if __name__ == "__main__":
             generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
-            if explore_network_flag == False:
-                print("load_demand:", np.sum(state["load_demand"]), ", generator_injection:", np.sum(state["generator_injection"]) )
-
             # tensorboard.generator_output_info(state["generator_injection"])
             # tensorboard.load_demand_info(state["load_demand"])
             # tensorboard.line_flow_info(state["line_flow"])
@@ -182,7 +179,8 @@ if __name__ == "__main__":
             tensorboard.step_info(main_loop_info, reward_info)
 
             if explore_network_flag == False:
-                print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+                print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
+                      f" generator_injection: {np.sum(state['generator_injection'])}, reward: {reward[0]}")
 
             random_done = False
             if random.random() < 0.1:

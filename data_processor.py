@@ -169,10 +169,6 @@ class DataProcessor:
         action = {
             "generator_injection": nn_output,
         }
-        #
-        # action = {
-        #     "generator_injection": np.zeros(11, int),
-        # }
 
         return action
 
@@ -183,12 +179,14 @@ class DataProcessor:
         # state["fire_distance"] = [1 - dist/self._considerable_fire_distance if dist < self._considerable_fire_distance else 0 for dist in state["fire_distance"]]
 
         fire_distance = []
-        for dist in state["fire_distance"]:
+        vulnerable_equipment = {}
+        for i, dist in enumerate(state["fire_distance"]):
             if dist < self._considerable_fire_distance:
-                val = 1 - dist/self._considerable_fire_distance
+                val = round(1 - dist/self._considerable_fire_distance, 3)
                 if dist < 2.0:
                     val = 1
                 fire_distance.append(val)
+                vulnerable_equipment[i] = val
             else:
                 fire_distance.append(0)
 
@@ -202,6 +200,7 @@ class DataProcessor:
         # print("theta:", state["theta"])
         # print("fire_distance:", state["fire_distance"])
         # print("fire_state:", state["fire_state"])
+        # print("vulnerable equipment: ", vulnerable_equipment)
 
         return state
 

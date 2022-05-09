@@ -93,7 +93,7 @@ class Agent:
         with tf.GradientTape() as tape:
             target_actor_actions = self._target_actor(next_state_batch)
             target_critic_values = self._target_critic([next_state_batch, target_actor_actions]) * (1 - episode_end_flag_batch)
-            return_y = reward_batch + self._gamma * target_critic_values
+            return_y = episode_end_flag_batch + self._gamma * target_critic_values
             # y = reward_batch[0] + self._gamma * self._target_critic([next_state_batch, target_actor_actions]) * (1 - episode_end_flag_batch)
             # y = reward_batch[0] + reward_batch[1] +  reward_batch[2] +  reward_batch[3] +  reward_batch[4]
 

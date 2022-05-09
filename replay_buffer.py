@@ -43,7 +43,7 @@ class ReplayBuffer:
         self.act_gen_injection = np.zeros((self._capacity, action_spaces[3]))
 
         self.rewards = np.zeros((self._capacity, 1))
-        self.episode_end_flag = np.zeros((self._capacity, 1), dtype=bool)
+        self.episode_end_flag = np.zeros((self._capacity, 1))
 
         self.next_st_bus = np.zeros((self._capacity, state_spaces[0]))
         self.next_st_branch = np.zeros((self._capacity, state_spaces[1]))

@@ -9,8 +9,8 @@ class Generators:
     def __init__(self, ppc, power_generation_preprocess_scale, ramp_frequency_in_hour = 6):
         self._generators = np.copy(ppc["gen"][:, GEN_BUS].astype("int"))
         self._num_generators = self._generators.size
-        self._generators_min_output = np.zeros(11)
-        # self._generators_min_output = np.copy(ppc["gen"][:, PMIN] / (power_generation_preprocess_scale * ppc["baseMVA"]))
+        # self._generators_min_output = np.zeros(11)
+        self._generators_min_output = np.copy(ppc["gen"][:, PMIN] / (power_generation_preprocess_scale * ppc["baseMVA"]))
         self._generators_max_output = np.copy(ppc["gen"][:, PMAX] / (power_generation_preprocess_scale * ppc["baseMVA"]))
         self._generators_max_ramp = np.copy(ppc["gen"][:, RAMP_10] / (power_generation_preprocess_scale * ppc["baseMVA"] * ramp_frequency_in_hour))
 

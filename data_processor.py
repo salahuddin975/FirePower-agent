@@ -272,8 +272,8 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
             tf.summary.scalar('train_info_2/3_critic_loss', info.critic_loss, step=self._train_info_counter)
             tf.summary.scalar('train_info_3/1_actor_actions', info.actor_actions, step=self._train_info_counter)
             tf.summary.scalar('train_info_3/2_critic_value_with_actor_actions', info.critic_value_with_actor_actions, step=self._train_info_counter)
-            tf.summary.scalar('train_info_3/3_load_loss', info.load_loss, step=self._train_info_counter)
-            tf.summary.scalar('train_info_3/4_actor_loss', info.actor_loss, step=self._train_info_counter)
+            # tf.summary.scalar('train_info_3/3_load_loss', info.load_loss, step=self._train_info_counter)
+            tf.summary.scalar('train_info_3/3_actor_loss', info.actor_loss, step=self._train_info_counter)
         self._train_info_counter += 1
 
     def step_info(self, info, reward_info):

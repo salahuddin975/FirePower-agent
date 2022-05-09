@@ -116,7 +116,7 @@ class Agent:
         self.update_target(self._target_actor.variables, self.actor.variables)
         self.update_target(self._target_critic.variables, self._critic.variables)
 
-        return TensorboardInfo(tf.math.reduce_mean(reward_batch), tf.math.reduce_mean(target_actor_actions),
+        return TensorboardInfo(tf.math.reduce_mean(episode_end_flag_batch), tf.math.reduce_mean(target_actor_actions),
                 tf.math.reduce_mean(target_critic_values), tf.math.reduce_mean(return_y),
                 tf.math.reduce_mean(action_batch), tf.math.reduce_mean(critic_value_with_original_actions), critic_loss,
                 tf.math.reduce_mean(actor_actions), tf.math.reduce_mean(critic_value_with_actor_actions), actor_loss)

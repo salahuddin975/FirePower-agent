@@ -32,7 +32,7 @@ class SliceLayer(layers.Layer):
 TensorboardInfo = namedtuple("TensorboardInfo",
                              ["reward_value", "target_actor_actions", "target_critic_value_with_target_actor_actions",
                               "return_y", "original_actions", "critic_value_with_original_actions", "critic_loss",
-                              "actor_actions", "critic_value_with_actor_actions", "actor_loss"])
+                              "actor_actions", "critic_value_with_actor_actions", "load_loss", "actor_loss"])
 
 class Agent:
     def __init__(self, base_path, state_spaces, action_spaces):
@@ -58,6 +58,9 @@ class Agent:
         self._critic = self._critic_model()
         self._target_critic = self._critic_model()
         self._target_critic.set_weights(self._critic.get_weights())
+
+        self._max_power_gen = np.array([1.92, 1.92, 3.0, 5.91, 0.0, 2.15, 1.55, 1.9833, 1.9833, 3.0, 5.0833])
+        self._total_max_power_gen = 28.5  # tf.reduce_sum(self._max_power_gen)
 
     def get_critic_value(self, state, action):
         value = self._critic([state, action])
@@ -107,7 +110,10 @@ class Agent:
         with tf.GradientTape() as tape:
             actor_actions = self.actor(state_batch)
             critic_value_with_actor_actions = self._critic([state_batch, actor_actions])
-            actor_loss = -1 * tf.math.reduce_mean(critic_value_with_actor_actions)
+
+            load_loss = self._total_max_power_gen - tf.reduce_sum(actor_actions * self._max_power_gen, axis=1)
+            weighted_critic_value = critic_value_with_actor_actions * -1000 + load_loss * -1
+            actor_loss = -1 * tf.math.reduce_mean(weighted_critic_value)
 
         actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
         self._actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
@@ -119,7 +125,8 @@ class Agent:
         return TensorboardInfo(tf.math.reduce_mean(episode_end_flag_batch), tf.math.reduce_mean(target_actor_actions),
                 tf.math.reduce_mean(target_critic_values), tf.math.reduce_mean(return_y),
                 tf.math.reduce_mean(action_batch), tf.math.reduce_mean(critic_value_with_original_actions), critic_loss,
-                tf.math.reduce_mean(actor_actions), tf.math.reduce_mean(critic_value_with_actor_actions), actor_loss)
+                tf.math.reduce_mean(actor_actions), tf.math.reduce_mean(critic_value_with_actor_actions),
+                tf.math.reduce_mean(load_loss), actor_loss)
 
     # @tf.function
     def update_target(self, target_weights, weights):

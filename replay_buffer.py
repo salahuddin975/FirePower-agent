@@ -118,6 +118,7 @@ class ReplayBuffer:
 
     def add_record(self, record):
         index = self._counter % self._capacity
+        # print(index, ". episode_end_prob: ", record[5])
 
         self.st_bus[index] = np.copy(record[0]["bus_status"])
         self.st_branch[index] = np.copy(record[0]["branch_status"])

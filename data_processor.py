@@ -236,6 +236,35 @@ class DataProcessor:
                 act_bus_status, act_branch_status, act_generator_selector, act_generator_injection]
 
 
+class FireProbability:
+    def __init__(self):
+        self._probability = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+
+    def initialize(self):
+        self._index = 10
+        self._record_queue = []
+
+    def add_record(self, record):
+        self._record_queue.append(record)
+
+    def get_records(self, done):
+        if not done:
+            return self._record_queue
+        else:
+            total_record = len(self._record_queue)
+            for _ in range(total_record):
+                record = self._record_queue.pop()
+                new_record = (record[0], record[1], record[2], record[3], record[4], self._probability[self._index])
+                self._record_queue.insert(0, new_record)
+
+                if self._index > 0 and record[0]["fire_distance"] != record[3]["fire_distance"]:
+                    # print("state fire_dist: ", record[0]["fire_distance"])
+                    # print("next_state fire_dist: ", record[3]["fire_distance"])
+                    self._index -= 1
+
+            return self._record_queue
+
+
 class Tensorboard:                 # $ tensorboard --logdir ./logs
     def __init__(self, base_path):
         current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")

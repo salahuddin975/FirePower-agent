@@ -40,6 +40,11 @@ class DataProcessor:
         std_dev = 0.2
         self._ou_noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(std_dev) * np.ones(1))
 
+        self._branches = [(0, 1),(0, 2),(0, 4),(1, 3),(1, 5),(2, 8),(2, 23),(3, 8),(4, 9),(5, 9),(6, 7),(7, 8),(7, 9),(8, 10),
+            (8, 11),(9, 10),(9, 11),(10, 12),(10, 13),(11, 12),(11, 22),(12, 22),(13, 15),(14, 15),(14, 20),
+            (14, 23),(15, 16),(15, 18),(16, 17),(16, 21),(17, 20),(18, 19),(19, 22),(20, 21)]
+        self._generators = [0,  1,  6, 12, 13, 14, 15, 17, 20, 21, 22]
+
     def _check_network_violations_branch(self, bus_status, branch_status):
         from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
         to_buses = self.simulator_resources.ppc["branch"][:, T_BUS].astype('int')
@@ -52,6 +57,30 @@ class DataProcessor:
                         branch_status[branch] = 0
 
         return branch_status
+
+    def _check_network_violations_bus(self, bus_status, branch_status):
+        generator_sets = [set() for _ in range(24)]
+        for branch in self._branches:
+            generator_sets[branch[0]].add(branch)
+            generator_sets[branch[1]].add(branch)
+
+        for i in range(34):
+            if branch_status[i] == 0:
+                x, y = self._branches[i]
+                generator_sets[x].remove((x,y))
+                generator_sets[y].remove((x,y))
+
+                if len(generator_sets[x]) == 0 and x in self._generators:
+                    index = self._generators.index(x)
+                    bus_status[index] = 0
+
+                if len(generator_sets[y]) == 0 and y in self._generators:
+                    index = self._generators.index(y)
+                    bus_status[index] = 0
+
+        # print("bus_status:", bus_status)
+        # print("branch_status:", branch_status)
+        return bus_status
 
     def add_heuristic_ramp(self, ramp, load_loss, num_generators, generators_current_output, generators_max_output, generators_max_ramp):
         for i in range(num_generators):
@@ -126,6 +155,7 @@ class DataProcessor:
                 branch_status[i] = 0
 
         branch_status = self._check_network_violations_branch(bus_status, branch_status)
+        bus_status = self._check_network_violations_bus(bus_status, branch_status)
         # print("bus status: ", bus_status)
         # print("branch status: ", branch_status)
 

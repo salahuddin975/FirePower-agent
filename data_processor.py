@@ -40,7 +40,7 @@ class DataProcessor:
         std_dev = 0.2
         self._ou_noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(std_dev) * np.ones(1))
 
-    def _check_network_violations(self, bus_status, branch_status):
+    def _check_network_violations_branch(self, bus_status, branch_status):
         from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
         to_buses = self.simulator_resources.ppc["branch"][:, T_BUS].astype('int')
 
@@ -125,7 +125,7 @@ class DataProcessor:
             if fire_distance[self._state_spaces[0] + i] == 1:
                 branch_status[i] = 0
 
-        branch_status = self._check_network_violations(bus_status, branch_status)
+        branch_status = self._check_network_violations_branch(bus_status, branch_status)
         # print("bus status: ", bus_status)
         # print("branch status: ", branch_status)
 

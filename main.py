@@ -132,7 +132,6 @@ if __name__ == "__main__":
     tensorboard = Tensorboard(base_path)
     summary_writer = SummaryWriter(base_path, save_model_version, load_episode_num)
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
-    fire_probability = FireProbability()
 
     # agent training
     total_episode = 100001
@@ -147,8 +146,7 @@ if __name__ == "__main__":
         max_reached_step = 0
         episodic_penalty = 0
         episodic_load_loss = 0
-        # record_queue = []
-        fire_probability.initialize()
+        record_queue = []
 
         state = data_processor.preprocess(state, power_generation_preprocess_scale, explore_network_flag)
         if not parameters.generator_max_output:
@@ -189,32 +187,19 @@ if __name__ == "__main__":
 
             if train_network:
                 record = (state, nn_noise_action, reward, next_state, env_action, 1 if done else 0)
-                fire_probability.add_record(record)
+                record_queue.append(record)
 
-                if done or (step + 1) == max_steps_per_episode:
-                    records = fire_probability.get_records(done)
-                    for record in records:
+                if len(record_queue) == 10 and done == False:
+                    buffer.add_record(record_queue.pop(0))
+                elif step == 299:
+                    for record in record_queue:
                         buffer.add_record(record)
-
-                        if episode >= 3:
-                            state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
-                            tensorboard_info = agent.train(state_batch, action_batch, reward_batch, next_state_batch,
-                                                           episode_end_flag_batch)
-                            tensorboard.train_info(tensorboard_info)
-
-                # record_queue.append(record)
-                #
-                # if len(record_queue) == 10 and done == False:
-                #     buffer.add_record(record_queue.pop(0))
-                # elif step == 299:
-                #     for record in record_queue:
-                #         buffer.add_record(record)
-                # elif done:
-                #     q_len = len(record_queue)
-                #     for i in range(q_len):
-                #         record = record_queue.pop(0)
-                #         done_probability = (i+1)/q_len
-                #         buffer.add_record((record[0], record[1], record[2], record[3], record[4], done_probability))
+                elif done:
+                    q_len = len(record_queue)
+                    for i in range(q_len):
+                        record = record_queue.pop(0)
+                        done_probability = (i+1)/q_len
+                        buffer.add_record((record[0], record[1], record[2], record[3], record[4], done_probability))
 
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]
@@ -225,24 +210,11 @@ if __name__ == "__main__":
                 max_reached_step = step
                 break
 
-            # if train_network and episode >= 3:
-            #     state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
-            #     tensorboard_info = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
-            #     tensorboard.train_info(tensorboard_info)
+            if train_network and episode >= 3:
+                state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
+                tensorboard_info = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
+                tensorboard.train_info(tensorboard_info)
                 # print("Episode:", episode, ", step: ", step, ", critic_value:", tensorboard_info.critic_value_with_original_action, ", critic_loss:", tensorboard_info.critic_loss)
-
-        # if train_network and episode > 5:
-        #     print ("Train at episode: ", episode)
-        #     start_time = datetime.now()
-        #     for i in range(num_train_per_episode):
-        #         state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
-        #         critic_loss, reward_value, critic_value, action_quality = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
-        #         tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value, action_quality)
-        #         if i % 1000 == 0:
-        #             print("train at: ", i)
-        #
-        #     computation_time = (datetime.now() - start_time).total_seconds()
-        #     print("Training_computation_time:", computation_time)
 
         tensorboard.episodic_info(episodic_penalty)
         summary_writer.add_info(episode, max_reached_step, episodic_penalty, episodic_load_loss)

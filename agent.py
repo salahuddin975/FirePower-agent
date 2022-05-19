@@ -91,12 +91,12 @@ class Agent:
         print("weights are loaded successfully!")
 
     # @tf.function
-    def train(self, state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch):
+    def train(self, state_batch, action_batch, reward_batch, next_state_batch, episode_end_probability_closeness_batch):
         # update critic network
         with tf.GradientTape() as tape:
             target_actor_actions = self._target_actor(next_state_batch)
-            target_critic_values = self._target_critic([next_state_batch, target_actor_actions]) * (1 - episode_end_flag_batch)
-            return_y = episode_end_flag_batch + self._gamma * target_critic_values
+            target_critic_values = self._target_critic([next_state_batch, target_actor_actions]) * (1 - episode_end_probability_closeness_batch)
+            return_y = episode_end_probability_closeness_batch + self._gamma * target_critic_values
             # y = reward_batch[0] + self._gamma * self._target_critic([next_state_batch, target_actor_actions]) * (1 - episode_end_flag_batch)
             # y = reward_batch[0] + reward_batch[1] +  reward_batch[2] +  reward_batch[3] +  reward_batch[4]
 
@@ -122,7 +122,7 @@ class Agent:
         self.update_target(self._target_actor.variables, self.actor.variables)
         self.update_target(self._target_critic.variables, self._critic.variables)
 
-        return TensorboardInfo(tf.math.reduce_mean(episode_end_flag_batch), tf.math.reduce_mean(target_actor_actions),
+        return TensorboardInfo(tf.math.reduce_mean(episode_end_probability_closeness_batch), tf.math.reduce_mean(target_actor_actions),
                 tf.math.reduce_mean(target_critic_values), tf.math.reduce_mean(return_y),
                 tf.math.reduce_mean(action_batch), tf.math.reduce_mean(critic_value_with_original_actions), critic_loss,
                 tf.math.reduce_mean(actor_actions), tf.math.reduce_mean(critic_value_with_actor_actions),

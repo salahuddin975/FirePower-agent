@@ -198,8 +198,8 @@ if __name__ == "__main__":
                     q_len = len(record_queue)
                     for i in range(q_len):
                         record = record_queue.pop(0)
-                        done_probability = (i+1)/q_len
-                        buffer.add_record((record[0], record[1], record[2], record[3], record[4], done_probability))
+                        done_probability_closeness = (i+1)/q_len
+                        buffer.add_record((record[0], record[1], record[2], record[3], record[4], done_probability_closeness))
 
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]

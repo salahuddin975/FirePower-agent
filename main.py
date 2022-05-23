@@ -185,21 +185,19 @@ if __name__ == "__main__":
 
             next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale, explore_network_flag)
 
-            if train_network:
-                record = (state, nn_noise_action, reward, next_state, env_action, 1 if done else 0)
-                record_queue.append(record)
-
-                if len(record_queue) == 10 and done == False:
-                    buffer.add_record(record_queue.pop(0))
-                elif step == 299:
-                    for record in record_queue:
-                        buffer.add_record(record)
-                elif done:
-                    q_len = len(record_queue)
-                    for i in range(q_len):
-                        record = record_queue.pop(0)
-                        done_probability_closeness = (i+1)/q_len
-                        buffer.add_record((record[0], record[1], record[2], record[3], record[4], done_probability_closeness))
+            record = (state, nn_noise_action, reward, next_state, env_action, 1 if done else 0)
+            record_queue.append(record)
+            if len(record_queue) == 10 and done == False:
+                buffer.add_record(record_queue.pop(0))
+            elif step == 299:
+                for record in record_queue:
+                    buffer.add_record(record)
+            elif done:
+                q_len = len(record_queue)
+                for i in range(q_len):
+                    record = record_queue.pop(0)
+                    done_probability_closeness = (i+1)/q_len
+                    buffer.add_record((record[0], record[1], record[2], record[3], record[4], done_probability_closeness))
 
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]

@@ -155,7 +155,7 @@ class DataProcessor:
                 branch_status[i] = 0
 
         branch_status = self._check_network_violations_branch(bus_status, branch_status)
-        # bus_status = self._check_network_violations_bus(bus_status, branch_status)
+        bus_status = self._check_network_violations_bus(bus_status, branch_status)
         # print("bus status: ", bus_status)
         # print("branch status: ", branch_status)
 

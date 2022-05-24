@@ -148,8 +148,8 @@ if __name__ == "__main__":
         episodic_load_loss = 0
 
         state = data_processor.preprocess(state, power_generation_preprocess_scale, explore_network_flag)
-        if not parameters.generator_max_output:
-            generators.set_max_outputs(state["generator_injection"])
+        # if not parameters.generator_max_output:
+        #     generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
             # tensorboard.generator_output_info(state["generator_injection"])

@@ -13,6 +13,7 @@ class DataProcessor:
         self.generators = generators
         self._state_spaces = state_spaces
         self._action_spaces = action_spaces
+        self._considerable_fire_distance = 10
 
     def _check_network_violations(self, bus_status, branch_status):
         from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
@@ -91,13 +92,13 @@ class DataProcessor:
     def check_violations(self, np_action, fire_distance, generators_current_output, bus_threshold=0.1, branch_threshold=0.1):
         bus_status = np.ones(self._state_spaces[0])
         for i in range(self._state_spaces[0]):
-            if fire_distance[i] < 2.0:
-                bus_status[i] = 0
+            if fire_distance[i] == 0.0:
+                bus_status[i] = 1
 
         branch_status = np.ones(self._state_spaces[1])
         for i in range(self._state_spaces[1]):
-            if fire_distance[self._state_spaces[0] + i] < 2.0:
-                branch_status[i] = 0
+            if fire_distance[self._state_spaces[0] + i] == 0.0:
+                branch_status[i] = 1
 
         branch_status = self._check_network_violations(bus_status, branch_status)
         # print("bus status: ", bus_status)
@@ -145,6 +146,42 @@ class DataProcessor:
         }
 
         return action
+
+    def preprocess(self, state, power_generation_scale, explore_network_flag):
+        # state["generator_injection"] = np.array([output / power_generation_scale for output in state["generator_injection"]])
+        # state["load_demand"] = np.array([load_output / power_generation_scale for load_output in state["load_demand"]])
+
+        # state["fire_distance"] = [1 - dist/self._considerable_fire_distance if dist < self._considerable_fire_distance else 0 for dist in state["fire_distance"]]
+
+        fire_distance = []
+        vulnerable_equipment = {}
+        for i, dist in enumerate(state["fire_distance"]):
+            if dist < self._considerable_fire_distance:
+                val = round(1 - dist/self._considerable_fire_distance, 3)
+                if dist < 2.0:
+                # if dist == 0.0:
+                    val = 1
+                fire_distance.append(val)
+                vulnerable_equipment[i] = val
+            else:
+                fire_distance.append(0)
+
+        state["fire_distance"] = fire_distance
+
+        # print("bus_status:", state["bus_status"])
+        # print("branch_status:", state["branch_status"])
+        # print("generator_output:", state["generator_injection"])
+        # print("load_demand:", state["load_demand"])
+        # print("line_flow:", state["line_flow"])
+        # print("theta:", state["theta"])
+        # print("fire_distance:", state["fire_distance"])
+        # print("fire_state:", state["fire_state"])
+
+        if explore_network_flag == False:
+            print("vulnerable equipment: ", vulnerable_equipment)
+
+        return state
+
 
     def get_tf_state(self, state):
         tf_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)

@@ -104,6 +104,7 @@ if __name__ == "__main__":
     load_model_version = 0
     load_episode_num = 0
 
+    power_generation_preprocess_scale = 10
     parameters = Parameters(base_path, save_model_version, args.path_geo)
     parameters.save_parameters()
     parameters.print_parameters()
@@ -139,13 +140,24 @@ if __name__ == "__main__":
         max_reached_step = 0
         episodic_penalty = 0
         episodic_load_loss = 0
+        total_increase_generation = 0
 
-        if not parameters.generator_max_output:
-            generators.set_max_outputs(state["generator_injection"])
+        min_generation = np.sum(state["generator_injection"])
+        # if not parameters.generator_max_output:
+        #     generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
+            current_generation = np.sum(state["generator_injection"])
+            if current_generation < min_generation:
+                min_generation = current_generation
+
+            increased_generation = int(current_generation - min_generation)
+            total_increase_generation += increased_generation
+
             if explore_network_flag == False:
-                print("load_demand:", np.sum(state["load_demand"]), ", generator_injection:", np.sum(state["generator_injection"]) )
+                print("load_demand:", np.sum(state["load_demand"]), ", current_generator:", current_generation,
+                      ", min_generation:", min_generation, ", increased_generation:", increased_generation)
+
 
             tf_state = data_processor.get_tf_state(state)
             nn_action = agent.actor(tf_state)
@@ -168,10 +180,11 @@ if __name__ == "__main__":
 
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]
+            next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale, explore_network_flag)
             state = next_state
 
             if done or (step == max_steps_per_episode - 1):
-                print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_penalty}")
+                print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_penalty}, total_increase_generation: {total_increase_generation}")
                 max_reached_step = step
                 break
 

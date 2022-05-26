@@ -103,8 +103,9 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
     set_gpu_memory_limit()
     base_path = "database_seed_" + str(seed_value)
 
+    power_generation_preprocess_scale = 10
     simulator_resources = SimulatorResources(power_file_path=power_path, geo_file_path=geo_path)
-    generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)
+    generators = Generators(ppc=simulator_resources.ppc, power_generation_preprocess_scale=power_generation_preprocess_scale, ramp_frequency_in_hour=6)
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=geo_path, network_file=power_path,
                         num_tunable_gen=num_of_generator, scaling_factor=1, seed=50)
@@ -135,6 +136,7 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
         max_reached_step = 0
         episodic_reward = 0
         episodic_load_loss = 0
+        state = data_processor.preprocess(state, power_generation_preprocess_scale, explore_network_flag)
 
         if not parameters.generator_max_output:
             generators.set_max_outputs(state["generator_injection"])
@@ -144,7 +146,7 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
             nn_action = agent.actor(tf_state)
 
             net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
-            env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
+            env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"], ramp_scale=power_generation_preprocess_scale)
 
             next_state, reward, done, _ = env.step(env_action)
             # print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
@@ -152,6 +154,7 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
             episodic_reward += reward[0]
             episodic_load_loss += reward[1]
 
+            next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale, explore_network_flag)
             state = next_state
 
             if done: violation_count += 1

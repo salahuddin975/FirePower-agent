@@ -1,5 +1,6 @@
 import os
 import gym
+import pandas as pd
 import random
 import argparse
 import numpy as np
@@ -134,6 +135,7 @@ if __name__ == "__main__":
     episodic_rewards = []
     train_network = False
     explore_network_flag = False
+    df = pd.DataFrame(columns=['episode', 'step', 'reward', 'load_demand', 'current_generation', 'increased_generation'])
 
     for episode in range(total_episode):
         state = env.reset()
@@ -169,6 +171,10 @@ if __name__ == "__main__":
             if explore_network_flag == False:
                 print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", "load_demand:", np.sum(state["load_demand"]), ", current_generation:", current_generation,
                      ", increased_generation:", increased_generation)
+            df = df.append({'episode': episode, 'step': step, 'reward': reward[0], 'load_demand':np.sum(state["load_demand"]),
+                           'current_generation': current_generation, 'increased_generation': increased_generation },
+                           ignore_index=True)
+
             buffer.add_record((state, net_action, reward, next_state, env_action, not done))
 
             episodic_penalty += reward[0]
@@ -218,3 +224,7 @@ if __name__ == "__main__":
         # if (episode % parameters.test_after_episodes == 0) and save_replay_buffer and episode:
         #     print(f"Saving replay buffer at: {episode}")
         #     buffer.save_buffer(save_replay_buffer_version)
+
+    print("saving ...")
+    print(df)
+    df.to_csv("./tools/info.csv", sep='\t')

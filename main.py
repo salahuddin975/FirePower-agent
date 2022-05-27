@@ -167,7 +167,7 @@ if __name__ == "__main__":
             total_increase_generation += increased_generation
 
             if explore_network_flag == False:
-                print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", "load_demand:", np.sum(state["load_demand"]), ", current_generator:", current_generation,
+                print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", "load_demand:", np.sum(state["load_demand"]), ", current_generation:", current_generation,
                      ", increased_generation:", increased_generation)
             buffer.add_record((state, net_action, reward, next_state, env_action, not done))
 

@@ -129,7 +129,7 @@ if __name__ == "__main__":
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
     # agent training
-    total_episode = 100
+    total_episode = 5
     max_steps_per_episode = 300
     num_train_per_episode = 500         # canbe used by loading replay buffer
     episodic_rewards = []

@@ -88,12 +88,13 @@ if __name__ == "__main__":
     set_gpu_memory_limit()
     base_path = "myopic_database_seed_" + str(seed_value)
 
+    ramp_frequency_in_hour = 6
     simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)
-    generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=6)
-    # generators.print_info()
+    generators = Generators(ppc=simulator_resources.ppc, ramp_frequency_in_hour=ramp_frequency_in_hour)
+    generators.print_info()
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power,
-                        num_tunable_gen=generators.get_num_generators(), scaling_factor=1, seed=50)
+                        num_tunable_gen=generators.get_num_generators(), scaling_factor=1, seed=50, sampling_duration = 1/ramp_frequency_in_hour)
     state_spaces = get_state_spaces(env.observation_space)
     action_spaces = get_action_spaces(env.action_space)
 
@@ -142,23 +143,11 @@ if __name__ == "__main__":
         episodic_load_loss = 0
         total_increase_generation = 0
 
-        min_generation = np.sum(state["generator_injection"])
+        pre_generation = np.sum(state["generator_injection"])
         # if not parameters.generator_max_output:
         #     generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
-            current_generation = np.sum(state["generator_injection"])
-            if current_generation < min_generation:
-                min_generation = current_generation
-
-            increased_generation = int(current_generation - min_generation)
-            total_increase_generation += increased_generation
-
-            if explore_network_flag == False:
-                print("load_demand:", np.sum(state["load_demand"]), ", current_generator:", current_generation,
-                      ", min_generation:", min_generation, ", increased_generation:", increased_generation)
-
-
             tf_state = data_processor.get_tf_state(state)
             nn_action = agent.actor(tf_state)
             # print("NN generator output: ", nn_action[0])
@@ -169,13 +158,17 @@ if __name__ == "__main__":
             # print("ramp:", env_action['generator_injection'])
             next_state, reward, done, _ = env.step(env_action)
 
-            # if done:
-            #     new_reward = reward
-            # else:
-            #     new_reward = (reward[0] + (28.5-np.sum(state["load_demand"])) * 100, reward[1])
-            #     print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", ", new:", new_reward[0])
+            current_generation = np.sum(state["generator_injection"])
+            increased_generation = round(current_generation - pre_generation, 4)
+            pre_generation = current_generation
+
+            if increased_generation < 0:
+                increased_generation = 0
+            total_increase_generation += increased_generation
+
             if explore_network_flag == False:
-                print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}")
+                print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", "load_demand:", np.sum(state["load_demand"]), ", current_generator:", current_generation,
+                     ", increased_generation:", increased_generation)
             buffer.add_record((state, net_action, reward, next_state, env_action, not done))
 
             episodic_penalty += reward[0]

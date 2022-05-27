@@ -225,6 +225,5 @@ if __name__ == "__main__":
         #     print(f"Saving replay buffer at: {episode}")
         #     buffer.save_buffer(save_replay_buffer_version)
 
-    print("saving ...")
-    print(df)
+    # print(df)
     df.to_csv("info.csv", sep='\t')

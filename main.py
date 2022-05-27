@@ -227,4 +227,4 @@ if __name__ == "__main__":
 
     print("saving ...")
     print(df)
-    df.to_csv("./tools/info.csv", sep='\t')
+    df.to_csv("info.csv", sep='\t')

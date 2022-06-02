@@ -92,13 +92,13 @@ class DataProcessor:
     def check_violations(self, np_action, fire_distance, generators_current_output, bus_threshold=0.1, branch_threshold=0.1):
         bus_status = np.ones(self._state_spaces[0])
         for i in range(self._state_spaces[0]):
-            if fire_distance[i] == 0.0:
-                bus_status[i] = 1
+            if fire_distance[i] == 1:
+                bus_status[i] = 0
 
         branch_status = np.ones(self._state_spaces[1])
         for i in range(self._state_spaces[1]):
-            if fire_distance[self._state_spaces[0] + i] == 0.0:
-                branch_status[i] = 1
+            if fire_distance[self._state_spaces[0] + i] == 1:
+                branch_status[i] = 0
 
         branch_status = self._check_network_violations(bus_status, branch_status)
         # print("bus status: ", bus_status)
@@ -177,8 +177,8 @@ class DataProcessor:
         # print("fire_distance:", state["fire_distance"])
         # print("fire_state:", state["fire_state"])
 
-        if explore_network_flag == False:
-            print("vulnerable equipment: ", vulnerable_equipment)
+        # if explore_network_flag == False:
+        #     print("vulnerable equipment: ", vulnerable_equipment)
 
         return state
 

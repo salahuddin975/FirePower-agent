@@ -158,10 +158,12 @@ if __name__ == "__main__":
             env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"])
 
             # print("ramp:", env_action['generator_injection'])
+            env_action["step_count"] = step
+            env_action["episode"] = episode
             next_state, reward, done, _ = env.step(env_action)
 
-            current_generation = np.sum(state["generator_injection"])
-            increased_generation = round(current_generation - pre_generation, 4)
+            current_generation = np.sum(next_state["generator_injection"])
+            increased_generation = round(current_generation - pre_generation, 3)
             pre_generation = current_generation
 
             if increased_generation < 0:
@@ -169,9 +171,9 @@ if __name__ == "__main__":
             total_increase_generation += increased_generation
 
             if explore_network_flag == False:
-                print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}", "load_demand:", np.sum(state["load_demand"]), ", current_generation:", current_generation,
+                print(f"Episode: {episode}, step: {step}, reward: {reward[0]}", ", load_demand:", np.sum(next_state["load_demand"]), ", current_generation:", current_generation,
                      ", increased_generation:", increased_generation)
-            df = df.append({'episode': episode, 'step': step, 'reward': reward[0], 'load_demand':np.sum(state["load_demand"]),
+            df = df.append({'episode': episode, 'step': step, 'reward': reward[0], 'load_demand':np.sum(next_state["load_demand"]),
                            'current_generation': current_generation, 'increased_generation': increased_generation },
                            ignore_index=True)
 

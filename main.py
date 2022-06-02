@@ -146,8 +146,8 @@ if __name__ == "__main__":
         total_increase_generation = 0
 
         pre_generation = np.sum(state["generator_injection"])
-        # if not parameters.generator_max_output:
-        #     generators.set_max_outputs(state["generator_injection"])
+        if not parameters.generator_max_output:
+            generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
             tf_state = data_processor.get_tf_state(state)

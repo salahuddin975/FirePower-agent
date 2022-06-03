@@ -34,14 +34,14 @@ class Visualizer:
         draw = ImageDraw.Draw(image)
 
         buses = self.conf_data['bus_ids']
-        for i, branch in enumerate(self.branches):
+        for branch in self.conf_data['branches']:
             xy_from = buses[branch[0]][1:3]
             xy_to = buses[branch[1]][1:3]
-            color = ImageColor.getrgb('gold') if branch_status[i] == 0 else ImageColor.getrgb('black')
+            color = ImageColor.getrgb('gold') if branch_status[(branch[0], branch[1])] else ImageColor.getrgb('black')
             draw.line(xy_from + xy_to, fill=color)
 
         for bus in self.conf_data['bus_ids']:
-            color = ImageColor.getrgb('gold') if bus_status[bus[0]] == 0 else ImageColor.getrgb('black')
+            color = ImageColor.getrgb('gold') if bus_status[bus[0]] else ImageColor.getrgb('black')
             image.putpixel((bus[1], bus[2]), color)
 
         image = image.resize((self.conf_data['cols'] * PPC, self.conf_data['rows'] * PPC), Image.NEAREST)
@@ -51,14 +51,14 @@ class Visualizer:
 
         draw = ImageDraw.Draw(image)
         draw.text((FONT_SIZE // 2, FONT_SIZE // 2),
-                  f"Episode: {episode}   Step: {step}   Generation: {sum(generation):.1f}",
+                  f"Episode: {episode}   Step: {step}   Generation: {sum((generation[bus] for bus in generation)):.1f}",
                   font=font, fill=ImageColor.getrgb('white'), stroke_width=FONT_STROKE_WIDTH,
                   stroke_fill=ImageColor.getrgb('black'))
 
         for bus in self.conf_data['bus_ids']:
             x = bus[1]
             y = bus[2]
-            if generation[bus[0]]:
+            if bus[0] in generation:
                 text = f"{bus[0]}: {generation[bus[0]]:.1f}"
             else:
                 text = f"{bus[0]}"

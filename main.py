@@ -10,6 +10,7 @@ from agent import Agent
 from replay_buffer import ReplayBuffer
 from data_processor import DataProcessor, Tensorboard, SummaryWriter
 from simulator_resorces import SimulatorResources, Generators
+from fire_propagation_visualizer import Visualizer
 from collections import namedtuple
 
 
@@ -130,6 +131,7 @@ if __name__ == "__main__":
                           buffer_capacity=1000000, batch_size=parameters.batch_size)
 
     tensorboard = Tensorboard(base_path)
+    visualizer = Visualizer(args.path_geo)
     summary_writer = SummaryWriter(base_path, save_model_version, load_episode_num)
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
@@ -168,7 +170,13 @@ if __name__ == "__main__":
             # print("original+noise+violation_check:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]),0)))
 
             # print("ramp:", env_action['generator_injection'])
-            next_state, reward, done, _ = env.step(env_action)
+            env_action["episode"] = episode
+            env_action["step_count"] = step
+
+            next_state, reward, done, cells_info = env.step(env_action)
+
+            image = visualizer.draw_map(episode, step, cells_info[0], cells_info[1], next_state["bus_status"], next_state["branch_status"], next_state["generator_injection"])
+            image.save(f"fire_propagation_{episode}_{step}.png")
 
             main_loop_info = MainLoopInfo(tf.math.reduce_mean(nn_action), agent.get_critic_value(tf_state, nn_action),
                                           tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),

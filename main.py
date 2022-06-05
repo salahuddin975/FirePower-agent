@@ -131,7 +131,7 @@ if __name__ == "__main__":
                           buffer_capacity=1000000, batch_size=parameters.batch_size)
 
     tensorboard = Tensorboard(base_path)
-    visualizer = Visualizer(args.path_geo)
+    visualizer = Visualizer(simulator_resources, args.path_geo)
     summary_writer = SummaryWriter(base_path, save_model_version, load_episode_num)
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 

@@ -2,6 +2,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageColor
 import json
 import random
+from pypower.idx_brch import *
+
 
 PPC = 6  # pixel per cell
 LINE_WIDTH = PPC // 3
@@ -10,7 +12,9 @@ FONT_STROKE_WIDTH = FONT_SIZE // 16
 
 
 class Visualizer:
-    def __init__(self, conf_file):
+    def __init__(self, simulator_resources, conf_file):
+        self.simulator_resources = simulator_resources
+
         with open(conf_file) as fin:
             self.conf_data = json.load(fin)
 
@@ -21,7 +25,22 @@ class Visualizer:
 
         self._generators = [0, 1, 6, 12, 13, 14, 15, 17, 20, 21, 22]
 
+    def _check_network_violations_branch(self, bus_status, branch_status):
+        from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
+        to_buses = self.simulator_resources.ppc["branch"][:, T_BUS].astype('int')
+
+        for bus in range(bus_status.size):
+            is_active = bus_status[bus]
+            for branch in range(branch_status.size):
+                if bus in [from_buses[branch], to_buses[branch]]:
+                    if is_active == 0:
+                        branch_status[branch] = 0
+
+        return branch_status
+
     def draw_map(self, episode, step, fire_cells, burnt_cells, bus_status, branch_status, generation):
+        branch_status = self._check_network_violations_branch(bus_status, branch_status)
+
         image = Image.new('RGB', (self.conf_data['cols'], self.conf_data['rows']), ImageColor.getrgb('darkgreen'))
 
         for cell in self.conf_data['fuel_type']:

@@ -14,4 +14,4 @@ episode=400
 #scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/FirePower-agent-private/database_seed_${seed}/parameters*.txt  ./../database_seed_50/
 #scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/FirePower-agent-private/fire-power-${seed}.log  ./../logs/
 
-scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/\*.png  .
+scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/fire_propagation_0_\*.png  .

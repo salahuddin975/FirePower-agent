@@ -145,7 +145,7 @@ if __name__ == "__main__":
 
     # images[0].save("map.gif", save_all=True, append_images=images[1:], loop=True)
 
-# scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/\*.png  .
+# scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/fire_propagation_0_\*.png  .
 
 # ffmpeg -framerate 30 -pattern_type sequence -i 'fire_propagation_0_%d.png' -c:v libx264 -pix_fmt yuv420p episode_0.mp4
 # for i in `seq 0 2`; do ffmpeg -framerate 30 -pattern_type sequence -i fire_propagation_${i}_%d.png -c:v libx264 -pix_fmt yuv420p episode_${i}.mp4 ; done

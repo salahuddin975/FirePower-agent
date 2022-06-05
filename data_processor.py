@@ -173,6 +173,13 @@ class DataProcessor:
             "generator_injection": ramp * ramp_scale,
         }
 
+        # action = {
+        #     "bus_status": np.ones(24),
+        #     "branch_status": np.ones(34),
+        #     "generator_selector": np.array([24] * 11),
+        #     "generator_injection": np.zeros(11, int),
+        # }
+
         return action
 
     def explore_network(self, nn_action, explore_network, noise_range=0.5):

@@ -6,6 +6,8 @@ import copy
 import numpy as np
 import tensorflow as tf
 from pypower.idx_brch import *
+from scipy.optimize import Bounds
+
 
 class OUActionNoise:
     def __init__(self, mean, std_deviation, theta=0.15, dt=1e-2, x_initial=None):
@@ -158,8 +160,18 @@ class DataProcessor:
 
 
         # minimize RMSE(x_i * total_load_demand, generators_current_output)
+
+
+
         # s.t. generators_min_output < generators_current_output < generators_max_output
+        output_bounds = Bounds(generators_min_output, generators_max_output)
+
+
+
         # s.t. abs(generators_current_output - x_i * total_load_demand) < generators_max_ramp
+        ramp_bounds = Bounds(np.zeros(len(generators_max_ramp)), generators_max_ramp)
+
+
 
 
 

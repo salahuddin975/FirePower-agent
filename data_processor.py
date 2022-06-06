@@ -6,7 +6,8 @@ import copy
 import numpy as np
 import tensorflow as tf
 from pypower.idx_brch import *
-from scipy.optimize import Bounds
+from scipy.optimize import Bounds, minimize, LinearConstraint
+from scipy import stats, optimize
 
 
 class OUActionNoise:
@@ -145,11 +146,18 @@ class DataProcessor:
 
         return generators_ramp
 
+
+
+
     def _clip_ramp_values(self, load_demand, generators_current_output, nn_output):
         total_load_demand = np.sum(load_demand)
         generators_min_output = self.generators.get_min_outputs()
         generators_max_output = self.generators.get_max_outputs()
         generators_max_ramp = self.generators.get_max_ramps()
+
+        epsilon = 0.01
+        assert 1 + epsilon > np.sum(nn_output) > 1-epsilon, "Not total value is 1"
+        assert np.min(nn_output) >= 0, "value is negative"
 
         output = nn_output * total_load_demand
 
@@ -157,23 +165,20 @@ class DataProcessor:
               ", min_output:", np.sum(generators_min_output), ", max_output:", np.sum(generators_max_output),
               ", max_total_ramp:", np.sum(generators_max_ramp), ", output: ", np.sum(output))
 
+        lower = np.maximum(generators_current_output - generators_max_ramp, generators_min_output)
+        upper = np.minimum(generators_current_output + generators_max_ramp, generators_max_output)
 
+        feasible_output = minimize(lambda feasible_output: np.sum(np.power((output - feasible_output), 2)),
+                 generators_current_output, options={'verbose': 1},
+                 bounds=[(lower[i], upper[i]) for i in range(len(upper))],
+                 constraints=LinearConstraint(A=np.transpose(np.ones(len(load_demand))),
+                 lb=np.array(total_load_demand-epsilon), ub=total_load_demand+epsilon), method='trust-constr')
 
-        # minimize RMSE(x_i * total_load_demand, generators_current_output)
+        ramp_value = feasible_output - generators_current_output
 
-
-
-        # s.t. generators_min_output < generators_current_output < generators_max_output
-        output_bounds = Bounds(generators_min_output, generators_max_output)
-
-
-
-        # s.t. abs(generators_current_output - x_i * total_load_demand) < generators_max_ramp
-        ramp_bounds = Bounds(np.zeros(len(generators_max_ramp)), generators_max_ramp)
-
-
-
-
+        print("feasible_output:", feasible_output)
+        print("ramp_value:", ramp_value)
+        return ramp_value
 
 
     def check_violations(self, np_action, state, ramp_scale):
@@ -240,7 +245,9 @@ class DataProcessor:
         for i in range(nn_output.size):
             if explore_network:
                 nn_output[i] = nn_output[i] + self._ou_noise() # random.uniform(-noise_range, noise_range)
-        nn_output = np.clip(nn_output, 0, 1)
+        nn_output = np.clip(nn_output, 0, None)
+        nn_output = nn_output / np.sum(nn_output)
+
         # print("nn output: ", nn_output)
 
         action = {

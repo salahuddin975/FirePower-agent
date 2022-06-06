@@ -159,6 +159,7 @@ class DataProcessor:
 
         # minimize RMSE(x_i * total_load_demand, generators_current_output)
         # s.t. generators_min_output < generators_current_output < generators_max_output
+        # s.t. abs(generators_current_output - x_i * total_load_demand) < generators_max_ramp
 
 
 

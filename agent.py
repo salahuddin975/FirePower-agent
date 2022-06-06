@@ -50,6 +50,7 @@ class Agent:
 
         self._state_spaces =  copy.deepcopy(state_spaces)
         self._action_spaces =  copy.deepcopy(action_spaces)
+        self._num_of_active_generators = self._action_spaces[3]
 
         self.actor = self._actor_model()
         self._target_actor = self._actor_model()
@@ -200,7 +201,7 @@ class Agent:
 
         hidden = layers.Dense(512, activation="relu") (state)
         hidden = layers.Dense(512, activation="relu") (hidden)
-        gen_inj_output = layers.Dense(self._action_spaces[3], activation="softmax") (hidden)
+        gen_inj_output = layers.Dense(self._num_of_active_generators, activation="softmax") (hidden)
 
         model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input],
                                [gen_inj_output])

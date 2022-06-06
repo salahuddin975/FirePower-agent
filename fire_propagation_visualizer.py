@@ -12,7 +12,8 @@ FONT_STROKE_WIDTH = FONT_SIZE // 16
 
 
 class Visualizer:
-    def __init__(self, simulator_resources, conf_file):
+    def __init__(self, generators, simulator_resources, conf_file):
+        self._generators = generators
         self.simulator_resources = simulator_resources
 
         with open(conf_file) as fin:
@@ -23,7 +24,6 @@ class Visualizer:
             if i not in self.branches:
                 self.branches.append(i)
 
-        self._generators = [0, 1, 6, 12, 13, 14, 15, 17, 20, 21, 22]
 
     def _check_network_violations_branch(self, bus_status, branch_status):
         from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
@@ -81,7 +81,7 @@ class Visualizer:
             x = bus[1]
             y = bus[2]
             # if generation[bus[0]]:
-            if bus[0] in self._generators:
+            if bus[0] in self._generators.get_generators():
                 text = f"{bus[0]}: {generation[bus[0]]:.1f}"
                 color = ImageColor.getrgb('white')
             else:

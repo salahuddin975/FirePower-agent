@@ -96,13 +96,14 @@ if __name__ == "__main__":
     set_gpu_memory_limit()
     base_path = "database_seed_" + str(seed_value)
 
+    ramp_frequency_in_hour = 20
     power_generation_preprocess_scale = 10
     simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)
-    generators = Generators(ppc=simulator_resources.ppc, power_generation_preprocess_scale=power_generation_preprocess_scale, ramp_frequency_in_hour=6)
+    generators = Generators(ppc=simulator_resources.ppc, power_generation_preprocess_scale=power_generation_preprocess_scale, ramp_frequency_in_hour=ramp_frequency_in_hour)
     # generators.print_info()
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power,
-                        num_tunable_gen=generators.get_num_generators(), scaling_factor=1, seed=seed_value if train_network else 50)
+                        num_tunable_gen=generators.get_num_generators(), scaling_factor=1, sampling_duration=1/ramp_frequency_in_hour, seed=seed_value if train_network else 50)
     state_spaces = get_state_spaces(env.observation_space)
     action_spaces = get_action_spaces(env.action_space)
 
@@ -186,8 +187,8 @@ if __name__ == "__main__":
             reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), reward[0], done)
             tensorboard.step_info(main_loop_info, reward_info)
 
-            if explore_network_flag == False:
-                print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
+            # if explore_network_flag == False:
+            print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
                       f" generator_injection: {np.sum(state['generator_injection'])}, reward: {reward[0]}")
 
             next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale, explore_network_flag)

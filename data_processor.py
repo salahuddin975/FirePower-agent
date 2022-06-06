@@ -143,16 +143,21 @@ class DataProcessor:
 
         return generators_ramp
 
-    def check_violations(self, np_action, fire_distance, generators_current_output, ramp_scale):
-        bus_status = np.ones(self._state_spaces[0])
-        for i in range(self._state_spaces[0]):
-            if fire_distance[i] == 1:
-                bus_status[i] = 0
+    def check_violations(self, np_action, state, ramp_scale):
+        bus_status = np.deepcopy(state["bus_status"])
+        branch_status = np.deepcopy(state["branch_status"])
+        generators_current_output = state["generator_injection"],
 
-        branch_status = np.ones(self._state_spaces[1])
-        for i in range(self._state_spaces[1]):
-            if fire_distance[self._state_spaces[0] + i] == 1:
-                branch_status[i] = 0
+        # fire_distance = state["fire_distance"]
+        # bus_status = np.ones(self._state_spaces[0])
+        # for i in range(self._state_spaces[0]):
+        #     if fire_distance[i] == 1:
+        #         bus_status[i] = 0
+
+        # branch_status = np.ones(self._state_spaces[1])
+        # for i in range(self._state_spaces[1]):
+        #     if fire_distance[self._state_spaces[0] + i] == 1:
+        #         branch_status[i] = 0
 
         branch_status = self._check_network_violations_branch(bus_status, branch_status)
         bus_status = self._check_network_violations_bus(bus_status, branch_status)
@@ -221,14 +226,25 @@ class DataProcessor:
             if dist < self._considerable_fire_distance:
                 val = round(1 - dist/self._considerable_fire_distance, 3)
                 # if dist < 2.0:
-                if dist == 0.0:
-                    val = 1
+                # if dist == 0.0:
+                #     val = 1
                 fire_distance.append(val)
                 vulnerable_equipment[i] = val
             else:
                 fire_distance.append(0)
 
         state["fire_distance"] = fire_distance
+
+        num_bus = len(state["bus_status"])
+        for i in range(num_bus):
+            if state["bus_status"][i] == 0:
+                fire_distance[i] = 1
+                vulnerable_equipment[i] = 1
+
+        for i in range(len(state["branch_status"])):
+            if state["branch_status"][i] == 0:
+                fire_distance[num_bus + i] = 1
+                vulnerable_equipment[num_bus + i] = 1
 
         # print("bus_status:", state["bus_status"])
         # print("branch_status:", state["branch_status"])

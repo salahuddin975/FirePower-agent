@@ -35,7 +35,7 @@ TensorboardInfo = namedtuple("TensorboardInfo",
                               "actor_actions", "critic_value_with_actor_actions", "actor_loss"])
 
 class Agent:
-    def __init__(self, base_path, state_spaces, action_spaces):
+    def __init__(self, base_path, state_spaces, action_spaces, generators):
         self._gamma = 0.9      # discount factor
         self._tau = 0.005       # used to update target network
         actor_lr = 0.001
@@ -48,8 +48,10 @@ class Agent:
         self._actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
         self._critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
 
-        self._state_spaces =  copy.deepcopy(state_spaces)
-        self._action_spaces =  copy.deepcopy(action_spaces)
+        self._state_spaces = copy.deepcopy(state_spaces)
+        self._action_spaces = copy.deepcopy(action_spaces)
+
+        self._generators = generators
         self._num_of_active_generators = self._action_spaces[3]
 
         self.actor = self._actor_model()

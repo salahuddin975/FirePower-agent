@@ -118,7 +118,7 @@ if __name__ == "__main__":
     parameters.save_parameters()
     parameters.print_parameters()
 
-    agent = Agent(base_path, state_spaces, action_spaces)
+    agent = Agent(base_path, state_spaces, action_spaces, generators)
     if load_model:
         agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
@@ -176,7 +176,7 @@ if __name__ == "__main__":
 
             next_state, reward, done, cells_info = env.step(env_action)
 
-            image = visualizer.draw_map(episode, step, cells_info[0], cells_info[1], next_state["bus_status"], next_state["branch_status"], next_state["generator_injection"])
+            image = visualizer.draw_map(episode, step, cells_info, next_state)
             image.save(f"fire_propagation_{episode}_{step}.png")
 
             main_loop_info = MainLoopInfo(tf.math.reduce_mean(nn_action), agent.get_critic_value(tf_state, nn_action),

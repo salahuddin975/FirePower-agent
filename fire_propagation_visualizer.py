@@ -2,6 +2,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageColor
 import json
 import random
+import copy
 from pypower.idx_brch import *
 
 
@@ -38,7 +39,12 @@ class Visualizer:
 
         return branch_status
 
-    def draw_map(self, episode, step, fire_cells, burnt_cells, bus_status, branch_status, generation):
+    def draw_map(self, episode, step, cells_info, state):
+        burning_cells = cells_info[0]
+        burnt_cells = cells_info[1]
+        bus_status = copy.deepcopy(state["bus_status"])
+        branch_status = copy.deepcopy(state["branch_status"])
+        generation = copy.deepcopy(state["generator_injection"])
         branch_status = self._check_network_violations_branch(bus_status, branch_status)
 
         image = Image.new('RGB', (self.conf_data['cols'], self.conf_data['rows']), ImageColor.getrgb('darkgreen'))
@@ -47,7 +53,7 @@ class Visualizer:
             assert (cell[2] == 0)
             image.putpixel((cell[0], cell[1]), ImageColor.getrgb('midnightblue'))
 
-        for fire_cell in fire_cells:
+        for fire_cell in burning_cells:
             image.putpixel((fire_cell[1], fire_cell[0]), ImageColor.getrgb('crimson'))
 
         for burnt_cell in burnt_cells:

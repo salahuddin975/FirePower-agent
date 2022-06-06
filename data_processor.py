@@ -44,7 +44,6 @@ class DataProcessor:
         self._branches = [(0, 1),(0, 2),(0, 4),(1, 3),(1, 5),(2, 8),(2, 23),(3, 8),(4, 9),(5, 9),(6, 7),(7, 8),(7, 9),(8, 10),
             (8, 11),(9, 10),(9, 11),(10, 12),(10, 13),(11, 12),(11, 22),(12, 22),(13, 15),(14, 15),(14, 20),
             (14, 23),(15, 16),(15, 18),(16, 17),(16, 21),(17, 20),(18, 19),(19, 22),(20, 21)]
-        self._generators = [0,  1,  6, 12, 13, 14, 15, 17, 20, 21, 22]
 
     def _check_network_violations_branch(self, bus_status, branch_status):
         from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
@@ -71,12 +70,12 @@ class DataProcessor:
                 generator_sets[x].remove((x,y))
                 generator_sets[y].remove((x,y))
 
-                if len(generator_sets[x]) == 0 and x in self._generators:
-                    index = self._generators.index(x)
+                if len(generator_sets[x]) == 0 and x in self.generators.get_generators():
+                    index = self.generators.get_generators().index(x)
                     bus_status[index] = 0
 
-                if len(generator_sets[y]) == 0 and y in self._generators:
-                    index = self._generators.index(y)
+                if len(generator_sets[y]) == 0 and y in self.generators.get_generators():
+                    index = self.generators.get_generators().index(y)
                     bus_status[index] = 0
 
         # print("bus_status:", bus_status)

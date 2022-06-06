@@ -14,7 +14,7 @@ class Generators:
         self._generators_max_output = np.copy(ppc["gen"][:, PMAX] / (power_generation_preprocess_scale * ppc["baseMVA"]))
         self._generators_max_ramp = np.copy(ppc["gen"][:, RAMP_10] / (power_generation_preprocess_scale * ppc["baseMVA"] * ramp_frequency_in_hour))
 
-        # self.remove_generator(13)
+        self.remove_generator(13)
 
     def remove_generator(self, generator):
         index = -1
@@ -23,8 +23,11 @@ class Generators:
                 index = i
 
         if index != -1:
-            self._generators = np.delete(self._generators, index)
             self._num_generators -= 1
+            self._generators = np.delete(self._generators, index)
+            self._generators_min_output = np.delete(self._generators_min_output, index)
+            self._generators_max_output = np.delete(self._generators_max_output, index)
+            self._generators_max_ramp = np.delete(self._generators_max_ramp, index)
 
     def get_generators(self):
         return self._generators

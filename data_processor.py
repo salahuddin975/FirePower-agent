@@ -149,35 +149,46 @@ class DataProcessor:
 
 
 
-    def _clip_ramp_values(self, load_demand, generators_current_output, nn_output):
+    def _clip_ramp_values(self, load_demand, generators_output, nn_output):
+        num_generators = self.generators.get_num_generators()
+        generators_current_output = np.zeros(num_generators)
+        for i in range(num_generators):
+            generators_current_output[i] = generators_output[self.generators.get_generators()[i]]
+
         total_load_demand = np.sum(load_demand)
         generators_min_output = self.generators.get_min_outputs()
         generators_max_output = self.generators.get_max_outputs()
         generators_max_ramp = self.generators.get_max_ramps()
 
         epsilon = 0.01
+        print("nn_output_sum: ", np.sum(nn_output))
         assert 1 + epsilon > np.sum(nn_output) > 1-epsilon, "Not total value is 1"
         assert np.min(nn_output) >= 0, "value is negative"
 
         output = nn_output * total_load_demand
 
-        print("total_load_demand:", total_load_demand, ", current_output: ", np.sum(generators_current_output),
-              ", min_output:", np.sum(generators_min_output), ", max_output:", np.sum(generators_max_output),
-              ", max_total_ramp:", np.sum(generators_max_ramp), ", output: ", np.sum(output))
+        # print("total_load_demand:", total_load_demand, ", current_output: ", np.sum(generators_current_output),
+        #       ", min_output:", np.sum(generators_min_output), ", max_output:", np.sum(generators_max_output),
+        #       ", max_total_ramp:", np.sum(generators_max_ramp), ", output: ", np.sum(output))
 
         lower = np.maximum(generators_current_output - generators_max_ramp, generators_min_output)
         upper = np.minimum(generators_current_output + generators_max_ramp, generators_max_output)
 
         feasible_output = minimize(lambda feasible_output: np.sum(np.power((output - feasible_output), 2)),
                  generators_current_output, options={'verbose': 1},
-                 bounds=[(lower[i], upper[i]) for i in range(len(upper))],
-                 constraints=LinearConstraint(A=np.transpose(np.ones(len(load_demand))),
-                 lb=np.array(total_load_demand-epsilon), ub=total_load_demand+epsilon), method='trust-constr')
+                 bounds=[(lower[i], upper[i]) for i in range(len(upper))])
 
-        ramp_value = feasible_output - generators_current_output
+        # feasible_output = minimize(lambda feasible_output: np.sum(np.power((output - feasible_output), 2)),
+        #          generators_current_output, options={'verbose': 1},
+        #          bounds=[(lower[i], upper[i]) for i in range(len(upper))],
+        #          constraints=LinearConstraint(A=np.transpose(np.ones(len(load_demand))),
+        #          lb=np.array(total_load_demand-epsilon), ub=total_load_demand+epsilon), method='trust-constr')
 
-        print("feasible_output:", feasible_output)
+
+        ramp_value = feasible_output.x - generators_current_output
+        print("feasible_output:", feasible_output.x)
         print("ramp_value:", ramp_value)
+
         return ramp_value
 
 
@@ -204,26 +215,26 @@ class DataProcessor:
         # print("bus status: ", bus_status)
         # print("branch status: ", branch_status)
 
-        self._clip_ramp_values(load_demand, generators_current_output, nn_output)
+        ramp = self._clip_ramp_values(load_demand, generators_current_output, nn_output)
 
         # ramp = self._clip_ramp_values(nn_output, generators_current_output)
         # ramp = self._check_bus_generator_violation(bus_status, ramp)
         # print("ramp: ", ramp)
 
 
-        # action = {
-        #     "bus_status": bus_status,
-        #     "branch_status": branch_status,
-        #     "generator_selector": self.generators.get_generators(),
-        #     "generator_injection": ramp * ramp_scale,
-        # }
-
         action = {
-            "bus_status": np.ones(24),
-            "branch_status": np.ones(34),
-            "generator_selector": np.array([24] * 10),
-            "generator_injection": np.zeros(10, int),
+            "bus_status": bus_status,
+            "branch_status": branch_status,
+            "generator_selector": self.generators.get_generators(),
+            "generator_injection": ramp,
         }
+
+        # action = {
+        #     "bus_status": np.ones(24),
+        #     "branch_status": np.ones(34),
+        #     "generator_selector": np.array([24] * 10),
+        #     "generator_injection": np.zeros(10, int),
+        # }
 
         return action
 

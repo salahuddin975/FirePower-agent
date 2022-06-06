@@ -42,8 +42,8 @@ class DataProcessor:
         self._ou_noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(std_dev) * np.ones(1))
 
         self._branches = [(0, 1),(0, 2),(0, 4),(1, 3),(1, 5),(2, 8),(2, 23),(3, 8),(4, 9),(5, 9),(6, 7),(7, 8),(7, 9),(8, 10),
-            (8, 11),(9, 10),(9, 11),(10, 12),(10, 13),(11, 12),(11, 22),(12, 22),(13, 15),(14, 15),(14, 20),
-            (14, 23),(15, 16),(15, 18),(16, 17),(16, 21),(17, 20),(18, 19),(19, 22),(20, 21)]
+                          (8, 11),(9, 10),(9, 11),(10, 12),(10, 13),(11, 12),(11, 22),(12, 22),(13, 15),(14, 15),(14, 20),
+                          (14, 23),(15, 16),(15, 18),(16, 17),(16, 21),(17, 20),(18, 19),(19, 22),(20, 21)]
 
     def _check_network_violations_branch(self, bus_status, branch_status):
         from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
@@ -94,7 +94,7 @@ class DataProcessor:
                         ramp[i] = load_loss
                     load_loss = load_loss - ramp[i]
 
-    def _clip_ramp_values(self, nn_output, generators_output):
+    def _clip_ramp_values1(self, nn_output, generators_output):     # previous way of calculating ramp
         # print("generators output: ", generators_output)
         # print("nn ratio output: ", nn_output)
 
@@ -143,10 +143,32 @@ class DataProcessor:
 
         return generators_ramp
 
+    def _clip_ramp_values(self, load_demand, generators_current_output, nn_output):
+        total_load_demand = np.sum(load_demand)
+        generators_min_output = self.generators.get_min_outputs()
+        generators_max_output = self.generators.get_max_outputs()
+        generators_max_ramp = self.generators.get_max_ramps()
+
+        output = nn_output * total_load_demand
+
+        print("total_load_demand:", total_load_demand, ", current_output: ", np.sum(generators_current_output),
+              ", min_output:", np.sum(generators_min_output), ", max_output:", np.sum(generators_max_output),
+              ", max_total_ramp:", np.sum(generators_max_ramp), ", output: ", np.sum(output))
+
+
+
+        # minimize RMSE(x_i * total_load_demand, generators_current_output)
+        # s.t. generators_min_output < generators_current_output < generators_max_output
+
+
+
+
     def check_violations(self, np_action, state, ramp_scale):
         bus_status = copy.deepcopy(state["bus_status"])
         branch_status = copy.deepcopy(state["branch_status"])
+        load_demand = copy.deepcopy(state["load_demand"])
         generators_current_output = copy.deepcopy(state["generator_injection"])
+        nn_output = np_action["generator_injection"]
 
         # fire_distance = state["fire_distance"]
         # bus_status = np.ones(self._state_spaces[0])
@@ -164,26 +186,26 @@ class DataProcessor:
         # print("bus status: ", bus_status)
         # print("branch status: ", branch_status)
 
-        nn_output = np_action["generator_injection"]
-        ramp = self._clip_ramp_values(nn_output, generators_current_output)
-        ramp = self._check_bus_generator_violation(bus_status, ramp)
+        self._clip_ramp_values(load_demand, generators_current_output, nn_output)
+
+        # ramp = self._clip_ramp_values(nn_output, generators_current_output)
+        # ramp = self._check_bus_generator_violation(bus_status, ramp)
         # print("ramp: ", ramp)
 
-        # generators_ramp = np.zeros(11, int)      # overwrite by dummy value (need to remove)
-
-        action = {
-            "bus_status": bus_status,
-            "branch_status": branch_status,
-            "generator_selector": self.generators.get_generators(),
-            "generator_injection": ramp * ramp_scale,
-        }
 
         # action = {
-        #     "bus_status": np.ones(24),
-        #     "branch_status": np.ones(34),
-        #     "generator_selector": np.array([24] * 11),
-        #     "generator_injection": np.zeros(11, int),
+        #     "bus_status": bus_status,
+        #     "branch_status": branch_status,
+        #     "generator_selector": self.generators.get_generators(),
+        #     "generator_injection": ramp * ramp_scale,
         # }
+
+        action = {
+            "bus_status": np.ones(24),
+            "branch_status": np.ones(34),
+            "generator_selector": np.array([24] * 10),
+            "generator_injection": np.zeros(10, int),
+        }
 
         return action
 

@@ -2,6 +2,7 @@ import os
 import csv
 import random
 import datetime
+import copy
 import numpy as np
 import tensorflow as tf
 from pypower.idx_brch import *
@@ -144,9 +145,9 @@ class DataProcessor:
         return generators_ramp
 
     def check_violations(self, np_action, state, ramp_scale):
-        bus_status = np.deepcopy(state["bus_status"])
-        branch_status = np.deepcopy(state["branch_status"])
-        generators_current_output = state["generator_injection"],
+        bus_status = copy.deepcopy(state["bus_status"])
+        branch_status = copy.deepcopy(state["branch_status"])
+        generators_current_output = copy.deepcopy(state["generator_injection"])
 
         # fire_distance = state["fire_distance"]
         # bus_status = np.ones(self._state_spaces[0])

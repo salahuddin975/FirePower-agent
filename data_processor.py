@@ -174,16 +174,26 @@ class DataProcessor:
         lower = np.maximum(generators_current_output - generators_max_ramp, generators_min_output)
         upper = np.minimum(generators_current_output + generators_max_ramp, generators_max_output)
 
-        feasible_output = minimize(lambda feasible_output: np.sum(np.power((output - feasible_output), 2)),
-                 generators_current_output, options={'verbose': 1},
-                 bounds=[(lower[i], upper[i]) for i in range(len(upper))])
+        # print("generators_current_output: ", generators_current_output)
+        # print("generators max output: ", generators_max_output)
+        # print("generators min output: ", generators_min_output)
+        # print("lower: ", lower)
+        # print("upper: ", upper)
 
         # feasible_output = minimize(lambda feasible_output: np.sum(np.power((output - feasible_output), 2)),
         #          generators_current_output, options={'verbose': 1},
-        #          bounds=[(lower[i], upper[i]) for i in range(len(upper))],
-        #          constraints=LinearConstraint(A=np.transpose(np.ones(len(load_demand))),
-        #          lb=np.array(total_load_demand-epsilon), ub=total_load_demand+epsilon), method='trust-constr')
+        #          bounds=[(lower[i], upper[i]) for i in range(len(upper))])
 
+        linear_constraint = LinearConstraint(A=np.transpose(np.ones(len(generators_current_output))), lb=np.array(total_load_demand - epsilon),
+                                             ub=total_load_demand + epsilon)
+
+        feasible_output = minimize(lambda feasible_output: np.sum(np.power((output - feasible_output), 2)),
+                 generators_current_output, options={'verbose': 1},
+                 bounds=[(lower[i], upper[i]) for i in range(len(upper))],
+                 constraints=[linear_constraint], method='trust-constr')
+
+
+        print("total_load_demand:", total_load_demand, ", total_feasible_output:", np.sum(feasible_output.x))
 
         ramp_value = feasible_output.x - generators_current_output
         print("feasible_output:", feasible_output.x)

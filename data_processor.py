@@ -188,7 +188,7 @@ class DataProcessor:
                                              ub=total_load_demand + epsilon)
 
         feasible_output = minimize(lambda feasible_output: np.sum(np.power((output - feasible_output), 2)),
-                 generators_current_output, options={'verbose': 1},
+                 generators_current_output, options={'verbose': 0},
                  bounds=[(lower[i], upper[i]) for i in range(len(upper))],
                  constraints=[linear_constraint], method='trust-constr')
 

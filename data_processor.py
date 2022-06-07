@@ -253,10 +253,14 @@ class DataProcessor:
 
         # amount of power for ramping up/down
         nn_output = np.array(tf.squeeze(nn_action[0]))
-        for i in range(nn_output.size):
-            if explore_network:
-                nn_output[i] = nn_output[i] + self._ou_noise() # random.uniform(-noise_range, noise_range)
-        nn_output = np.clip(nn_output, 0, None)
+
+        while True:
+            for i in range(nn_output.size):
+                if explore_network:
+                    nn_output[i] = nn_output[i] + self._ou_noise() # random.uniform(-noise_range, noise_range)
+            nn_output = np.clip(nn_output, 0, None)
+            if np.sum(nn_output): break
+
         nn_output = nn_output / np.sum(nn_output)
 
         # print("nn output: ", nn_output)

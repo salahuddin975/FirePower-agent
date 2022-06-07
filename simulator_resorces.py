@@ -29,6 +29,11 @@ class Generators:
             self._generators_max_output = np.delete(self._generators_max_output, index)
             self._generators_max_ramp = np.delete(self._generators_max_ramp, index)
 
+    def set_zero_for_generator(self, i):
+        self._generators_min_output[i] = 0
+        self._generators_max_output[i] = 0
+        self._generators_max_ramp[i] = 0
+
     def get_generators(self):
         return self._generators
 

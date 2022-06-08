@@ -61,29 +61,29 @@ class DataProcessor:
 
         return branch_status
 
-    def _check_network_violations_bus(self, bus_status, branch_status):
-        generator_sets = [set() for _ in range(24)]
-        for branch in self._branches:
-            generator_sets[branch[0]].add(branch)
-            generator_sets[branch[1]].add(branch)
-
-        for i in range(34):
-            if branch_status[i] == 0:
-                x, y = self._branches[i]
-                generator_sets[x].remove((x,y))
-                generator_sets[y].remove((x,y))
-
-                if len(generator_sets[x]) == 0 and x in self.generators.get_generators():
-                    index = self.generators.get_generators().index(x)
-                    bus_status[index] = 0
-
-                if len(generator_sets[y]) == 0 and y in self.generators.get_generators():
-                    index = self.generators.get_generators().index(y)
-                    bus_status[index] = 0
-
-        # print("bus_status:", bus_status)
-        # print("branch_status:", branch_status)
-        return bus_status
+    # def _check_network_violations_bus(self, bus_status, branch_status):
+    #     generator_sets = [set() for _ in range(24)]
+    #     for branch in self._branches:
+    #         generator_sets[branch[0]].add(branch)
+    #         generator_sets[branch[1]].add(branch)
+    #
+    #     for i in range(34):
+    #         if branch_status[i] == 0:
+    #             x, y = self._branches[i]
+    #             generator_sets[x].remove((x,y))
+    #             generator_sets[y].remove((x,y))
+    #
+    #             if len(generator_sets[x]) == 0 and x in self.generators.get_generators():
+    #                 index = self.generators.get_generators().index(x)
+    #                 bus_status[index] = 0
+    #
+    #             if len(generator_sets[y]) == 0 and y in self.generators.get_generators():
+    #                 index = self.generators.get_generators().index(y)
+    #                 bus_status[index] = 0
+    #
+    #     # print("bus_status:", bus_status)
+    #     # print("branch_status:", branch_status)
+    #     return bus_status
 
     # def add_heuristic_ramp(self, ramp, load_loss, num_generators, generators_current_output, generators_max_output, generators_max_ramp):
     #     for i in range(num_generators):
@@ -152,9 +152,9 @@ class DataProcessor:
         generators_max_output = self.generators.get_max_outputs()
         generators_max_ramp = self.generators.get_max_ramps()
 
-        epsilon = 0.01
         # print("nn_output_sum: ", np.sum(nn_output))
-        assert 1 + epsilon > np.sum(nn_output) > 1-epsilon, "Not total value is 1"
+        epsilon_nn = 0.0001
+        assert 1 + epsilon_nn > np.sum(nn_output) > 1-epsilon_nn, "Not total value is 1"
         assert np.min(nn_output) >= 0, "value is negative"
 
         output = nn_output * total_load_demand
@@ -176,8 +176,9 @@ class DataProcessor:
         #          generators_current_output, options={'verbose': 1},
         #          bounds=[(lower[i], upper[i]) for i in range(len(upper))])
 
-        linear_constraint = LinearConstraint(A=np.transpose(np.ones(len(generators_current_output))), lb=np.array(total_load_demand - epsilon),
-                                             ub=total_load_demand + epsilon)
+        epsilon_total = 0.000001
+        linear_constraint = LinearConstraint(A=np.transpose(np.ones(len(generators_current_output))), lb=np.array(total_load_demand - epsilon_total),
+                                             ub=np.array(total_load_demand + epsilon_total))
 
         feasible_output = minimize(lambda feasible_output: np.sum(np.power((output - feasible_output), 2)),
                  generators_current_output, options={'verbose': 0},
@@ -247,7 +248,7 @@ class DataProcessor:
             generators_current_output[i] = state["generator_injection"][self.generators.get_generators()[i]]
 
         branch_status = self._check_network_violations_branch(bus_status, branch_status)
-        bus_status = self._check_network_violations_bus(bus_status, branch_status)
+        # bus_status = self._check_network_violations_bus(bus_status, branch_status)
 
         nn_output = np.array(tf.squeeze(nn_action[0]))
         while True:

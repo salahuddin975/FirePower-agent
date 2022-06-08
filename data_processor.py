@@ -61,29 +61,25 @@ class DataProcessor:
 
         return branch_status
 
-    # def _check_network_violations_bus(self, bus_status, branch_status):
-    #     generator_sets = [set() for _ in range(24)]
-    #     for branch in self._branches:
-    #         generator_sets[branch[0]].add(branch)
-    #         generator_sets[branch[1]].add(branch)
-    #
-    #     for i in range(34):
-    #         if branch_status[i] == 0:
-    #             x, y = self._branches[i]
-    #             generator_sets[x].remove((x,y))
-    #             generator_sets[y].remove((x,y))
-    #
-    #             if len(generator_sets[x]) == 0 and x in self.generators.get_generators():
-    #                 index = self.generators.get_generators().index(x)
-    #                 bus_status[index] = 0
-    #
-    #             if len(generator_sets[y]) == 0 and y in self.generators.get_generators():
-    #                 index = self.generators.get_generators().index(y)
-    #                 bus_status[index] = 0
-    #
-    #     # print("bus_status:", bus_status)
-    #     # print("branch_status:", branch_status)
-    #     return bus_status
+    def _check_network_violations_bus(self, bus_status, branch_status):
+        bus_sets = [set() for _ in range(24)]
+        for branch in self._branches:
+            bus_sets[branch[0]].add(branch)
+            bus_sets[branch[1]].add(branch)
+
+        for i in range(34):
+            if branch_status[i] == 0:
+                x, y = self._branches[i]
+                bus_sets[x].remove((x,y))
+                bus_sets[y].remove((x,y))
+
+                if len(bus_sets[x]) == 0: # and x in self.generators.get_generators():
+                    bus_status[x] = 0
+
+                if len(bus_sets[y]) == 0:  #and y in self.generators.get_generators():
+                    bus_status[y] = 0
+
+        return bus_status
 
     # def add_heuristic_ramp(self, ramp, load_loss, num_generators, generators_current_output, generators_max_output, generators_max_ramp):
     #     for i in range(num_generators):
@@ -169,12 +165,9 @@ class DataProcessor:
         # print("generators_current_output: ", generators_current_output)
         # print("generators max output: ", generators_max_output)
         # print("generators min output: ", generators_min_output)
+        # print("generators max ramp: ", generators_max_ramp)
         # print("lower: ", lower)
         # print("upper: ", upper)
-
-        # feasible_output = minimize(lambda feasible_output: np.sum(np.power((output - feasible_output), 2)),
-        #          generators_current_output, options={'verbose': 1},
-        #          bounds=[(lower[i], upper[i]) for i in range(len(upper))])
 
         epsilon_total = 0.000001
         linear_constraint = LinearConstraint(A=np.transpose(np.ones(len(generators_current_output))), lb=np.array(total_load_demand - epsilon_total),
@@ -185,7 +178,7 @@ class DataProcessor:
                  bounds=[(lower[i], upper[i]) for i in range(len(upper))],
                  constraints=[linear_constraint], method='trust-constr')
 
-        print("total_load_demand:", total_load_demand, ", total_feasible_output:", np.sum(feasible_output.x))
+        # print("total_load_demand:", total_load_demand, ", total_feasible_output:", np.sum(feasible_output.x))
 
         ramp_value = feasible_output.x - generators_current_output
         # print("feasible_output:", feasible_output.x)
@@ -248,7 +241,9 @@ class DataProcessor:
             generators_current_output[i] = state["generator_injection"][self.generators.get_generators()[i]]
 
         branch_status = self._check_network_violations_branch(bus_status, branch_status)
-        # bus_status = self._check_network_violations_bus(bus_status, branch_status)
+        bus_status = self._check_network_violations_bus(bus_status, branch_status)
+        # print("branch_status: ", branch_status)
+        # print("bus_status: ", bus_status)
 
         nn_output = np.array(tf.squeeze(nn_action[0]))
         while True:

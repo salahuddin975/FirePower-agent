@@ -159,9 +159,17 @@ class DataProcessor:
         #       ", min_output:", np.sum(generators_min_output), ", max_output:", np.sum(generators_max_output),
         #       ", max_total_ramp:", np.sum(generators_max_ramp), ", output: ", np.sum(output))
 
+        for i in range(len(generators_current_output)):
+            if generators_current_output[i] == 0.0:
+                generators_max_ramp[i] = 0
+                generators_min_output[i] = 0
+                generators_max_output[i] = 0
+
         lower = np.maximum(generators_current_output - generators_max_ramp, generators_min_output)
         upper = np.minimum(generators_current_output + generators_max_ramp, generators_max_output)
 
+        # print("diff: ", generators_current_output - generators_max_ramp)
+        # print("sum: ", generators_current_output + generators_max_ramp)
         # print("generators_current_output: ", generators_current_output)
         # print("generators max output: ", generators_max_output)
         # print("generators min output: ", generators_min_output)
@@ -180,13 +188,21 @@ class DataProcessor:
                  bounds=[(lower[i], upper[i]) for i in range(len(upper))],
                  constraints=[linear_constraint], method='trust-constr')
 
-        # print("total_load_demand:", total_load_demand, ", total_feasible_output:", np.sum(feasible_output.x))
+        ramp = feasible_output.x - generators_current_output
 
-        ramp_value = feasible_output.x - generators_current_output
-        # print("feasible_output:", feasible_output.x)
-        # print("ramp_value:", ramp_value)
+        for i in range(ramp.size):
+            if ramp[i] > 0:
+                ramp[i] = ramp[i] if ramp[i] < generators_max_ramp[i] else generators_max_ramp[i]
+                ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] < generators_max_output[i] else generators_max_output[i] - generators_current_output[i]
+            else:
+                ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[i] else -generators_max_ramp[i]
+                ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] > generators_min_output[i] else generators_min_output[i] - generators_current_output[i]
 
-        return ramp_value
+            if abs(ramp[i]) < 0.00001:
+                ramp[i] = 0.0
+
+        # print("generators set ramp: ", ramp)
+        return ramp
 
     # def check_violations(self, np_action, state, ramp_scale):
     #     bus_status = copy.deepcopy(state["bus_status"])
@@ -244,8 +260,8 @@ class DataProcessor:
 
         branch_status = self._check_network_violations_branch(bus_status, branch_status) # if bus is 0, then corresponding all branches are 0
         bus_status = self._check_network_violations_bus(bus_status, branch_status) # if all branches are 0, then corresponding bus is 0
-        # print("branch_status: ", branch_status)
-        # print("bus_status: ", bus_status)
+        print("branch_status: ", branch_status)
+        print("bus_status: ", bus_status)
 
         nn_output = np.array(tf.squeeze(nn_action[0]))
         while True:

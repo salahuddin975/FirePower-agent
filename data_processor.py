@@ -240,8 +240,8 @@ class DataProcessor:
         for i in range(self.generators.get_num_generators()):
             generators_current_output[i] = state["generator_injection"][self.generators.get_generators()[i]]
 
-        branch_status = self._check_network_violations_branch(bus_status, branch_status)
-        bus_status = self._check_network_violations_bus(bus_status, branch_status)
+        branch_status = self._check_network_violations_branch(bus_status, branch_status) # if bus is 0, then corresponding all branches are 0
+        bus_status = self._check_network_violations_bus(bus_status, branch_status) # if all branches are 0, then corresponding bus is 0
         # print("branch_status: ", branch_status)
         # print("bus_status: ", bus_status)
 
@@ -251,7 +251,7 @@ class DataProcessor:
                 if explore_network:
                     nn_output[i] = nn_output[i] + self._ou_noise() # random.uniform(-noise_range, noise_range)
             nn_output = np.clip(nn_output, 0, None)
-            self._check_bus_generator_violation(bus_status, nn_output, generators_current_output)
+            self._check_bus_generator_violation(bus_status, nn_output, generators_current_output) # if bus is 0, then corresponding generator output, ramp 0
             if np.sum(nn_output): break
         nn_output = nn_output / np.sum(nn_output)
 

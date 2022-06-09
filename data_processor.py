@@ -169,7 +169,7 @@ class DataProcessor:
         # print("lower: ", lower)
         # print("upper: ", upper)
 
-        assert lower.all() <= upper.all(), "lower, upper value constraint failed."
+        assert (lower <= upper).all(), "lower, upper value constraint failed."
 
         epsilon_total = 0.000001
         linear_constraint = LinearConstraint(A=np.transpose(np.ones(len(generators_current_output))), lb=np.array(total_load_demand - epsilon_total),

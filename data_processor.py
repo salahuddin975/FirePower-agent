@@ -260,8 +260,8 @@ class DataProcessor:
 
         branch_status = self._check_network_violations_branch(bus_status, branch_status) # if bus is 0, then corresponding all branches are 0
         bus_status = self._check_network_violations_bus(bus_status, branch_status) # if all branches are 0, then corresponding bus is 0
-        print("branch_status: ", branch_status)
-        print("bus_status: ", bus_status)
+        # print("branch_status: ", branch_status)
+        # print("bus_status: ", bus_status)
 
         nn_output = np.array(tf.squeeze(nn_action[0]))
         while True:

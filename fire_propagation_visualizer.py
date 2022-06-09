@@ -45,6 +45,7 @@ class Visualizer:
         bus_status = copy.deepcopy(state["bus_status"])
         branch_status = copy.deepcopy(state["branch_status"])
         generation = copy.deepcopy(state["generator_injection"])
+        load_demand = copy.deepcopy(state["load_demand"])
         branch_status = self._check_network_violations_branch(bus_status, branch_status)
 
         image = Image.new('RGB', (self.conf_data['cols'], self.conf_data['rows']), ImageColor.getrgb('darkgreen'))

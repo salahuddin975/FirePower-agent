@@ -144,6 +144,7 @@ if __name__ == "__main__":
     explore_network_flag = True if train_network else False
 
     for episode in range(total_episode):
+        generators.reset()
         state = env.reset()
 
         max_reached_step = 0

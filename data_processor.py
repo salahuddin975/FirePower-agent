@@ -153,8 +153,6 @@ class DataProcessor:
         assert 1 + epsilon_nn > np.sum(nn_output) > 1-epsilon_nn, "Not total value is 1"
         assert np.min(nn_output) >= 0, "value is negative"
 
-        output = nn_output * total_load_demand
-
         # print("total_load_demand:", total_load_demand, ", current_output: ", np.sum(generators_current_output),
         #       ", min_output:", np.sum(generators_min_output), ", max_output:", np.sum(generators_max_output),
         #       ", max_total_ramp:", np.sum(generators_max_ramp), ", output: ", np.sum(output))
@@ -164,6 +162,11 @@ class DataProcessor:
                 generators_max_ramp[i] = 0
                 generators_min_output[i] = 0
                 generators_max_output[i] = 0
+                nn_output[i] = 0
+
+        if np.sum(nn_output):
+            nn_output = nn_output / np.sum(nn_output)
+        output = nn_output * total_load_demand
 
         lower = np.maximum(generators_current_output - generators_max_ramp, generators_min_output)
         upper = np.minimum(generators_current_output + generators_max_ramp, generators_max_output)
@@ -187,6 +190,9 @@ class DataProcessor:
                  generators_current_output, options={'verbose': 0},
                  bounds=[(lower[i], upper[i]) for i in range(len(upper))],
                  constraints=[linear_constraint], method='trust-constr')
+
+        # assert (total_load_demand + epsilon_total) >= np.sum(feasible_output.x) >= (total_load_demand - epsilon_total), \
+        #     f"feasible output constraint violated, {total_load_demand + epsilon_total} >= {np.sum(feasible_output.x)} >= {total_load_demand - epsilon_total}"
 
         ramp = feasible_output.x - generators_current_output
 

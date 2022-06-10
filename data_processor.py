@@ -194,6 +194,7 @@ class DataProcessor:
         # assert (total_load_demand + epsilon_total) >= np.sum(feasible_output.x) >= (total_load_demand - epsilon_total), \
         #     f"feasible output constraint violated, {total_load_demand + epsilon_total} >= {np.sum(feasible_output.x)} >= {total_load_demand - epsilon_total}"
 
+        penalty = (np.sum(generators_current_output) - np.sum(feasible_output.x)) * 10 * 100
         ramp = feasible_output.x - generators_current_output
 
         for i in range(ramp.size):
@@ -208,7 +209,7 @@ class DataProcessor:
                 ramp[i] = 0.0
 
         # print("generators set ramp: ", ramp)
-        return ramp
+        return ramp, (penalty, penalty)
 
     # def check_violations(self, np_action, state, ramp_scale):
     #     bus_status = copy.deepcopy(state["bus_status"])
@@ -283,7 +284,7 @@ class DataProcessor:
             "generator_injection": copy.deepcopy(nn_output),
         }
 
-        ramp = self._clip_ramp_values(state["load_demand"], generators_current_output, nn_output)
+        ramp, custom_reward = self._clip_ramp_values(state["load_demand"], generators_current_output, nn_output)
 
         env_action = {
             "bus_status": bus_status,
@@ -292,7 +293,7 @@ class DataProcessor:
             "generator_injection": ramp,
         }
 
-        return nn_noise_action, env_action
+        return nn_noise_action, env_action, custom_reward
 
     def preprocess(self, state, power_generation_scale, explore_network_flag):
         state["generator_injection"] = np.array([output / power_generation_scale for output in state["generator_injection"]])

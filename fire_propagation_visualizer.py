@@ -89,10 +89,10 @@ class Visualizer:
             y = bus[2]
             # if generation[bus[0]]:
             if bus[0] in self._generators.get_generators():
-                text = f"{bus[0]}: {generation[bus[0]]:.1f}"
+                text = f"{bus[0]}: {load_demand[bus[0]]:.1f}, {generation[bus[0]]:.1f}"
                 color = ImageColor.getrgb('white')
             else:
-                text = f"{bus[0]}"
+                text = f"{bus[0]}: {load_demand[bus[0]]:.1f}"
                 color = ImageColor.getrgb('gold')
             if bus_status[bus[0]]:
                 stroke_color = ImageColor.getrgb('black')

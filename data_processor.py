@@ -61,7 +61,7 @@ class DataProcessor:
 
         return branch_status
 
-    def _adjust_load_demand_for_all_branches_out(self, branch_status, load_demand, current_output):
+    def _adjust_load_demand_if_all_branches_out(self, branch_status, load_demand, current_output):
         bus_sets = [set() for _ in range(24)]
         for branch in self._branches:
             bus_sets[branch[0]].add(branch)
@@ -75,7 +75,7 @@ class DataProcessor:
 
                 if len(bus_sets[x]) == 0 and x in self.generators.get_generators() and current_output[x] == 0:
                     load_demand[x] = 0
-                if len(bus_sets[x]) == 0 and x in self.generators.get_generators():
+                elif len(bus_sets[x]) == 0 and x in self.generators.get_generators():
                     self.generators.set_max_output(x, load_demand[x])
                     # self.generators.set_min_output(x, load_demand[x])
                 elif len(bus_sets[x]) == 0:
@@ -83,7 +83,7 @@ class DataProcessor:
 
                 if len(bus_sets[y]) == 0 and y in self.generators.get_generators() and current_output[y] == 0:
                     load_demand[y] = 0
-                if len(bus_sets[y]) == 0 and y in self.generators.get_generators():
+                elif len(bus_sets[y]) == 0 and y in self.generators.get_generators():
                     self.generators.set_max_output(y, load_demand[y])
                     # self.generators.set_min_output(y, load_demand[y])
                 elif len(bus_sets[y]) == 0:
@@ -275,7 +275,7 @@ class DataProcessor:
         current_output = state["generator_injection"]
 
         branch_status = self._check_network_violations_branch(bus_status, branch_status) # if bus is 0, then corresponding all branches are 0
-        self._adjust_load_demand_for_all_branches_out(branch_status, load_demand, current_output) # adjust load_demand and generation max output if all branches are 0
+        self._adjust_load_demand_if_all_branches_out(branch_status, load_demand, current_output) # adjust load_demand and generation max output if all branches are 0
 
         generators_current_output = np.zeros(self.generators.get_num_generators())
         for i in range(self.generators.get_num_generators()):
@@ -307,6 +307,8 @@ class DataProcessor:
             "generator_selector": self.generators.get_generators(),
             "generator_injection": ramp,
         }
+
+        state.update({'load_demand': load_demand})
 
         return nn_noise_action, env_action, custom_reward
 

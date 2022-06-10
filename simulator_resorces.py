@@ -35,11 +35,6 @@ class Generators:
             self._generators_max_output = np.delete(self._generators_max_output, index)
             self._generators_max_ramp = np.delete(self._generators_max_ramp, index)
 
-    def set_zero_for_generator(self, i):
-        self._generators_min_output[i] = 0
-        self._generators_max_output[i] = 0
-        self._generators_max_ramp[i] = 0
-
     def get_generators(self):
         return self._generators
 
@@ -52,11 +47,37 @@ class Generators:
     def get_max_outputs(self):
         return self._generators_max_output
 
+    def get_max_ramps(self):
+        return self._generators_max_ramp
+
     def set_max_outputs(self, max_output):
         self._generators_max_output = np.copy(max_output[self._generators])
 
-    def get_max_ramps(self):
-        return self._generators_max_ramp
+    def set_zero_for_generator(self, i):
+        self._generators_min_output[i] = 0
+        self._generators_max_output[i] = 0
+        self._generators_max_ramp[i] = 0
+
+    def set_max_output(self, bus_id, max_output):
+        index = -1
+        for i in range(len(self._generators)):
+            if self._generators[i] == bus_id:
+                index = i
+        self._generators_max_output[index] = max_output
+
+    def set_min_output(self, bus_id, min_output):
+        index = -1
+        for i in range(len(self._generators)):
+            if self._generators[i] == bus_id:
+                index = i
+        self._generators_min_output[index] = min_output
+
+    def set_max_ramp(self, bus_id, max_ramp):
+        index = -1
+        for i in range(len(self._generators)):
+            if self._generators[i] == bus_id:
+                index = i
+        self._generators_max_ramp[index] = max_ramp
 
     def print_info(self):
         print ("generators: ", self._generators)

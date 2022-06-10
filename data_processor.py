@@ -271,14 +271,18 @@ class DataProcessor:
         # print("bus_status: ", bus_status)
 
         nn_output = np.array(tf.squeeze(nn_action[0]))
-        while True:
+        if explore_network:
+            noises = np.zeros(nn_output.size)
             for i in range(nn_output.size):
-                if explore_network:
-                    nn_output[i] = nn_output[i] + self._ou_noise() # random.uniform(-noise_range, noise_range)
+                noises[i] = self._ou_noise()
+            nn_output += noises
             nn_output = np.clip(nn_output, 0, None)
-            self._check_bus_generator_violation(bus_status, nn_output, generators_current_output) # if bus is 0, then corresponding generator output, ramp 0
-            if np.sum(nn_output): break
-        nn_output = nn_output / np.sum(nn_output)
+
+        self._check_bus_generator_violation(bus_status, nn_output, generators_current_output) # if bus is 0, then corresponding generator output, ramp 0
+        if np.sum(nn_output):
+            nn_output = nn_output / np.sum(nn_output)
+        else:
+            nn_output = np.array(tf.squeeze(nn_action[0]))
 
         nn_noise_action = {
             "generator_injection": copy.deepcopy(nn_output),

@@ -164,6 +164,9 @@ class DataProcessor:
                 generators_max_output[i] = 0
                 nn_output[i] = 0
 
+        if np.sum(generators_max_output) < total_load_demand:
+            total_load_demand = np.sum(generators_max_output)
+
         if np.sum(nn_output):
             nn_output = nn_output / np.sum(nn_output)
         output = nn_output * total_load_demand

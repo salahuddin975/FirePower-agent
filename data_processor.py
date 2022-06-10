@@ -61,7 +61,7 @@ class DataProcessor:
 
         return branch_status
 
-    def _check_network_violations_bus(self, bus_status, branch_status):
+    def _adjust_load_demand_for_all_branches_out(self, branch_status, load_demand):
         bus_sets = [set() for _ in range(24)]
         for branch in self._branches:
             bus_sets[branch[0]].add(branch)
@@ -73,13 +73,17 @@ class DataProcessor:
                 bus_sets[x].remove((x,y))
                 bus_sets[y].remove((x,y))
 
-                if len(bus_sets[x]) == 0: # and x in self.generators.get_generators():
-                    bus_status[x] = 0
+                if len(bus_sets[x]) == 0 and x in self.generators.get_generators():
+                    self.generators.set_max_output(x, load_demand[x])
+                    # self.generators.set_min_output(x, load_demand[x])
+                elif len(bus_sets[x]) == 0:
+                    load_demand[x] = 0
 
-                if len(bus_sets[y]) == 0:  #and y in self.generators.get_generators():
-                    bus_status[y] = 0
-
-        return bus_status
+                if len(bus_sets[y]) == 0 and y in self.generators.get_generators():
+                    self.generators.set_max_output(y, load_demand[y])
+                    # self.generators.set_min_output(y, load_demand[y])
+                elif len(bus_sets[y]) == 0:
+                    load_demand[y] = 0
 
     # def add_heuristic_ramp(self, ramp, load_loss, num_generators, generators_current_output, generators_max_output, generators_max_ramp):
     #     for i in range(num_generators):
@@ -263,13 +267,14 @@ class DataProcessor:
     def process_nn_action(self, state, nn_action, explore_network, noise_range=0.5):
         bus_status = copy.deepcopy(state["bus_status"])
         branch_status = copy.deepcopy(state["branch_status"])
+        load_demand = copy.deepcopy(state["load_demand"])
 
         generators_current_output = np.zeros(self.generators.get_num_generators())
         for i in range(self.generators.get_num_generators()):
             generators_current_output[i] = state["generator_injection"][self.generators.get_generators()[i]]
 
         branch_status = self._check_network_violations_branch(bus_status, branch_status) # if bus is 0, then corresponding all branches are 0
-        bus_status = self._check_network_violations_bus(bus_status, branch_status) # if all branches are 0, then corresponding bus is 0
+        self._adjust_load_demand_for_all_branches_out(branch_status, load_demand) # adjust load_demand and generation max output if all branches are 0
         # print("branch_status: ", branch_status)
         # print("bus_status: ", bus_status)
 
@@ -291,7 +296,7 @@ class DataProcessor:
             "generator_injection": copy.deepcopy(nn_output),
         }
 
-        ramp, custom_reward = self._clip_ramp_values(state["load_demand"], generators_current_output, nn_output)
+        ramp, custom_reward = self._clip_ramp_values(load_demand, generators_current_output, nn_output)
 
         env_action = {
             "bus_status": bus_status,

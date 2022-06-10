@@ -308,8 +308,6 @@ class DataProcessor:
             "generator_injection": ramp,
         }
 
-        state.update({'load_demand': load_demand})
-
         return nn_noise_action, env_action, custom_reward
 
     def preprocess(self, state, power_generation_scale, explore_network_flag):

@@ -76,16 +76,20 @@ class DataProcessor:
                 if len(bus_sets[x]) == 0 and x in self.generators.get_generators() and current_output[x] == 0:
                     load_demand[x] = 0
                 elif len(bus_sets[x]) == 0 and x in self.generators.get_generators():
+                    current_output[x] = load_demand[x]
                     self.generators.set_max_output(x, load_demand[x])
-                    # self.generators.set_min_output(x, load_demand[x])
+                    self.generators.set_min_output(x, load_demand[x])
+                    self.generators.set_max_ramp(x, 0)
                 elif len(bus_sets[x]) == 0:
                     load_demand[x] = 0
 
                 if len(bus_sets[y]) == 0 and y in self.generators.get_generators() and current_output[y] == 0:
                     load_demand[y] = 0
                 elif len(bus_sets[y]) == 0 and y in self.generators.get_generators():
+                    current_output[y] = load_demand[y]
                     self.generators.set_max_output(y, load_demand[y])
-                    # self.generators.set_min_output(y, load_demand[y])
+                    self.generators.set_min_output(y, load_demand[y])
+                    self.generators.set_max_ramp(y, 0)
                 elif len(bus_sets[y]) == 0:
                     load_demand[y] = 0
 
@@ -184,6 +188,7 @@ class DataProcessor:
 
         # print("diff: ", generators_current_output - generators_max_ramp)
         # print("sum: ", generators_current_output + generators_max_ramp)
+        # print("total_servable_load_demand: ", total_load_demand)
         # print("generators_current_output: ", generators_current_output)
         # print("generators max output: ", generators_max_output)
         # print("generators min output: ", generators_min_output)
@@ -205,9 +210,10 @@ class DataProcessor:
         # assert (total_load_demand + epsilon_total) >= np.sum(feasible_output.x) >= (total_load_demand - epsilon_total), \
         #     f"feasible output constraint violated, {total_load_demand + epsilon_total} >= {np.sum(feasible_output.x)} >= {total_load_demand - epsilon_total}"
 
-        penalty = (np.sum(generators_current_output) - np.sum(feasible_output.x)) * 10 * 100
-        ramp = feasible_output.x - generators_current_output
+        custom_penalty = (np.sum(generators_current_output) - np.sum(feasible_output.x)) * 10 * 100
+        # print("modified_generators_current_output: ", np.sum(generators_current_output), "; feasible_output: ", np.sum(feasible_output.x), "; custom_penalty: ", custom_penalty)
 
+        ramp = feasible_output.x - generators_current_output
         for i in range(ramp.size):
             if ramp[i] > 0:
                 ramp[i] = ramp[i] if ramp[i] < generators_max_ramp[i] else generators_max_ramp[i]
@@ -220,7 +226,7 @@ class DataProcessor:
                 ramp[i] = 0.0
 
         # print("generators set ramp: ", ramp)
-        return ramp, (penalty, penalty)
+        return ramp, (custom_penalty, custom_penalty)
 
     # def check_violations(self, np_action, state, ramp_scale):
     #     bus_status = copy.deepcopy(state["bus_status"])

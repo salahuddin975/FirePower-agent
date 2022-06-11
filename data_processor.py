@@ -314,6 +314,13 @@ class DataProcessor:
             "generator_injection": ramp,
         }
 
+        # env_action = {
+        #     "bus_status": np.ones(24),
+        #     "branch_status": np.ones(34),
+        #     "generator_selector": [24] * 10,
+        #     "generator_injection": np.zeros(10),
+        # }
+
         return nn_noise_action, env_action, custom_reward
 
     def preprocess(self, state, power_generation_scale, explore_network_flag):
@@ -357,8 +364,8 @@ class DataProcessor:
         # print("fire_distance:", state["fire_distance"])
         # print("fire_state:", state["fire_state"])
 
-        if explore_network_flag == False:
-            print("vulnerable equipment: ", vulnerable_equipment)
+        # if explore_network_flag == False:
+        #     print("vulnerable equipment: ", vulnerable_equipment)
 
         return state
 

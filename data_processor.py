@@ -48,6 +48,8 @@ class DataProcessor:
                           (8, 11),(9, 10),(9, 11),(10, 12),(10, 13),(11, 12),(11, 22),(12, 22),(13, 15),(14, 15),(14, 20),
                           (14, 23),(15, 16),(15, 18),(16, 17),(16, 21),(17, 20),(18, 19),(19, 22),(20, 21)]
 
+        self.custom_writer = CustomWriter()
+
     def _check_network_violations_branch(self, bus_status, branch_status):
         from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
         to_buses = self.simulator_resources.ppc["branch"][:, T_BUS].astype('int')
@@ -201,6 +203,8 @@ class DataProcessor:
         linear_constraint = LinearConstraint(A=np.transpose(np.ones(len(generators_current_output))), lb=total_load_demand_lower, ub=total_load_demand_upper)
         print("load_demand_total: ", total_load_demand, "; load_demand_lower_total: ", total_load_demand_lower, "; load_demand_upper_total: ", total_load_demand_upper)
 
+        # self.custom_writer.add_info(self.episode, self.step, total_load_demand, np.sum(generators_current_output), np.sum(lower), np.sum(upper))
+
         feasible_output = minimize(lambda feasible_output: np.sum(np.power((actor_output - feasible_output), 2)),
                  generators_current_output, options={'verbose': 0},
                  bounds=[(lower[i], upper[i]) for i in range(len(upper))],
@@ -274,6 +278,8 @@ class DataProcessor:
     #     return action
 
     def process_nn_action(self, state, nn_action, explore_network, noise_range=0.5):
+        self.episode = state["episode"]
+        self.step = ["step"]
         bus_status = copy.deepcopy(state["bus_status"])
         branch_status = copy.deepcopy(state["branch_status"])
         load_demand = copy.deepcopy(state["load_demand"])
@@ -582,4 +588,21 @@ class SummaryWriter:
             writer = csv.writer(fd)
             writer.writerow([str(self._model_version), str(episode), str(max_reached_step), str(episodic_penalty),
                              str(load_loss), str(active_line_removal_penalty), str(no_action_penalty), str(violation_penalty)])
+
+
+class CustomWriter:
+    def __init__(self):
+        self._initialize()
+
+    def _initialize(self):
+        with open(f'gams_feasible.csv', 'w') as fd:
+            writer = csv.writer(fd)
+            writer.writerow(["episode", "step", "servable_load_demand", "generator_current_output",
+                             "output_lower_bound", "output_upper_bound"])
+
+    def add_info(self, episode, step, load_demand, current_output, lower_bound, upper_bound):
+        with open(f'gams_feasible.csv', 'a') as fd:
+            writer = csv.writer(fd)
+            writer.writerow([str(episode), str(step), str(load_demand), str(current_output),
+                             str(lower_bound), str(upper_bound)])
 

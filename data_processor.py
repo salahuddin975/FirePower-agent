@@ -164,7 +164,7 @@ class DataProcessor:
 
         # print("nn_output_sum: ", np.sum(nn_output))
         epsilon_nn = 0.0001
-        epsilon_total = 0.00001
+        epsilon_total = 0.000001
         assert 1 + epsilon_nn > np.sum(nn_output) > 1-epsilon_nn, "Not total value is 1"
         assert np.min(nn_output) >= 0, "value is negative"
 
@@ -211,8 +211,8 @@ class DataProcessor:
                  constraints=[linear_constraint], method='trust-constr')
 
         print("feasible_output: ", np.sum(feasible_output.x))
-        assert total_load_demand_upper >= np.sum(feasible_output.x) >= total_load_demand_lower, \
-            f"feasible_output constraint violated: {total_load_demand_upper} >= {np.sum(feasible_output.x)} >= {total_load_demand_lower}"
+        # assert total_load_demand_upper >= np.sum(feasible_output.x) >= total_load_demand_lower, \
+        #     f"feasible_output constraint violated: {total_load_demand_upper} >= {np.sum(feasible_output.x)} >= {total_load_demand_lower}"
 
         custom_penalty = (np.sum(generators_current_output) - np.sum(feasible_output.x)) * 10 * 100
         ramp = feasible_output.x - generators_current_output

@@ -165,6 +165,8 @@ if __name__ == "__main__":
             # print("NN generator output: ", nn_action[0])
             # print("original:", agent.get_critic_value(tf_state, nn_action))
 
+            state["episode"] = episode
+            state["step"] = step
             nn_noise_action, env_action, custom_reward = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
             # print("original+noise:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)))
 
@@ -193,7 +195,7 @@ if __name__ == "__main__":
                       f" generator_injection: {np.sum(state['generator_injection'])}, reward: {reward[0]}, custom_reward: {custom_reward[0]}")
 
             next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale, explore_network_flag)
-            buffer.add_record((state, nn_noise_action, custom_reward, next_state, env_action, done))
+            buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))
 
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]

@@ -179,6 +179,8 @@ class DataProcessor:
         lower = np.maximum(generators_current_output - generators_max_ramp, generators_min_output)
         upper = np.minimum(generators_current_output + generators_max_ramp, generators_max_output)
 
+        # self.custom_writer.add_info(self.episode, self.step, total_load_demand, np.sum(generators_current_output), np.sum(lower), np.sum(upper))
+
         if np.sum(upper) - epsilon_total < total_load_demand:
             # print("Adjust load demand: total_load_demand: ", total_load_demand, ", upper: ", np.sum(upper) - epsilon_total )
             total_load_demand = np.sum(upper) - epsilon_total
@@ -202,8 +204,6 @@ class DataProcessor:
         total_load_demand_upper = np.array(total_load_demand + epsilon_total)
         linear_constraint = LinearConstraint(A=np.transpose(np.ones(len(generators_current_output))), lb=total_load_demand_lower, ub=total_load_demand_upper)
         print("load_demand_total: ", total_load_demand, "; load_demand_lower_total: ", total_load_demand_lower, "; load_demand_upper_total: ", total_load_demand_upper)
-
-        # self.custom_writer.add_info(self.episode, self.step, total_load_demand, np.sum(generators_current_output), np.sum(lower), np.sum(upper))
 
         feasible_output = minimize(lambda feasible_output: np.sum(np.power((actor_output - feasible_output), 2)),
                  generators_current_output, options={'verbose': 0},
@@ -279,7 +279,7 @@ class DataProcessor:
 
     def process_nn_action(self, state, nn_action, explore_network, noise_range=0.5):
         self.episode = state["episode"]
-        self.step = ["step"]
+        self.step = state["step"]
         bus_status = copy.deepcopy(state["bus_status"])
         branch_status = copy.deepcopy(state["branch_status"])
         load_demand = copy.deepcopy(state["load_demand"])
@@ -331,6 +331,7 @@ class DataProcessor:
     def preprocess(self, state, power_generation_scale, explore_network_flag):
         state["generator_injection"] = np.array([output / power_generation_scale for output in state["generator_injection"]])
         state["load_demand"] = np.array([load_output / power_generation_scale for load_output in state["load_demand"]])
+        state["pload_served"] = np.array([served_load / power_generation_scale for served_load in state["pload_served"]])
 
         # state["fire_distance"] = [1 - dist/self._considerable_fire_distance if dist < self._considerable_fire_distance else 0 for dist in state["fire_distance"]]
 
@@ -364,6 +365,7 @@ class DataProcessor:
         # print("branch_status:", state["branch_status"])
         # print("generator_output:", state["generator_injection"])
         # print("load_demand:", state["load_demand"])
+        # print("pload_served:", state["pload_served"])
         # print("line_flow:", state["line_flow"])
         # print("theta:", state["theta"])
         # print("fire_distance:", state["fire_distance"])

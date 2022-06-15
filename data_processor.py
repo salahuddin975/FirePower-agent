@@ -287,7 +287,7 @@ class DataProcessor:
         load_demand = copy.deepcopy(state["load_demand"])
         current_output = state["generator_injection"]
 
-        branch_status = self._check_network_violations_branch(bus_status, branch_status) # if bus is 0, then corresponding all branches are 0
+        # branch_status = self._check_network_violations_branch(bus_status, branch_status) # if bus is 0, then corresponding all branches are 0
         # self._adjust_load_demand_if_all_branches_out(branch_status, load_demand, current_output) # adjust load_demand and generation max output if all branches are 0
 
         generators_current_output = np.zeros(self.generators.get_num_generators())

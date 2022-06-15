@@ -302,7 +302,7 @@ class DataProcessor:
             nn_output += noises
             nn_output = np.clip(nn_output, 0, None)
 
-        self._check_bus_generator_violation(bus_status, nn_output, generators_current_output) # if bus is 0, then corresponding generator output, ramp 0
+        # self._check_bus_generator_violation(bus_status, nn_output, generators_current_output) # if bus is 0, then corresponding generator output, ramp 0
         if np.sum(nn_output):
             nn_output = nn_output / np.sum(nn_output)
         else:

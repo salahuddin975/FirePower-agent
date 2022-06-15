@@ -163,7 +163,10 @@ if __name__ == "__main__":
             myopic_action["episode"] = episode
             myopic_action["step_count"] = step
             myopic_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
-            servable_load_demand = np.sum(myopic_state["generator_injection"])
+            servable_load_demand = np.sum(myopic_state["generator_injection"])/power_generation_preprocess_scale
+
+            print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])}, generator_injection: {np.sum(state['generator_injection'])}, "
+                f"servable_load_demand: {servable_load_demand}, diff: {round(np.sum(state['load_demand']) - servable_load_demand, 4)}")
 
             tf_state = data_processor.get_tf_state(state)
             nn_action = ddpg.actor(tf_state)
@@ -190,9 +193,7 @@ if __name__ == "__main__":
             tensorboard.step_info(main_loop_info, reward_info)
 
             # if explore_network_flag == False:
-            print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
-                      f" generator_injection: {np.sum(state['generator_injection'])}, reward: {reward[0]}, custom_reward: {custom_reward[0]}, "
-                  f"diff: {round(np.sum(state['load_demand']) - servable_load_demand/power_generation_preprocess_scale, 3)}")
+            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}, custom_reward: {custom_reward[0]}")
 
             next_state = data_processor.preprocess(next_state, explore_network_flag)
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))

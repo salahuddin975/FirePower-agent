@@ -321,14 +321,18 @@ class DataProcessor:
             "generator_injection": ramp,
         }
 
-        # env_action = {
-        #     "bus_status": np.ones(24),
-        #     "branch_status": np.ones(34),
-        #     "generator_selector": [24] * 10,
-        #     "generator_injection": np.zeros(10),
-        # }
-
         return nn_noise_action, env_action, custom_reward
+
+    def get_myopic_action(self, state):
+        bus_status = copy.deepcopy(state["bus_status"])
+        branch_status = copy.deepcopy(state["branch_status"])
+
+        return {
+            "bus_status": bus_status,
+            "branch_status": branch_status,
+            "generator_selector": [24] * 10,
+            "generator_injection": np.zeros(10),
+        }
 
     def preprocess(self, state, power_generation_scale, explore_network_flag):
         state["generator_injection"] = np.array([output / power_generation_scale for output in state["generator_injection"]])

@@ -2,6 +2,7 @@ import os
 import gym
 import random
 import argparse
+import copy
 import numpy as np
 from datetime import datetime
 import tensorflow as tf
@@ -158,6 +159,12 @@ if __name__ == "__main__":
             # tensorboard.load_demand_info(state["load_demand"])
             # tensorboard.line_flow_info(state["line_flow"])
 
+            myopic_action = data_processor.get_myopic_action(state)
+            myopic_action["episode"] = episode
+            myopic_action["step_count"] = step
+            myopic_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
+            servable_load_demand = np.sum(myopic_state["generator_injection"])
+
             tf_state = data_processor.get_tf_state(state)
             nn_action = ddpg.actor(tf_state)
 
@@ -183,7 +190,8 @@ if __name__ == "__main__":
 
             # if explore_network_flag == False:
             print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
-                      f" generator_injection: {np.sum(state['generator_injection'])}, reward: {reward[0]}, custom_reward: {custom_reward[0]}")
+                      f" generator_injection: {np.sum(state['generator_injection'])}, reward: {reward[0]}, custom_reward: {custom_reward[0]}, "
+                  f"diff: {round(np.sum(state['load_demand']) - servable_load_demand/10, 3)}")
 
             next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale, explore_network_flag)
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))

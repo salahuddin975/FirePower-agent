@@ -152,8 +152,6 @@ if __name__ == "__main__":
         episodic_load_loss = 0
 
         state = data_processor.preprocess(state, power_generation_preprocess_scale, explore_network_flag)
-        # if not parameters.generator_max_output:
-        #     generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
             # tensorboard.generator_output_info(state["generator_injection"])
@@ -162,21 +160,14 @@ if __name__ == "__main__":
 
             tf_state = data_processor.get_tf_state(state)
             nn_action = ddpg.actor(tf_state)
-            # print("NN generator output: ", nn_action[0])
-            # print("original:", agent.get_critic_value(tf_state, nn_action))
 
             state["episode"] = episode
             state["step"] = step
             nn_noise_action, env_action, custom_reward = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
-            # print("original+noise:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)))
-
-            # env_action = data_processor.check_violations(nn_noise_action, state, ramp_scale=power_generation_preprocess_scale)
-            # print("original+noise+violation_check:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]),0)))
 
             # print("ramp:", env_action['generator_injection'])
             env_action["episode"] = episode
             env_action["step_count"] = step
-
             next_state, reward, done, cells_info = env.step(env_action)
 
             # image = visualizer.draw_map(episode, step, cells_info, next_state)
@@ -211,19 +202,6 @@ if __name__ == "__main__":
                 tensorboard_info = ddpg.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
                 tensorboard.train_info(tensorboard_info)
                 # print("Episode:", episode, ", step: ", step, ", critic_value:", tensorboard_info.critic_value_with_original_action, ", critic_loss:", tensorboard_info.critic_loss)
-
-        # if train_network and episode > 5:
-        #     print ("Train at episode: ", episode)
-        #     start_time = datetime.now()
-        #     for i in range(num_train_per_episode):
-        #         state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
-        #         critic_loss, reward_value, critic_value, action_quality = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
-        #         tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value, action_quality)
-        #         if i % 1000 == 0:
-        #             print("train at: ", i)
-        #
-        #     computation_time = (datetime.now() - start_time).total_seconds()
-        #     print("Training_computation_time:", computation_time)
 
         tensorboard.episodic_info(episodic_penalty)
         summary_writer.add_info(episode, max_reached_step, episodic_penalty, episodic_load_loss)

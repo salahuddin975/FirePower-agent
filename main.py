@@ -170,6 +170,7 @@ if __name__ == "__main__":
 
             state["episode"] = episode
             state["step"] = step
+            state["servable_load_demand"] = myopic_state["generator_injection"]
             nn_noise_action, env_action, custom_reward = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
 
             # print("ramp:", env_action['generator_injection'])

@@ -135,7 +135,7 @@ if __name__ == "__main__":
     tensorboard = Tensorboard(base_path)
     visualizer = Visualizer(generators, simulator_resources, args.path_geo)
     summary_writer = SummaryWriter(base_path, save_model_version, load_episode_num)
-    data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
+    data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces, power_generation_preprocess_scale)
 
     # agent training
     total_episode = 100001
@@ -152,7 +152,7 @@ if __name__ == "__main__":
         episodic_penalty = 0
         episodic_load_loss = 0
 
-        state = data_processor.preprocess(state, power_generation_preprocess_scale, explore_network_flag)
+        state = data_processor.preprocess(state, explore_network_flag)
 
         for step in range(max_steps_per_episode):
             # tensorboard.generator_output_info(state["generator_injection"])
@@ -192,9 +192,9 @@ if __name__ == "__main__":
             # if explore_network_flag == False:
             print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
                       f" generator_injection: {np.sum(state['generator_injection'])}, reward: {reward[0]}, custom_reward: {custom_reward[0]}, "
-                  f"diff: {round(np.sum(state['load_demand']) - servable_load_demand/10, 3)}")
+                  f"diff: {round(np.sum(state['load_demand']) - servable_load_demand/power_generation_preprocess_scale, 3)}")
 
-            next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale, explore_network_flag)
+            next_state = data_processor.preprocess(next_state, explore_network_flag)
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))
 
             episodic_penalty += reward[0]

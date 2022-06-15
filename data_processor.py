@@ -34,11 +34,12 @@ class OUActionNoise:
 
 
 class DataProcessor:
-    def __init__(self, simulator_resources, generators, state_spaces, action_spaces):
+    def __init__(self, simulator_resources, generators, state_spaces, action_spaces, power_generation_preprocess_scale):
         self.simulator_resources = simulator_resources
         self.generators = generators
         self._state_spaces = state_spaces
         self._action_spaces = action_spaces
+        self._power_generation_preprocess_scale = power_generation_preprocess_scale
         self._considerable_fire_distance = 10
 
         std_dev = 0.2
@@ -182,11 +183,11 @@ class DataProcessor:
         # self.custom_writer.add_info(self.episode, self.step, total_servable_load_demand, np.sum(generators_current_output), np.sum(lower), np.sum(upper))
 
         if np.sum(upper) - epsilon_total < total_servable_load_demand:
-            print("Adjust load demand: total_servable_load_demand: ", total_servable_load_demand, ", upper: ", np.sum(upper) - epsilon_total )
+            # print("Adjust load demand: total_servable_load_demand: ", total_servable_load_demand, ", upper: ", np.sum(upper) - epsilon_total )
             total_servable_load_demand = np.sum(upper) - epsilon_total
 
         if np.sum(lower) + epsilon_total > total_servable_load_demand:
-            print("Adjust load demand: total_servable_load_demand: ", total_servable_load_demand, ", lower: ", np.sum(upper) - epsilon_total )
+            # print("Adjust load demand: total_servable_load_demand: ", total_servable_load_demand, ", lower: ", np.sum(upper) - epsilon_total )
             total_servable_load_demand = np.sum(lower) + epsilon_total
 
         # print("generators max output: ", generators_max_output)
@@ -277,9 +278,8 @@ class DataProcessor:
         self.step = state["step"]
         bus_status = copy.deepcopy(state["bus_status"])
         branch_status = copy.deepcopy(state["branch_status"])
-        load_demand = copy.deepcopy(state["load_demand"])
         current_output = state["generator_injection"]
-        servable_load_demand = copy.deepcopy(state["servable_load_demand"])
+        servable_load_demand = np.array([load_output / self._power_generation_preprocess_scale for load_output in state["servable_load_demand"]])
 
         # branch_status = self._check_network_violations_branch(bus_status, branch_status) # if bus is 0, then corresponding all branches are 0
         # self._adjust_load_demand_if_all_branches_out(branch_status, load_demand, current_output) # adjust load_demand and generation max output if all branches are 0
@@ -328,9 +328,9 @@ class DataProcessor:
             "generator_injection": np.zeros(10),
         }
 
-    def preprocess(self, state, power_generation_scale, explore_network_flag):
-        state["generator_injection"] = np.array([output / power_generation_scale for output in state["generator_injection"]])
-        state["load_demand"] = np.array([load_output / power_generation_scale for load_output in state["load_demand"]])
+    def preprocess(self, state, explore_network_flag):
+        state["generator_injection"] = np.array([output / self._power_generation_preprocess_scale for output in state["generator_injection"]])
+        state["load_demand"] = np.array([load_output / self._power_generation_preprocess_scale for load_output in state["load_demand"]])
 
         # state["fire_distance"] = [1 - dist/self._considerable_fire_distance if dist < self._considerable_fire_distance else 0 for dist in state["fire_distance"]]
 

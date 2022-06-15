@@ -190,8 +190,8 @@ if __name__ == "__main__":
             reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), reward[0], done)
             tensorboard.step_info(main_loop_info, reward_info)
 
-            # if explore_network_flag == False:
-            print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
+            if explore_network_flag == False:
+                print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
                       f" generator_injection: {np.sum(state['generator_injection'])}, reward: {reward[0]}, custom_reward: {custom_reward[0]}")
 
             next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale, explore_network_flag)

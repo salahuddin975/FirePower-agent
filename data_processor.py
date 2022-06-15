@@ -181,36 +181,38 @@ class DataProcessor:
 
         # self.custom_writer.add_info(self.episode, self.step, total_load_demand, np.sum(generators_current_output), np.sum(lower), np.sum(upper))
 
-        if np.sum(upper) - epsilon_total < total_load_demand:
+        # if np.sum(upper) - epsilon_total < total_load_demand:
             # print("Adjust load demand: total_load_demand: ", total_load_demand, ", upper: ", np.sum(upper) - epsilon_total )
-            total_load_demand = np.sum(upper) - epsilon_total
-
-        # if np.sum(nn_output):
-        #     nn_output = nn_output / np.sum(nn_output)
-        actor_output = nn_output * total_load_demand
+            # total_load_demand = np.sum(upper) - epsilon_total
 
         # print("generators max output: ", generators_max_output)
         # print("generators min output: ", generators_min_output)
         # print("generators max ramp: ", generators_max_ramp)
         # print("generators current output: ", generators_current_output)
-        print("generators_current_output_total: ", np.sum(generators_current_output), "; lower_total: ", np.sum(lower),
-              "; upper_total: ", np.sum(upper), "; actor_output_total: ", np.sum(actor_output))
+        # print("generators_current_output_total: ", np.sum(generators_current_output), "; lower_total: ", np.sum(lower),
+        #       "; upper_total: ", np.sum(upper), "; actor_output_total: ", np.sum(actor_output))
 
         assert (lower <= upper).all(), "lower, upper value constraint failed."
         assert np.sum(lower) <= np.sum(generators_current_output) <= np.sum(upper), \
             f"total_lower: {np.sum(lower)}, total_current_output: {np.sum(generators_current_output)}, total_upper: {np.sum(upper)}"
+        assert np.sum(lower) <= total_load_demand <= np.sum(upper), \
+            f"total_load_demand: {total_load_demand} is not in the range of lower: {np.sum(lower)} and upper: {np.sum(upper)} "
+
+        # if np.sum(nn_output):
+        #     nn_output = nn_output / np.sum(nn_output)
+        actor_output = nn_output * total_load_demand
 
         total_load_demand_lower = np.array(total_load_demand - epsilon_total)
         total_load_demand_upper = np.array(total_load_demand + epsilon_total)
         linear_constraint = LinearConstraint(A=np.transpose(np.ones(len(generators_current_output))), lb=total_load_demand_lower, ub=total_load_demand_upper)
-        print("load_demand_total: ", total_load_demand, "; load_demand_lower_total: ", total_load_demand_lower, "; load_demand_upper_total: ", total_load_demand_upper)
+        # print("load_demand_total: ", total_load_demand, "; load_demand_lower_total: ", total_load_demand_lower, "; load_demand_upper_total: ", total_load_demand_upper)
 
         feasible_output = minimize(lambda feasible_output: np.sum(np.power((actor_output - feasible_output), 2)),
                  generators_current_output, options={'verbose': 0},
                  bounds=[(lower[i], upper[i]) for i in range(len(upper))],
                  constraints=[linear_constraint], method='trust-constr')
 
-        print("feasible_output: ", np.sum(feasible_output.x))
+        # print("feasible_output: ", np.sum(feasible_output.x))
         # assert total_load_demand_upper >= np.sum(feasible_output.x) >= total_load_demand_lower, \
         #     f"feasible_output constraint violated: {total_load_demand_upper} >= {np.sum(feasible_output.x)} >= {total_load_demand_lower}"
 
@@ -331,7 +333,6 @@ class DataProcessor:
     def preprocess(self, state, power_generation_scale, explore_network_flag):
         state["generator_injection"] = np.array([output / power_generation_scale for output in state["generator_injection"]])
         state["load_demand"] = np.array([load_output / power_generation_scale for load_output in state["load_demand"]])
-        state["pload_served"] = np.array([served_load / power_generation_scale for served_load in state["pload_served"]])
 
         # state["fire_distance"] = [1 - dist/self._considerable_fire_distance if dist < self._considerable_fire_distance else 0 for dist in state["fire_distance"]]
 
@@ -365,7 +366,6 @@ class DataProcessor:
         # print("branch_status:", state["branch_status"])
         # print("generator_output:", state["generator_injection"])
         # print("load_demand:", state["load_demand"])
-        # print("pload_served:", state["pload_served"])
         # print("line_flow:", state["line_flow"])
         # print("theta:", state["theta"])
         # print("fire_distance:", state["fire_distance"])

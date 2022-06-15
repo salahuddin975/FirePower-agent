@@ -6,7 +6,7 @@ import numpy as np
 from datetime import datetime
 import tensorflow as tf
 from parameters import Parameters
-from agent import Agent
+from ddpg import DDPG
 from replay_buffer import ReplayBuffer
 from data_processor import DataProcessor, Tensorboard, SummaryWriter
 from simulator_resorces import SimulatorResources, Generators
@@ -118,9 +118,9 @@ if __name__ == "__main__":
     parameters.save_parameters()
     parameters.print_parameters()
 
-    agent = Agent(base_path, state_spaces, action_spaces, generators)
+    ddpg = DDPG(base_path, state_spaces, action_spaces, generators)
     if load_model:
-        agent.load_weight(version=load_model_version, episode_num=load_episode_num)
+        ddpg.load_weight(version=load_model_version, episode_num=load_episode_num)
 
     # replay buffer
     save_replay_buffer = True if train_network else False
@@ -161,7 +161,7 @@ if __name__ == "__main__":
             # tensorboard.line_flow_info(state["line_flow"])
 
             tf_state = data_processor.get_tf_state(state)
-            nn_action = agent.actor(tf_state)
+            nn_action = ddpg.actor(tf_state)
             # print("NN generator output: ", nn_action[0])
             # print("original:", agent.get_critic_value(tf_state, nn_action))
 
@@ -182,16 +182,16 @@ if __name__ == "__main__":
             # image = visualizer.draw_map(episode, step, cells_info, next_state)
             # image.save(f"fire_propagation_{episode}_{step}.png")
 
-            main_loop_info = MainLoopInfo(tf.math.reduce_mean(nn_action), agent.get_critic_value(tf_state, nn_action),
+            main_loop_info = MainLoopInfo(tf.math.reduce_mean(nn_action), ddpg.get_critic_value(tf_state, nn_action),
                                           tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
-                                          agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
+                                          ddpg.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
                                           tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)),
-                                          agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]),0)))
+                                          ddpg.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)))
             reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), reward[0], done)
             tensorboard.step_info(main_loop_info, reward_info)
 
-            if explore_network_flag == False:
-                print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
+            # if explore_network_flag == False:
+            print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
                       f" generator_injection: {np.sum(state['generator_injection'])}, reward: {reward[0]}, custom_reward: {custom_reward[0]}")
 
             next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale, explore_network_flag)
@@ -208,7 +208,7 @@ if __name__ == "__main__":
 
             if train_network and episode >= 3:
                 state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
-                tensorboard_info = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
+                tensorboard_info = ddpg.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
                 tensorboard.train_info(tensorboard_info)
                 # print("Episode:", episode, ", step: ", step, ", critic_value:", tensorboard_info.critic_value_with_original_action, ", critic_loss:", tensorboard_info.critic_loss)
 
@@ -238,7 +238,7 @@ if __name__ == "__main__":
 
         # save model weights
         if (episode % parameters.test_after_episodes == 0) and save_model and episode:
-            agent.save_weight(version=save_model_version, episode_num=episode)
+            ddpg.save_weight(version=save_model_version, episode_num=episode)
 
         # save replay buffer
         if (episode % parameters.test_after_episodes == 0) and save_replay_buffer and episode:

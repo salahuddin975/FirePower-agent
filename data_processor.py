@@ -43,7 +43,7 @@ class DataProcessor:
         self._considerable_fire_distance = 10
 
         std_dev = 0.2
-        self._ou_noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(std_dev) * np.ones(1))
+        self._ou_noise = OUActionNoise(mean=np.zeros(self.generators.get_num_generators()), std_deviation=np.ones(self.generators.get_num_generators()) * std_dev)
 
         self._branches = [(0, 1),(0, 2),(0, 4),(1, 3),(1, 5),(2, 8),(2, 23),(3, 8),(4, 9),(5, 9),(6, 7),(7, 8),(7, 9),(8, 10),
                           (8, 11),(9, 10),(9, 11),(10, 12),(10, 13),(11, 12),(11, 22),(12, 22),(13, 15),(14, 15),(14, 20),
@@ -165,7 +165,7 @@ class DataProcessor:
 
         # print("nn_output_sum: ", np.sum(nn_output))
         epsilon_nn = 0.0001
-        epsilon_total = 0.000001
+        epsilon_total = 0.0001
         assert 1 + epsilon_nn > np.sum(nn_output) > 1-epsilon_nn, "Not total value is 1"
         assert np.min(nn_output) >= 0, "value is negative"
 
@@ -175,20 +175,20 @@ class DataProcessor:
                 generators_max_ramp[i] = 0
                 generators_min_output[i] = 0
                 generators_max_output[i] = 0
-                nn_output[i] = 0
+                # nn_output[i] = 0
 
         lower = np.maximum(generators_current_output - generators_max_ramp, generators_min_output)
         upper = np.minimum(generators_current_output + generators_max_ramp, generators_max_output)
 
         # self.custom_writer.add_info(self.episode, self.step, total_servable_load_demand, np.sum(generators_current_output), np.sum(lower), np.sum(upper))
 
-        if np.sum(upper) - epsilon_total < total_servable_load_demand:
-            # print("Adjust load demand: total_servable_load_demand: ", total_servable_load_demand, ", upper: ", np.sum(upper) - epsilon_total )
-            total_servable_load_demand = np.sum(upper) - epsilon_total
-
-        if np.sum(lower) + epsilon_total > total_servable_load_demand:
-            # print("Adjust load demand: total_servable_load_demand: ", total_servable_load_demand, ", lower: ", np.sum(upper) - epsilon_total )
-            total_servable_load_demand = np.sum(lower) + epsilon_total
+        # if np.sum(upper) - epsilon_total < total_servable_load_demand:
+        #     # print("Adjust load demand: total_servable_load_demand: ", total_servable_load_demand, ", upper: ", np.sum(upper) - epsilon_total )
+        #     total_servable_load_demand = np.sum(upper) - epsilon_total
+        #
+        # if np.sum(lower) + epsilon_total > total_servable_load_demand:
+        #     # print("Adjust load demand: total_servable_load_demand: ", total_servable_load_demand, ", lower: ", np.sum(upper) - epsilon_total )
+        #     total_servable_load_demand = np.sum(lower) + epsilon_total
 
         # print("generators max output: ", generators_max_output)
         # print("generators min output: ", generators_min_output)
@@ -205,11 +205,12 @@ class DataProcessor:
 
         # if np.sum(nn_output):
         #     nn_output = nn_output / np.sum(nn_output)
-        actor_output = nn_output * total_servable_load_demand
+        actor_output = nn_output * total_servable_load_demand * (1 - epsilon_total)
 
-        total_load_demand_lower = np.array(total_servable_load_demand - epsilon_total)
-        total_load_demand_upper = np.array(total_servable_load_demand + epsilon_total)
-        linear_constraint = LinearConstraint(A=np.transpose(np.ones(len(generators_current_output))), lb=total_load_demand_lower, ub=total_load_demand_upper)
+        total_load_demand_lower = np.array(total_servable_load_demand * (1 - epsilon_total))
+        total_load_demand_upper = np.array(total_servable_load_demand * (1 - 0.5 * epsilon_total))
+        linear_constraint = LinearConstraint(A=np.transpose(np.ones(len(generators_current_output))),
+                                             lb=total_load_demand_lower, ub=total_load_demand_upper)
         # print("load_demand_total: ", total_servable_load_demand, "; load_demand_lower_total: ", total_load_demand_lower, "; load_demand_upper_total: ", total_load_demand_upper)
 
         feasible_output = minimize(lambda feasible_output: np.sum(np.power((actor_output - feasible_output), 2)),
@@ -217,12 +218,16 @@ class DataProcessor:
                  bounds=[(lower[i], upper[i]) for i in range(len(upper))],
                  constraints=[linear_constraint], method='trust-constr')
 
+        assert(total_load_demand_lower * (1 - epsilon_total) <= sum(feasible_output.x) < total_load_demand_upper), \
+            f"feasible_output constraint violated: {total_load_demand_lower * (1 - epsilon_total)} <= {np.sum(feasible_output.x)} >= {total_load_demand_upper}"
+
         # print("feasible_output: ", np.sum(feasible_output.x))
         # assert total_load_demand_upper >= np.sum(feasible_output.x) >= total_load_demand_lower, \
         #     f"feasible_output constraint violated: {total_load_demand_upper} >= {np.sum(feasible_output.x)} >= {total_load_demand_lower}"
 
         ramp = feasible_output.x - generators_current_output
         # print("generators set ramp: ", ramp)
+
         return ramp
 
     # def check_violations(self, np_action, state, ramp_scale):
@@ -286,19 +291,11 @@ class DataProcessor:
         for i in range(self.generators.get_num_generators()):
             generators_current_output[i] = current_output[self.generators.get_generators()[i]]
 
-        nn_output = np.array(tf.squeeze(nn_action[0]))
+        nn_output = np.array(tf.squeeze(nn_action))
         if explore_network:
-            noises = np.zeros(nn_output.size)
-            for i in range(nn_output.size):
-                noises[i] = self._ou_noise()
-            nn_output += noises
-            nn_output = np.clip(nn_output, 0, None)
-
-        # self._check_bus_generator_violation(bus_status, nn_output, generators_current_output) # if bus is 0, then corresponding generator output, ramp 0
-        if np.sum(nn_output):
+            noise = self._ou_noise()
+            nn_output *= np.exp(noise)
             nn_output = nn_output / np.sum(nn_output)
-        else:
-            nn_output = np.array(tf.squeeze(nn_action[0]))
 
         nn_noise_action = {
             "generator_injection": copy.deepcopy(nn_output),

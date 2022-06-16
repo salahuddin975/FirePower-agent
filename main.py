@@ -193,7 +193,7 @@ if __name__ == "__main__":
             reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), rl_reward[0], done)
             tensorboard.step_info(main_loop_info, reward_info)
 
-            reward = (np.sum(next_state["generator_injection"]) - np.sum(myopic_state["generator_injection"])) * 100
+            reward = (np.sum(next_state["generator_injection"]) - np.sum(myopic_state["generator_injection"])) # * 100
             custom_reward = (reward, reward)
 
             total_myopic_reward += myopic_reward[0]

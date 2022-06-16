@@ -159,19 +159,13 @@ if __name__ == "__main__":
             # tensorboard.load_demand_info(state["load_demand"])
             # tensorboard.line_flow_info(state["line_flow"])
 
-            myopic_action = data_processor.get_myopic_action()
-            myopic_action["episode"] = episode
-            myopic_action["step_count"] = step
-            myopic_action["action_type"] = "myopic"
+            myopic_action = data_processor.get_myopic_action(episode, step)
             myopic_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
 
-            target_myopic_action = data_processor.get_myopic_action()
-            target_myopic_action["episode"] = episode
-            target_myopic_action["step_count"] = step
-            target_myopic_action["action_type"] = "target_myopic"
+            target_myopic_action = data_processor.get_target_myopic_action(episode, step)
             target_myopic_state, target_myopic_reward, target_myopic_done, _ = env.step(target_myopic_action)
-            servable_load_demand = np.sum(target_myopic_state["generator_injection"])/power_generation_preprocess_scale
 
+            servable_load_demand = np.sum(target_myopic_state["generator_injection"])/power_generation_preprocess_scale
             print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])}, generator_injection: {np.sum(state['generator_injection'])}, "
                 f"servable_load_demand: {servable_load_demand}, diff: {round(np.sum(state['load_demand']) - servable_load_demand, 4)}")
 
@@ -184,9 +178,6 @@ if __name__ == "__main__":
             nn_noise_action, env_action, custom_reward = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
 
             # print("ramp:", env_action['generator_injection'])
-            env_action["episode"] = episode
-            env_action["step_count"] = step
-            env_action["action_type"] = "rl"
             next_state, reward, done, cells_info = env.step(env_action)
 
             # image = visualizer.draw_map(episode, step, cells_info, next_state)

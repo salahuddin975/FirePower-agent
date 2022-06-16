@@ -309,6 +309,9 @@ class DataProcessor:
         ramp, custom_reward = self._clip_ramp_values(servable_load_demand, generators_current_output, nn_output)
 
         env_action = {
+            "episode": self.episode,
+            "step_count": self.step,
+            "action_type": "rl",
             "bus_status": bus_status,
             "branch_status": branch_status,
             "generator_selector": self.generators.get_generators(),
@@ -317,8 +320,22 @@ class DataProcessor:
 
         return nn_noise_action, env_action, custom_reward
 
-    def get_myopic_action(self):
+    def get_myopic_action(self, episode, step):
         return {
+            "episode": episode,
+            "step_count": step,
+            "action_type": "myopic",
+            "bus_status": np.ones(24),
+            "branch_status": np.ones(34),
+            "generator_selector": [24] * 10,
+            "generator_injection": np.zeros(10),
+        }
+
+    def get_target_myopic_action(self, episode, step):
+        return {
+            "episode": episode,
+            "step_count": step,
+            "action_type": "target_myopic",
             "bus_status": np.ones(24),
             "branch_status": np.ones(34),
             "generator_selector": [24] * 10,

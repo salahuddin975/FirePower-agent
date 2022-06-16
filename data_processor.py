@@ -317,13 +317,10 @@ class DataProcessor:
 
         return nn_noise_action, env_action, custom_reward
 
-    def get_myopic_action(self, state):
-        bus_status = copy.deepcopy(state["bus_status"])
-        branch_status = copy.deepcopy(state["branch_status"])
-
+    def get_myopic_action(self):
         return {
-            "bus_status": bus_status,
-            "branch_status": branch_status,
+            "bus_status": np.ones(24),
+            "branch_status": np.ones(34),
             "generator_selector": [24] * 10,
             "generator_injection": np.zeros(10),
         }
@@ -370,7 +367,7 @@ class DataProcessor:
         # print("fire_state:", state["fire_state"])
 
         # if explore_network_flag == False:
-        #     print("vulnerable equipment: ", vulnerable_equipment)
+        print("vulnerable equipment: ", vulnerable_equipment)
 
         return state
 

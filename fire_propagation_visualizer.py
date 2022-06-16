@@ -26,18 +26,18 @@ class Visualizer:
                 self.branches.append(i)
 
 
-    def _check_network_violations_branch(self, bus_status, branch_status):
-        from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
-        to_buses = self.simulator_resources.ppc["branch"][:, T_BUS].astype('int')
-
-        for bus in range(bus_status.size):
-            is_active = bus_status[bus]
-            for branch in range(branch_status.size):
-                if bus in [from_buses[branch], to_buses[branch]]:
-                    if is_active == 0:
-                        branch_status[branch] = 0
-
-        return branch_status
+    # def _check_network_violations_branch(self, bus_status, branch_status):
+    #     from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
+    #     to_buses = self.simulator_resources.ppc["branch"][:, T_BUS].astype('int')
+    #
+    #     for bus in range(bus_status.size):
+    #         is_active = bus_status[bus]
+    #         for branch in range(branch_status.size):
+    #             if bus in [from_buses[branch], to_buses[branch]]:
+    #                 if is_active == 0:
+    #                     branch_status[branch] = 0
+    #
+    #     return branch_status
 
     def draw_map(self, episode, step, cells_info, state):
         burning_cells = cells_info[0]
@@ -46,7 +46,7 @@ class Visualizer:
         branch_status = copy.deepcopy(state["branch_status"])
         generation = copy.deepcopy(state["generator_injection"])
         load_demand = copy.deepcopy(state["load_demand"])
-        branch_status = self._check_network_violations_branch(bus_status, branch_status)
+        # branch_status = self._check_network_violations_branch(bus_status, branch_status)
 
         image = Image.new('RGB', (self.conf_data['cols'], self.conf_data['rows']), ImageColor.getrgb('darkgreen'))
 

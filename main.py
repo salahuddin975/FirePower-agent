@@ -149,8 +149,9 @@ if __name__ == "__main__":
         state = env.reset()
 
         max_reached_step = 0
-        episodic_penalty = 0
-        episodic_load_loss = 0
+        total_myopic_reward = 0
+        total_target_myopic_reward = 0
+        total_rl_reward = 0
 
         state = data_processor.preprocess(state, explore_network_flag)
 
@@ -191,18 +192,21 @@ if __name__ == "__main__":
             reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), reward[0], done)
             tensorboard.step_info(main_loop_info, reward_info)
 
+            total_myopic_reward += myopic_reward[0]
+            total_target_myopic_reward += target_myopic_reward[0]
+            total_rl_reward += reward[0]
             # if explore_network_flag == False:
-            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}, custom_reward: {custom_reward[0]}")
+            print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward[0]}, "
+                  f"target_myopic_reward: {target_myopic_reward[0]}, rl_reward: {reward[0]}, custom_reward: {custom_reward[0]}")
 
             next_state = data_processor.preprocess(next_state, explore_network_flag)
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))
 
-            episodic_penalty += reward[0]
-            episodic_load_loss += reward[1]
             state = next_state
 
             if done or (step == max_steps_per_episode - 1):
-                print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_penalty}, total_load_loss: {episodic_load_loss}")
+                print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total myopic_reward: {total_myopic_reward},"
+                      f" total_target_myopic_reward: {total_target_myopic_reward}, total_rl_reward: {total_rl_reward}")
                 max_reached_step = step
                 break
 
@@ -212,8 +216,8 @@ if __name__ == "__main__":
                 tensorboard.train_info(tensorboard_info)
                 # print("Episode:", episode, ", step: ", step, ", critic_value:", tensorboard_info.critic_value_with_original_action, ", critic_loss:", tensorboard_info.critic_loss)
 
-        tensorboard.episodic_info(episodic_penalty)
-        summary_writer.add_info(episode, max_reached_step, episodic_penalty, episodic_load_loss)
+        tensorboard.episodic_info(total_rl_reward)
+        summary_writer.add_info(episode, max_reached_step, total_rl_reward, total_rl_reward)
 
         # explore / Testing
         if episode and (episode % parameters.test_after_episodes == 0):

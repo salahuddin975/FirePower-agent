@@ -113,7 +113,7 @@ if __name__ == "__main__":
     load_model = False if train_network else True
     save_model_version = 0
     load_model_version = 0
-    load_episode_num = 0
+    load_episode_num = 20
 
     parameters = Parameters(base_path, save_model_version, args.path_geo)
     parameters.save_parameters()
@@ -169,7 +169,7 @@ if __name__ == "__main__":
 
             # servable_load_demand = np.sum(target_myopic_state["generator_injection"])/power_generation_preprocess_scale
             # print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])}, generator_injection: {np.sum(state['generator_injection'])}, "
-            #     f"servable_load_demand: {servable_load_demand}, diff: {round(np.sum(state['load_demand']) - servable_load_demand, 4)}")
+            #     f"servable_load_demand: {servable_load_demand}, diff: {round(np.sum(state['load_demand']) - servable_load_demand, 4) * 10}")
 
             tf_state = data_processor.get_tf_state(state)
             nn_action = ddpg.actor(tf_state)

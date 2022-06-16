@@ -221,11 +221,9 @@ class DataProcessor:
         # assert total_load_demand_upper >= np.sum(feasible_output.x) >= total_load_demand_lower, \
         #     f"feasible_output constraint violated: {total_load_demand_upper} >= {np.sum(feasible_output.x)} >= {total_load_demand_lower}"
 
-        custom_penalty = (np.sum(generators_current_output) - np.sum(feasible_output.x)) * 10 * 100
         ramp = feasible_output.x - generators_current_output
-
         # print("generators set ramp: ", ramp)
-        return ramp, (custom_penalty, custom_penalty)
+        return ramp
 
     # def check_violations(self, np_action, state, ramp_scale):
     #     bus_status = copy.deepcopy(state["bus_status"])
@@ -306,7 +304,7 @@ class DataProcessor:
             "generator_injection": copy.deepcopy(nn_output),
         }
 
-        ramp, custom_reward = self._clip_ramp_values(servable_load_demand, generators_current_output, nn_output)
+        ramp = self._clip_ramp_values(servable_load_demand, generators_current_output, nn_output)
 
         env_action = {
             "episode": self.episode,
@@ -318,7 +316,7 @@ class DataProcessor:
             "generator_injection": ramp,
         }
 
-        return nn_noise_action, env_action, custom_reward
+        return nn_noise_action, env_action
 
     def get_myopic_action(self, episode, step):
         return {

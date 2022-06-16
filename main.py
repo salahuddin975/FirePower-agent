@@ -176,7 +176,7 @@ if __name__ == "__main__":
             state["episode"] = episode
             state["step"] = step
             state["servable_load_demand"] = target_myopic_state["generator_injection"]
-            nn_noise_action, env_action, custom_reward = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
+            nn_noise_action, env_action = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
 
             # print("ramp:", env_action['generator_injection'])
             next_state, reward, done, cells_info = env.step(env_action)
@@ -197,7 +197,7 @@ if __name__ == "__main__":
             total_rl_reward += reward[0]
             # if explore_network_flag == False:
             print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward[0]}, "
-                  f"target_myopic_reward: {target_myopic_reward[0]}, rl_reward: {reward[0]}, custom_reward: {custom_reward[0]}")
+                  f"target_myopic_reward: {target_myopic_reward[0]}, rl_reward: {reward[0]}")
 
             next_state = data_processor.preprocess(next_state, explore_network_flag)
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))

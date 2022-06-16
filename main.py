@@ -152,6 +152,7 @@ if __name__ == "__main__":
         total_myopic_reward = 0
         total_target_myopic_reward = 0
         total_rl_reward = 0
+        total_custom_reward = 0
 
         state = data_processor.preprocess(state, explore_network_flag)
 
@@ -166,9 +167,9 @@ if __name__ == "__main__":
             target_myopic_action = data_processor.get_target_myopic_action(episode, step)
             target_myopic_state, target_myopic_reward, target_myopic_done, _ = env.step(target_myopic_action)
 
-            servable_load_demand = np.sum(target_myopic_state["generator_injection"])/power_generation_preprocess_scale
-            print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])}, generator_injection: {np.sum(state['generator_injection'])}, "
-                f"servable_load_demand: {servable_load_demand}, diff: {round(np.sum(state['load_demand']) - servable_load_demand, 4)}")
+            # servable_load_demand = np.sum(target_myopic_state["generator_injection"])/power_generation_preprocess_scale
+            # print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])}, generator_injection: {np.sum(state['generator_injection'])}, "
+            #     f"servable_load_demand: {servable_load_demand}, diff: {round(np.sum(state['load_demand']) - servable_load_demand, 4)}")
 
             tf_state = data_processor.get_tf_state(state)
             nn_action = ddpg.actor(tf_state)
@@ -179,7 +180,7 @@ if __name__ == "__main__":
             nn_noise_action, env_action = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
 
             # print("ramp:", env_action['generator_injection'])
-            next_state, reward, done, cells_info = env.step(env_action)
+            next_state, rl_reward, done, cells_info = env.step(env_action)
 
             # image = visualizer.draw_map(episode, step, cells_info, next_state)
             # image.save(f"fire_propagation_{episode}_{step}.png")
@@ -189,24 +190,28 @@ if __name__ == "__main__":
                                           ddpg.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
                                           tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)),
                                           ddpg.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)))
-            reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), reward[0], done)
+            reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), rl_reward[0], done)
             tensorboard.step_info(main_loop_info, reward_info)
+
+            reward = (np.sum(next_state["generator_injection"]) - np.sum(myopic_state["generator_injection"])) * 100
+            custom_reward = (reward, reward)
 
             total_myopic_reward += myopic_reward[0]
             total_target_myopic_reward += target_myopic_reward[0]
-            total_rl_reward += reward[0]
-            # if explore_network_flag == False:
-            print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward[0]}, "
-                  f"target_myopic_reward: {target_myopic_reward[0]}, rl_reward: {reward[0]}")
+            total_rl_reward += rl_reward[0]
+            total_custom_reward += custom_reward[0]
+
+            if explore_network_flag == False:
+                print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward[0]}, target_myopic_reward: "
+                      f"{target_myopic_reward[0]}, rl_reward: {rl_reward[0]}, custom_reward: {reward}")
 
             next_state = data_processor.preprocess(next_state, explore_network_flag)
-            buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))
-
+            buffer.add_record((state, nn_noise_action, custom_reward, next_state, env_action, done))
             state = next_state
 
             if done or (step == max_steps_per_episode - 1):
                 print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total myopic_reward: {total_myopic_reward},"
-                      f" total_target_myopic_reward: {total_target_myopic_reward}, total_rl_reward: {total_rl_reward}")
+                      f" total_target_myopic_reward: {total_target_myopic_reward}, total_rl_reward: {total_rl_reward}, total_custom_reward: {total_custom_reward}")
                 max_reached_step = step
                 break
 

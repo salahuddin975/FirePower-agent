@@ -169,12 +169,13 @@ class DataProcessor:
         assert 1 + epsilon_nn > np.sum(nn_output) > 1-epsilon_nn, "Not total value is 1"
         assert np.min(nn_output) >= 0, "value is negative"
 
-        for i in range(len(generators_current_output)):
-            if generators_current_output[i] == 0.0:
+        for i in range(len(servable_load_demand)):
+            if servable_load_demand[i] == 0.0:
                 # print("generator ", self.generators.get_generators()[i], " output is 0; nn_output: ", nn_output[i])
                 generators_max_ramp[i] = 0
                 generators_min_output[i] = 0
                 generators_max_output[i] = 0
+                generators_current_output[i] = 0
                 # nn_output[i] = 0
 
         lower = np.maximum(generators_current_output - generators_max_ramp, generators_min_output)
@@ -222,8 +223,6 @@ class DataProcessor:
             f"feasible_output constraint violated: {total_load_demand_lower * (1 - epsilon_total)} <= {np.sum(feasible_output.x)} >= {total_load_demand_upper}"
 
         # print("feasible_output: ", np.sum(feasible_output.x))
-        # assert total_load_demand_upper >= np.sum(feasible_output.x) >= total_load_demand_lower, \
-        #     f"feasible_output constraint violated: {total_load_demand_upper} >= {np.sum(feasible_output.x)} >= {total_load_demand_lower}"
 
         ramp = feasible_output.x - generators_current_output
         # print("generators set ramp: ", ramp)
@@ -282,19 +281,19 @@ class DataProcessor:
         bus_status = copy.deepcopy(state["bus_status"])
         branch_status = copy.deepcopy(state["branch_status"])
         current_output = state["generator_injection"]
-        servable_load_demand = np.array([load_output / self._power_generation_preprocess_scale for load_output in state["servable_load_demand"]])
 
         # branch_status = self._check_network_violations_branch(bus_status, branch_status) # if bus is 0, then corresponding all branches are 0
         # self._adjust_load_demand_if_all_branches_out(branch_status, load_demand, current_output) # adjust load_demand and generation max output if all branches are 0
 
         generators_current_output = np.zeros(self.generators.get_num_generators())
+        servable_load_demand = np.zeros(self.generators.get_num_generators())
         for i in range(self.generators.get_num_generators()):
             generators_current_output[i] = current_output[self.generators.get_generators()[i]]
+            servable_load_demand[i] = state["servable_load_demand"][self.generators.get_generators()[i]] / self._power_generation_preprocess_scale
 
         nn_output = np.array(tf.squeeze(nn_action))
         if explore_network:
-            noise = self._ou_noise()
-            nn_output *= np.exp(noise)
+            nn_output *= np.exp(self._ou_noise())
             nn_output = nn_output / np.sum(nn_output)
 
         nn_noise_action = {

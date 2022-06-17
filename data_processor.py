@@ -199,10 +199,6 @@ class DataProcessor:
         # print("generators_current_output_total: ", np.sum(generators_current_output), "; lower_total: ", np.sum(lower),
         #       "; upper_total: ", np.sum(upper), "; total_servable_load_demand:", total_servable_load_demand)
 
-        assert (lower <= upper).all(), "lower, upper value constraint failed."
-        assert np.sum(lower) <= total_servable_load_demand <= np.sum(upper), \
-            f"total_servable_load_demand: {total_servable_load_demand} is not in the range of lower: {np.sum(lower)} and upper: {np.sum(upper)} "
-
         # if np.sum(nn_output):
         #     nn_output = nn_output / np.sum(nn_output)
         actor_output = nn_output * total_servable_load_demand * (1 - epsilon_total)
@@ -212,6 +208,10 @@ class DataProcessor:
         linear_constraint = LinearConstraint(A=np.transpose(np.ones(len(generators_current_output))),
                                              lb=total_load_demand_lower, ub=total_load_demand_upper)
         # print("load_demand_total: ", total_servable_load_demand, "; load_demand_lower_total: ", total_load_demand_lower, "; load_demand_upper_total: ", total_load_demand_upper)
+
+        assert (lower <= upper).all(), "lower, upper value constraint failed."
+        assert np.sum(lower) <= total_load_demand_upper and total_load_demand_lower <= np.sum(upper), \
+            f"{np.sum(lower)} <= {total_load_demand_upper} and {total_load_demand_lower} <= {np.sum(upper)} violation"
 
         feasible_output = minimize(lambda feasible_output: np.sum(np.power((actor_output - feasible_output), 2)),
                  generators_current_output, options={'verbose': 0},

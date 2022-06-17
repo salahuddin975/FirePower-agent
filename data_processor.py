@@ -195,8 +195,9 @@ class DataProcessor:
         # print("generators min output: ", generators_min_output)
         # print("generators max ramp: ", generators_max_ramp)
         # print("generators current output: ", generators_current_output)
+        # print("servable load demand: ", servable_load_demand)
         # print("generators_current_output_total: ", np.sum(generators_current_output), "; lower_total: ", np.sum(lower),
-        #       "; upper_total: ", np.sum(upper), "; actor_output_total: ", np.sum(actor_output))
+        #       "; upper_total: ", np.sum(upper), "; total_servable_load_demand:", total_servable_load_demand)
 
         assert (lower <= upper).all(), "lower, upper value constraint failed."
         assert np.sum(lower) <= total_servable_load_demand <= np.sum(upper), \

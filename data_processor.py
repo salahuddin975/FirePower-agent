@@ -199,8 +199,6 @@ class DataProcessor:
         #       "; upper_total: ", np.sum(upper), "; actor_output_total: ", np.sum(actor_output))
 
         assert (lower <= upper).all(), "lower, upper value constraint failed."
-        # assert np.sum(lower) <= np.sum(generators_current_output) <= np.sum(upper), \
-        #     f"total_lower: {np.sum(lower)}, total_current_output: {np.sum(generators_current_output)}, total_upper: {np.sum(upper)}"
         assert np.sum(lower) <= total_servable_load_demand <= np.sum(upper), \
             f"total_servable_load_demand: {total_servable_load_demand} is not in the range of lower: {np.sum(lower)} and upper: {np.sum(upper)} "
 

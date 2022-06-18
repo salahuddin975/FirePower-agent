@@ -42,7 +42,7 @@ class DataProcessor:
         self._power_generation_preprocess_scale = power_generation_preprocess_scale
         self._considerable_fire_distance = 10
 
-        std_dev = 0.2
+        std_dev = 1
         self._ou_noise = OUActionNoise(mean=np.zeros(self.generators.get_num_generators()), std_deviation=np.ones(self.generators.get_num_generators()) * std_dev)
 
         self._branches = [(0, 1),(0, 2),(0, 4),(1, 3),(1, 5),(2, 8),(2, 23),(3, 8),(4, 9),(5, 9),(6, 7),(7, 8),(7, 9),(8, 10),

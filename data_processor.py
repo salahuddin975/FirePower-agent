@@ -41,8 +41,8 @@ class DataProcessor:
         self._action_spaces = action_spaces
         self._considerable_fire_distance = 10
 
-        std_dev = 0.2
-        self._ou_noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(std_dev) * np.ones(1))
+        std_dev = .2
+        self._ou_noise = OUActionNoise(mean=np.zeros(self.generators.get_num_generators()), std_deviation=np.ones(self.generators.get_num_generators()) * std_dev)
 
         self._branches = [(0, 1),(0, 2),(0, 4),(1, 3),(1, 5),(2, 8),(2, 23),(3, 8),(4, 9),(5, 9),(6, 7),(7, 8),(7, 9),(8, 10),
                           (8, 11),(9, 10),(9, 11),(10, 12),(10, 13),(11, 12),(11, 22),(12, 22),(13, 15),(14, 15),(14, 20),
@@ -264,20 +264,16 @@ class DataProcessor:
         for i in range(self.generators.get_num_generators()):
             generators_current_output[i] = state["generator_injection"][self.generators.get_generators()[i]]
 
-        branch_status = self._check_network_violations_branch(bus_status, branch_status) # if bus is 0, then corresponding all branches are 0
-        bus_status = self._check_network_violations_bus(bus_status, branch_status) # if all branches are 0, then corresponding bus is 0
+        # branch_status = self._check_network_violations_branch(bus_status, branch_status) # if bus is 0, then corresponding all branches are 0
+        # bus_status = self._check_network_violations_bus(bus_status, branch_status) # if all branches are 0, then corresponding bus is 0
         # print("branch_status: ", branch_status)
         # print("bus_status: ", bus_status)
 
-        nn_output = np.array(tf.squeeze(nn_action[0]))
-        while True:
-            for i in range(nn_output.size):
-                if explore_network:
-                    nn_output[i] = nn_output[i] + self._ou_noise() # random.uniform(-noise_range, noise_range)
-            nn_output = np.clip(nn_output, 0, None)
-            self._check_bus_generator_violation(bus_status, nn_output, generators_current_output) # if bus is 0, then corresponding generator output, ramp 0
-            if np.sum(nn_output): break
-        nn_output = nn_output / np.sum(nn_output)
+        nn_output = np.array(tf.squeeze(nn_action))
+        if explore_network:
+            nn_output *= np.exp(self._ou_noise())
+            nn_output = nn_output / np.sum(nn_output)
+        # print("step: ", self.step, ", exploration: ", ((np.array(tf.squeeze(nn_action)) - nn_output)/nn_output) * 100)
 
         nn_noise_action = {
             "generator_injection": copy.deepcopy(nn_output),

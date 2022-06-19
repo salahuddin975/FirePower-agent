@@ -174,6 +174,7 @@ if __name__ == "__main__":
             # print("ramp:", env_action['generator_injection'])
             env_action["episode"] = episode
             env_action["step_count"] = step
+            env_action["train_environment"] = True
 
             next_state, reward, done, cells_info = env.step(env_action)
 

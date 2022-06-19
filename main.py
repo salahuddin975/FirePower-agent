@@ -189,7 +189,7 @@ if __name__ == "__main__":
 
             if explore_network_flag == False:
                 print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
-                      f" generator_injection: {np.sum(state['generator_injection'])}, reward: {reward[0]}")
+                      f" generator_injection: {np.sum(state['generator_injection'])}, load_loss: {reward[1]}, generation_rejection: {reward[0] - reward[1]}, reward: {reward[0]}")
 
             next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale, explore_network_flag)
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))

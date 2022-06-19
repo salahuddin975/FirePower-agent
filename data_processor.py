@@ -247,7 +247,7 @@ class DataProcessor:
     #
     #     return action
 
-    def process_nn_action(self, state, nn_action, explore_network, noise_range=0.5):
+    def process_nn_action(self, state, nn_action, explore_network, episode, step):
         bus_status = copy.deepcopy(state["bus_status"])
         branch_status = copy.deepcopy(state["branch_status"])
 
@@ -262,9 +262,10 @@ class DataProcessor:
 
         nn_output = np.array(tf.squeeze(nn_action))
         if explore_network:
-            nn_output *= np.exp(self._ou_noise())
-            nn_output = nn_output / np.sum(nn_output)
-        # print("step: ", self.step, ", exploration: ", ((np.array(tf.squeeze(nn_action)) - nn_output)/nn_output) * 100)
+            # nn_output *= np.exp(self._ou_noise())
+            nn_output = nn_output + self._ou_noise()
+            nn_output = np.clip(nn_output, 0, 1)
+        # print("episode: ", episode, ", step: ", step, ", exploration: ", ((np.array(tf.squeeze(nn_action)) - nn_output)/nn_output) * 100)
 
         nn_noise_action = {
             "generator_injection": copy.deepcopy(nn_output),

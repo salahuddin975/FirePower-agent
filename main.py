@@ -165,7 +165,7 @@ if __name__ == "__main__":
             # print("NN generator output: ", nn_action[0])
             # print("original:", agent.get_critic_value(tf_state, nn_action))
 
-            nn_noise_action, env_action = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
+            nn_noise_action, env_action = data_processor.process_nn_action(state, nn_action, explore_network_flag, episode, step)
             # print("original+noise:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)))
 
             # env_action = data_processor.check_violations(nn_noise_action, state, ramp_scale=power_generation_preprocess_scale)

@@ -42,7 +42,7 @@ class DataProcessor:
         self._power_generation_preprocess_scale = power_generation_preprocess_scale
         self._considerable_fire_distance = 10
 
-        std_dev = 1
+        std_dev = .2
         self._ou_noise = OUActionNoise(mean=np.zeros(self.generators.get_num_generators()), std_deviation=np.ones(self.generators.get_num_generators()) * std_dev)
 
         self._branches = [(0, 1),(0, 2),(0, 4),(1, 3),(1, 5),(2, 8),(2, 23),(3, 8),(4, 9),(5, 9),(6, 7),(7, 8),(7, 9),(8, 10),
@@ -294,6 +294,7 @@ class DataProcessor:
         if explore_network:
             nn_output *= np.exp(self._ou_noise())
             nn_output = nn_output / np.sum(nn_output)
+        # print("step: ", self.step, ", exploration: ", ((np.array(tf.squeeze(nn_action)) - nn_output)/nn_output) * 100)
 
         nn_noise_action = {
             "generator_injection": copy.deepcopy(nn_output),
@@ -376,8 +377,8 @@ class DataProcessor:
         # print("fire_distance:", state["fire_distance"])
         # print("fire_state:", state["fire_state"])
 
-        if explore_network_flag == False:
-            print("vulnerable equipment: ", vulnerable_equipment)
+        # if explore_network_flag == False:
+        #     print("vulnerable equipment: ", vulnerable_equipment)
 
         return state
 

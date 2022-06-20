@@ -5,7 +5,7 @@ import csv
 import numpy as np
 import tensorflow as tf
 from parameters import Parameters
-from ddpg import DDPG
+from agent import Agent
 from replay_buffer import ReplayBuffer
 from data_processor import DataProcessor
 from simulator_resorces import SimulatorResources, Generators
@@ -116,13 +116,13 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
     parameters = Parameters(base_path, load_model_version, geo_path)
     parameters.print_parameters()
 
-    ddpg = DDPG(base_path, state_spaces, action_spaces)
-    ddpg.load_weight(version=load_model_version, episode_num=load_episode_num)
+    agent = Agent(base_path, state_spaces, action_spaces)
+    agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
     result_writer = ResultWriter(base_path, load_model_version, load_episode_num)
     data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
-    # ddpg training
+    # agent training
     total_episode = 20
     max_steps_per_episode = 300
     explore_network_flag = False
@@ -143,9 +143,9 @@ def main(seed, num_of_generator, load_model_version=0, load_episode_num=0):
 
         for step in range(max_steps_per_episode):
             tf_state = data_processor.get_tf_state(state)
-            ddpg_action = ddpg.actor(tf_state)
+            nn_action = agent.actor(tf_state)
 
-            net_action = data_processor.explore_network(ddpg_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
+            net_action = data_processor.explore_network(nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
             env_action = data_processor.check_violations(net_action, state["fire_distance"], state["generator_injection"], ramp_scale=power_generation_preprocess_scale)
 
             next_state, reward, done, _ = env.step(env_action)

@@ -34,12 +34,11 @@ class OUActionNoise:
 
 
 class DataProcessor:
-    def __init__(self, simulator_resources, generators, state_spaces, action_spaces, power_generation_preprocess_scale):
+    def __init__(self, simulator_resources, generators, state_spaces, action_spaces):
         self.simulator_resources = simulator_resources
         self.generators = generators
         self._state_spaces = state_spaces
         self._action_spaces = action_spaces
-        self._power_generation_preprocess_scale = power_generation_preprocess_scale
         self._considerable_fire_distance = 10
 
         std_dev = 0.2
@@ -157,8 +156,8 @@ class DataProcessor:
                     self.generators.set_zero_for_generator(j)
                     generators_current_output[j] = 0
 
-    def _clip_ramp_values(self, servable_load_demand, generators_current_output, nn_output):
-        total_servable_load_demand = np.sum(servable_load_demand)
+    def _clip_ramp_values(self, load_demand, generators_current_output, nn_output):
+        total_load_demand = np.sum(load_demand)
         generators_min_output = self.generators.get_min_outputs()
         generators_max_output = self.generators.get_max_outputs()
         generators_max_ramp = self.generators.get_max_ramps()
@@ -180,15 +179,11 @@ class DataProcessor:
         lower = np.maximum(generators_current_output - generators_max_ramp, generators_min_output)
         upper = np.minimum(generators_current_output + generators_max_ramp, generators_max_output)
 
-        # self.custom_writer.add_info(self.episode, self.step, total_servable_load_demand, np.sum(generators_current_output), np.sum(lower), np.sum(upper))
+        # self.custom_writer.add_info(self.episode, self.step, total_load_demand, np.sum(generators_current_output), np.sum(lower), np.sum(upper))
 
-        if np.sum(upper) - epsilon_total < total_servable_load_demand:
-            # print("Adjust load demand: total_servable_load_demand: ", total_servable_load_demand, ", upper: ", np.sum(upper) - epsilon_total )
-            total_servable_load_demand = np.sum(upper) - epsilon_total
-
-        if np.sum(lower) + epsilon_total > total_servable_load_demand:
-            # print("Adjust load demand: total_servable_load_demand: ", total_servable_load_demand, ", lower: ", np.sum(upper) - epsilon_total )
-            total_servable_load_demand = np.sum(lower) + epsilon_total
+        # if np.sum(upper) - epsilon_total < total_load_demand:
+            # print("Adjust load demand: total_load_demand: ", total_load_demand, ", upper: ", np.sum(upper) - epsilon_total )
+            # total_load_demand = np.sum(upper) - epsilon_total
 
         # print("generators max output: ", generators_max_output)
         # print("generators min output: ", generators_min_output)
@@ -198,19 +193,19 @@ class DataProcessor:
         #       "; upper_total: ", np.sum(upper), "; actor_output_total: ", np.sum(actor_output))
 
         assert (lower <= upper).all(), "lower, upper value constraint failed."
-        # assert np.sum(lower) <= np.sum(generators_current_output) <= np.sum(upper), \
-        #     f"total_lower: {np.sum(lower)}, total_current_output: {np.sum(generators_current_output)}, total_upper: {np.sum(upper)}"
-        assert np.sum(lower) <= total_servable_load_demand <= np.sum(upper), \
-            f"total_servable_load_demand: {total_servable_load_demand} is not in the range of lower: {np.sum(lower)} and upper: {np.sum(upper)} "
+        assert np.sum(lower) <= np.sum(generators_current_output) <= np.sum(upper), \
+            f"total_lower: {np.sum(lower)}, total_current_output: {np.sum(generators_current_output)}, total_upper: {np.sum(upper)}"
+        assert np.sum(lower) <= total_load_demand <= np.sum(upper), \
+            f"total_load_demand: {total_load_demand} is not in the range of lower: {np.sum(lower)} and upper: {np.sum(upper)} "
 
         # if np.sum(nn_output):
         #     nn_output = nn_output / np.sum(nn_output)
-        actor_output = nn_output * total_servable_load_demand
+        actor_output = nn_output * total_load_demand
 
-        total_load_demand_lower = np.array(total_servable_load_demand - epsilon_total)
-        total_load_demand_upper = np.array(total_servable_load_demand + epsilon_total)
+        total_load_demand_lower = np.array(total_load_demand - epsilon_total)
+        total_load_demand_upper = np.array(total_load_demand + epsilon_total)
         linear_constraint = LinearConstraint(A=np.transpose(np.ones(len(generators_current_output))), lb=total_load_demand_lower, ub=total_load_demand_upper)
-        # print("load_demand_total: ", total_servable_load_demand, "; load_demand_lower_total: ", total_load_demand_lower, "; load_demand_upper_total: ", total_load_demand_upper)
+        # print("load_demand_total: ", total_load_demand, "; load_demand_lower_total: ", total_load_demand_lower, "; load_demand_upper_total: ", total_load_demand_upper)
 
         feasible_output = minimize(lambda feasible_output: np.sum(np.power((actor_output - feasible_output), 2)),
                  generators_current_output, options={'verbose': 0},
@@ -223,6 +218,17 @@ class DataProcessor:
 
         custom_penalty = (np.sum(generators_current_output) - np.sum(feasible_output.x)) * 10 * 100
         ramp = feasible_output.x - generators_current_output
+
+        # for i in range(ramp.size):
+        #     if ramp[i] > 0:
+        #         ramp[i] = ramp[i] if ramp[i] < generators_max_ramp[i] else generators_max_ramp[i]
+        #         ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] < generators_max_output[i] else generators_max_output[i] - generators_current_output[i]
+        #     else:
+        #         ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[i] else -generators_max_ramp[i]
+        #         ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] > generators_min_output[i] else generators_min_output[i] - generators_current_output[i]
+        #
+        #     if abs(ramp[i]) < 0.00001:
+        #         ramp[i] = 0.0
 
         # print("generators set ramp: ", ramp)
         return ramp, (custom_penalty, custom_penalty)
@@ -278,8 +284,8 @@ class DataProcessor:
         self.step = state["step"]
         bus_status = copy.deepcopy(state["bus_status"])
         branch_status = copy.deepcopy(state["branch_status"])
+        load_demand = copy.deepcopy(state["load_demand"])
         current_output = state["generator_injection"]
-        servable_load_demand = np.array([load_output / self._power_generation_preprocess_scale for load_output in state["servable_load_demand"]])
 
         # branch_status = self._check_network_violations_branch(bus_status, branch_status) # if bus is 0, then corresponding all branches are 0
         # self._adjust_load_demand_if_all_branches_out(branch_status, load_demand, current_output) # adjust load_demand and generation max output if all branches are 0
@@ -306,7 +312,7 @@ class DataProcessor:
             "generator_injection": copy.deepcopy(nn_output),
         }
 
-        ramp, custom_reward = self._clip_ramp_values(servable_load_demand, generators_current_output, nn_output)
+        ramp, custom_reward = self._clip_ramp_values(load_demand, generators_current_output, nn_output)
 
         env_action = {
             "bus_status": bus_status,
@@ -315,22 +321,18 @@ class DataProcessor:
             "generator_injection": ramp,
         }
 
+        # env_action = {
+        #     "bus_status": np.ones(24),
+        #     "branch_status": np.ones(34),
+        #     "generator_selector": [24] * 10,
+        #     "generator_injection": np.zeros(10),
+        # }
+
         return nn_noise_action, env_action, custom_reward
 
-    def get_myopic_action(self, state):
-        bus_status = copy.deepcopy(state["bus_status"])
-        branch_status = copy.deepcopy(state["branch_status"])
-
-        return {
-            "bus_status": bus_status,
-            "branch_status": branch_status,
-            "generator_selector": [24] * 10,
-            "generator_injection": np.zeros(10),
-        }
-
-    def preprocess(self, state, explore_network_flag):
-        state["generator_injection"] = np.array([output / self._power_generation_preprocess_scale for output in state["generator_injection"]])
-        state["load_demand"] = np.array([load_output / self._power_generation_preprocess_scale for load_output in state["load_demand"]])
+    def preprocess(self, state, power_generation_scale, explore_network_flag):
+        state["generator_injection"] = np.array([output / power_generation_scale for output in state["generator_injection"]])
+        state["load_demand"] = np.array([load_output / power_generation_scale for load_output in state["load_demand"]])
 
         # state["fire_distance"] = [1 - dist/self._considerable_fire_distance if dist < self._considerable_fire_distance else 0 for dist in state["fire_distance"]]
 

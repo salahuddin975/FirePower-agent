@@ -34,7 +34,7 @@ TensorboardInfo = namedtuple("TensorboardInfo",
                               "return_y", "original_actions", "critic_value_with_original_actions", "critic_loss",
                               "actor_actions", "critic_value_with_actor_actions", "actor_loss"])
 
-class DDPG:
+class Agent:
     def __init__(self, base_path, state_spaces, action_spaces, generators):
         self._gamma = 0.9      # discount factor
         self._tau = 0.005       # used to update target network

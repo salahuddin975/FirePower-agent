@@ -2,12 +2,11 @@ import os
 import gym
 import random
 import argparse
-import copy
 import numpy as np
 from datetime import datetime
 import tensorflow as tf
 from parameters import Parameters
-from ddpg import DDPG
+from agent import Agent
 from replay_buffer import ReplayBuffer
 from data_processor import DataProcessor, Tensorboard, SummaryWriter
 from simulator_resorces import SimulatorResources, Generators
@@ -119,9 +118,9 @@ if __name__ == "__main__":
     parameters.save_parameters()
     parameters.print_parameters()
 
-    ddpg = DDPG(base_path, state_spaces, action_spaces, generators)
+    agent = Agent(base_path, state_spaces, action_spaces, generators)
     if load_model:
-        ddpg.load_weight(version=load_model_version, episode_num=load_episode_num)
+        agent.load_weight(version=load_model_version, episode_num=load_episode_num)
 
     # replay buffer
     save_replay_buffer = True if train_network else False
@@ -135,7 +134,7 @@ if __name__ == "__main__":
     tensorboard = Tensorboard(base_path)
     visualizer = Visualizer(generators, simulator_resources, args.path_geo)
     summary_writer = SummaryWriter(base_path, save_model_version, load_episode_num)
-    data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces, power_generation_preprocess_scale)
+    data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
 
     # agent training
     total_episode = 100001
@@ -152,50 +151,50 @@ if __name__ == "__main__":
         episodic_penalty = 0
         episodic_load_loss = 0
 
-        state = data_processor.preprocess(state, explore_network_flag)
+        state = data_processor.preprocess(state, power_generation_preprocess_scale, explore_network_flag)
+        # if not parameters.generator_max_output:
+        #     generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
             # tensorboard.generator_output_info(state["generator_injection"])
             # tensorboard.load_demand_info(state["load_demand"])
             # tensorboard.line_flow_info(state["line_flow"])
 
-            myopic_action = data_processor.get_myopic_action(state)
-            myopic_action["episode"] = episode
-            myopic_action["step_count"] = step
-            myopic_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
-            servable_load_demand = np.sum(myopic_state["generator_injection"])/power_generation_preprocess_scale
-
-            print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])}, generator_injection: {np.sum(state['generator_injection'])}, "
-                f"servable_load_demand: {servable_load_demand}, diff: {round(np.sum(state['load_demand']) - servable_load_demand, 4)}")
-
             tf_state = data_processor.get_tf_state(state)
-            nn_action = ddpg.actor(tf_state)
+            nn_action = agent.actor(tf_state)
+            # print("NN generator output: ", nn_action[0])
+            # print("original:", agent.get_critic_value(tf_state, nn_action))
 
             state["episode"] = episode
             state["step"] = step
-            state["servable_load_demand"] = myopic_state["generator_injection"]
             nn_noise_action, env_action, custom_reward = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
+            # print("original+noise:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)))
+
+            # env_action = data_processor.check_violations(nn_noise_action, state, ramp_scale=power_generation_preprocess_scale)
+            # print("original+noise+violation_check:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]),0)))
 
             # print("ramp:", env_action['generator_injection'])
             env_action["episode"] = episode
             env_action["step_count"] = step
+
             next_state, reward, done, cells_info = env.step(env_action)
 
             # image = visualizer.draw_map(episode, step, cells_info, next_state)
             # image.save(f"fire_propagation_{episode}_{step}.png")
 
-            main_loop_info = MainLoopInfo(tf.math.reduce_mean(nn_action), ddpg.get_critic_value(tf_state, nn_action),
+            main_loop_info = MainLoopInfo(tf.math.reduce_mean(nn_action), agent.get_critic_value(tf_state, nn_action),
                                           tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
-                                          ddpg.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
+                                          agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
                                           tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)),
-                                          ddpg.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)))
+                                          agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]),0)))
             reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), reward[0], done)
             tensorboard.step_info(main_loop_info, reward_info)
 
-            # if explore_network_flag == False:
-            print(f"Episode: {episode}, at step: {step}, reward: {reward[0]}, custom_reward: {custom_reward[0]}")
+            if explore_network_flag == False:
+                print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
+                      f" generator_injection: {np.sum(state['generator_injection'])}, reward: {reward[0]}, custom_reward: {custom_reward[0]}")
 
-            next_state = data_processor.preprocess(next_state, explore_network_flag)
+            next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale, explore_network_flag)
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))
 
             episodic_penalty += reward[0]
@@ -209,9 +208,22 @@ if __name__ == "__main__":
 
             if train_network and episode >= 3:
                 state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
-                tensorboard_info = ddpg.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
+                tensorboard_info = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
                 tensorboard.train_info(tensorboard_info)
                 # print("Episode:", episode, ", step: ", step, ", critic_value:", tensorboard_info.critic_value_with_original_action, ", critic_loss:", tensorboard_info.critic_loss)
+
+        # if train_network and episode > 5:
+        #     print ("Train at episode: ", episode)
+        #     start_time = datetime.now()
+        #     for i in range(num_train_per_episode):
+        #         state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
+        #         critic_loss, reward_value, critic_value, action_quality = agent.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
+        #         tensorboard.add_critic_network_info(critic_loss, reward_value, critic_value, action_quality)
+        #         if i % 1000 == 0:
+        #             print("train at: ", i)
+        #
+        #     computation_time = (datetime.now() - start_time).total_seconds()
+        #     print("Training_computation_time:", computation_time)
 
         tensorboard.episodic_info(episodic_penalty)
         summary_writer.add_info(episode, max_reached_step, episodic_penalty, episodic_load_loss)
@@ -226,7 +238,7 @@ if __name__ == "__main__":
 
         # save model weights
         if (episode % parameters.test_after_episodes == 0) and save_model and episode:
-            ddpg.save_weight(version=save_model_version, episode_num=episode)
+            agent.save_weight(version=save_model_version, episode_num=episode)
 
         # save replay buffer
         if (episode % parameters.test_after_episodes == 0) and save_replay_buffer and episode:

@@ -164,7 +164,7 @@ if __name__ == "__main__":
 
             state["episode"] = episode
             state["step"] = step
-            nn_noise_action, env_action, custom_reward = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
+            nn_noise_action, env_action = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
             # print("original+noise:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)))
 
             # env_action = data_processor.check_violations(nn_noise_action, state, ramp_scale=power_generation_preprocess_scale)
@@ -188,9 +188,9 @@ if __name__ == "__main__":
             reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), reward[0], done)
             tensorboard.step_info(main_loop_info, reward_info)
 
-            if explore_network_flag == False:
-                print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
-                      f" generator_injection: {np.sum(state['generator_injection'])}, reward: {reward[0]}, custom_reward: {custom_reward[0]}")
+            # if explore_network_flag == False:
+            print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
+                      f" generator_injection: {np.sum(state['generator_injection'])}, reward: {reward[0]}")
 
             next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale, explore_network_flag)
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))

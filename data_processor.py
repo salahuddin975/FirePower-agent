@@ -301,7 +301,7 @@ class DataProcessor:
             "generator_injection": copy.deepcopy(nn_output),
         }
 
-        ramp, custom_reward = self._clip_ramp_values(generators_current_output, nn_output)
+        ramp = self._clip_ramp_values(generators_current_output, nn_output)
 
         env_action = {
             "bus_status": bus_status,
@@ -310,7 +310,7 @@ class DataProcessor:
             "generator_injection": ramp,
         }
 
-        return nn_noise_action, env_action, custom_reward
+        return nn_noise_action, env_action
 
     def preprocess(self, state, power_generation_scale, explore_network_flag):
         state["generator_injection"] = np.array([output / power_generation_scale for output in state["generator_injection"]])

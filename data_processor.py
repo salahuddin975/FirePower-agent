@@ -41,8 +41,8 @@ class DataProcessor:
         self._action_spaces = action_spaces
         self._considerable_fire_distance = 10
 
-        std_dev = 0.2
-        self._ou_noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(std_dev) * np.ones(1))
+        std_dev = .2
+        self._ou_noise = OUActionNoise(mean=np.zeros(self.generators.get_num_generators()), std_deviation=np.ones(self.generators.get_num_generators()) * std_dev)
 
         self._branches = [(0, 1),(0, 2),(0, 4),(1, 3),(1, 5),(2, 8),(2, 23),(3, 8),(4, 9),(5, 9),(6, 7),(7, 8),(7, 9),(8, 10),
                           (8, 11),(9, 10),(9, 11),(10, 12),(10, 13),(11, 12),(11, 22),(12, 22),(13, 15),(14, 15),(14, 20),
@@ -283,19 +283,12 @@ class DataProcessor:
         for i in range(self.generators.get_num_generators()):
             generators_current_output[i] = current_output[self.generators.get_generators()[i]]
 
-        nn_output = np.array(tf.squeeze(nn_action[0]))
+        nn_output = np.array(tf.squeeze(nn_action))
         if explore_network:
-            noises = np.zeros(nn_output.size)
-            for i in range(nn_output.size):
-                noises[i] = self._ou_noise()
-            nn_output += noises
-            nn_output = np.clip(nn_output, 0, None)
-
-        # self._check_bus_generator_violation(bus_status, nn_output, generators_current_output) # if bus is 0, then corresponding generator output, ramp 0
-        if np.sum(nn_output):
-            nn_output = nn_output / np.sum(nn_output)
-        else:
-            nn_output = np.array(tf.squeeze(nn_action[0]))
+            # nn_output *= np.exp(self._ou_noise())
+            nn_output = nn_output + self._ou_noise()
+            nn_output = np.clip(nn_output, 0, 1)
+        # print("episode: ", episode, ", step: ", step, ", exploration: ", ((np.array(tf.squeeze(nn_action)) - nn_output)/nn_output) * 100)
 
         nn_noise_action = {
             "generator_injection": copy.deepcopy(nn_output),

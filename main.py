@@ -164,7 +164,7 @@ if __name__ == "__main__":
 
             state["episode"] = episode
             state["step"] = step
-            nn_noise_action, env_action = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
+            nn_noise_action, env_action = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag)
             # print("original+noise:", agent.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)))
 
             # print("ramp:", env_action['generator_injection'])

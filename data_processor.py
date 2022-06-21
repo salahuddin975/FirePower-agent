@@ -203,7 +203,7 @@ class DataProcessor:
         # print("generators set ramp: ", ramp)
         return ramp
 
-    def process_nn_action(self, state, nn_action, explore_network, noise_range=0.5):
+    def process_nn_action(self, state, nn_action, explore_network):
         self.episode = state["episode"]
         self.step = state["step"]
         load_demand = copy.deepcopy(state["load_demand"])

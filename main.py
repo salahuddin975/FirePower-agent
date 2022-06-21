@@ -146,14 +146,11 @@ if __name__ == "__main__":
     for episode in range(total_episode):
         generators.reset()
         state = env.reset()
+        state = data_processor.preprocess(state, power_generation_preprocess_scale, explore_network_flag)
 
         max_reached_step = 0
         episodic_penalty = 0
         episodic_load_loss = 0
-
-        state = data_processor.preprocess(state, power_generation_preprocess_scale, explore_network_flag)
-        # if not parameters.generator_max_output:
-        #     generators.set_max_outputs(state["generator_injection"])
 
         for step in range(max_steps_per_episode):
             # tensorboard.generator_output_info(state["generator_injection"])
@@ -179,8 +176,9 @@ if __name__ == "__main__":
 
             next_state, reward, done, cells_info = env.step(env_action)
 
-            # image = visualizer.draw_map(episode, step, cells_info, next_state)
-            # image.save(f"fire_propagation_{episode}_{step}.png")
+            if train_network:
+                image = visualizer.draw_map(episode, step, cells_info, next_state)
+                image.save(f"fire_propagation_{episode}_{step}.png")
 
             main_loop_info = MainLoopInfo(tf.math.reduce_mean(nn_action), agent.get_critic_value(tf_state, nn_action),
                                           tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),

@@ -96,7 +96,7 @@ if __name__ == "__main__":
     set_gpu_memory_limit()
     base_path = "database_seed_" + str(seed_value)
 
-    ramp_frequency_in_hour = 20
+    ramp_frequency_in_hour = 12
     power_generation_preprocess_scale = 10
     simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)
     generators = Generators(ppc=simulator_resources.ppc, power_generation_preprocess_scale=power_generation_preprocess_scale, ramp_frequency_in_hour=ramp_frequency_in_hour)

@@ -201,7 +201,7 @@ class Agent:
 
         hidden = layers.Dense(512, activation="relu") (state)
         hidden = layers.Dense(512, activation="relu") (hidden)
-        gen_inj_output = layers.Dense(self._num_of_active_generators, activation="softmax") (hidden)
+        gen_inj_output = layers.Dense(self._num_of_active_generators, activation="sigmoid") (hidden)
 
         model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input],
                                [gen_inj_output])

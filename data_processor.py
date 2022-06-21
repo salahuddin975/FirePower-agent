@@ -107,42 +107,31 @@ class DataProcessor:
     #                     ramp[i] = load_loss
     #                 load_loss = load_loss - ramp[i]
 
-    # def _clip_ramp_values1(self, nn_output, generators_output):     # previous way of calculating ramp
-    #     # print("generators output: ", generators_output)
-    #     # print("nn ratio output: ", nn_output)
-    #
-    #     num_generators = self.generators.get_num_generators()
-    #     generators_current_output = np.zeros(num_generators)
-    #     for i in range(num_generators):
-    #         generators_current_output[i] = generators_output[self.generators.get_generators()[i]]
-    #     # print("generators current output: ", generators_current_output)
-    #
-    #     # print("nn ramp: ", nn_ramp)
-    #
-    #     generators_max_output = self.generators.get_max_outputs()
-    #     generators_min_output = self.generators.get_min_outputs()
-    #     generators_max_ramp = self.generators.get_max_ramps()
-    #
-    #     # net_output =  nn_output * generators_max_output
-    #     net_output = generators_min_output + nn_output * (generators_max_output - generators_min_output)
-    #     # print ("network output: ", net_output)
-    #
-    #     ramp = net_output - generators_current_output
-    #     # print("generators initial ramp: ", ramp)
-    #
-    #     for i in range(ramp.size):
-    #         if ramp[i] > 0:
-    #             ramp[i] = ramp[i] if ramp[i] < generators_max_ramp[i] else generators_max_ramp[i]
-    #             ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] < generators_max_output[i] else generators_max_output[i] - generators_current_output[i]
-    #         else:
-    #             ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[i] else -generators_max_ramp[i]
-    #             ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] > generators_min_output[i] else generators_min_output[i] - generators_current_output[i]
-    #
-    #         if abs(ramp[i]) < 0.00001:
-    #             ramp[i] = 0.0
-    #
-    #     # print("generators set ramp: ", ramp)
-    #     return ramp
+    def _clip_ramp_values(self, generators_current_output, nn_output):     # previous way of calculating ramp
+        generators_max_output = self.generators.get_max_outputs()
+        generators_min_output = self.generators.get_min_outputs()
+        generators_max_ramp = self.generators.get_max_ramps()
+
+        # net_output =  nn_output * generators_max_output
+        net_output = generators_min_output + nn_output * (generators_max_output - generators_min_output)
+        # print ("network output: ", net_output)
+
+        ramp = net_output - generators_current_output
+        # print("generators initial ramp: ", ramp)
+
+        for i in range(ramp.size):
+            if ramp[i] > 0:
+                ramp[i] = ramp[i] if ramp[i] < generators_max_ramp[i] else generators_max_ramp[i]
+                ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] < generators_max_output[i] else generators_max_output[i] - generators_current_output[i]
+            else:
+                ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[i] else -generators_max_ramp[i]
+                ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] > generators_min_output[i] else generators_min_output[i] - generators_current_output[i]
+
+            if abs(ramp[i]) < 0.00001:
+                ramp[i] = 0.0
+
+        # print("generators set ramp: ", ramp)
+        return ramp
 
     def _check_bus_generator_violation(self, bus_status, nn_output, generators_current_output):
         selected_generators = self.generators.get_generators()
@@ -156,82 +145,82 @@ class DataProcessor:
                     self.generators.set_zero_for_generator(j)
                     generators_current_output[j] = 0
 
-    def _clip_ramp_values(self, load_demand, generators_current_output, nn_output):
-        total_load_demand = np.sum(load_demand)
-        generators_min_output = self.generators.get_min_outputs()
-        generators_max_output = self.generators.get_max_outputs()
-        generators_max_ramp = self.generators.get_max_ramps()
-
-        # print("nn_output_sum: ", np.sum(nn_output))
-        epsilon_nn = 0.0001
-        epsilon_total = 0.000001
-        assert 1 + epsilon_nn > np.sum(nn_output) > 1-epsilon_nn, "Not total value is 1"
-        assert np.min(nn_output) >= 0, "value is negative"
-
-        for i in range(len(generators_current_output)):
-            if generators_current_output[i] == 0.0:
-                # print("generator ", self.generators.get_generators()[i], " output is 0; nn_output: ", nn_output[i])
-                generators_max_ramp[i] = 0
-                generators_min_output[i] = 0
-                generators_max_output[i] = 0
-                nn_output[i] = 0
-
-        lower = np.maximum(generators_current_output - generators_max_ramp, generators_min_output)
-        upper = np.minimum(generators_current_output + generators_max_ramp, generators_max_output)
-
-        # self.custom_writer.add_info(self.episode, self.step, total_load_demand, np.sum(generators_current_output), np.sum(lower), np.sum(upper))
-
-        # if np.sum(upper) - epsilon_total < total_load_demand:
-            # print("Adjust load demand: total_load_demand: ", total_load_demand, ", upper: ", np.sum(upper) - epsilon_total )
-            # total_load_demand = np.sum(upper) - epsilon_total
-
-        # print("generators max output: ", generators_max_output)
-        # print("generators min output: ", generators_min_output)
-        # print("generators max ramp: ", generators_max_ramp)
-        # print("generators current output: ", generators_current_output)
-        # print("generators_current_output_total: ", np.sum(generators_current_output), "; lower_total: ", np.sum(lower),
-        #       "; upper_total: ", np.sum(upper), "; actor_output_total: ", np.sum(actor_output))
-
-        assert (lower <= upper).all(), "lower, upper value constraint failed."
-        assert np.sum(lower) <= np.sum(generators_current_output) <= np.sum(upper), \
-            f"total_lower: {np.sum(lower)}, total_current_output: {np.sum(generators_current_output)}, total_upper: {np.sum(upper)}"
-        assert np.sum(lower) <= total_load_demand <= np.sum(upper), \
-            f"total_load_demand: {total_load_demand} is not in the range of lower: {np.sum(lower)} and upper: {np.sum(upper)} "
-
-        # if np.sum(nn_output):
-        #     nn_output = nn_output / np.sum(nn_output)
-        actor_output = nn_output * total_load_demand
-
-        total_load_demand_lower = np.array(total_load_demand - epsilon_total)
-        total_load_demand_upper = np.array(total_load_demand + epsilon_total)
-        linear_constraint = LinearConstraint(A=np.transpose(np.ones(len(generators_current_output))), lb=total_load_demand_lower, ub=total_load_demand_upper)
-        # print("load_demand_total: ", total_load_demand, "; load_demand_lower_total: ", total_load_demand_lower, "; load_demand_upper_total: ", total_load_demand_upper)
-
-        feasible_output = minimize(lambda feasible_output: np.sum(np.power((actor_output - feasible_output), 2)),
-                 generators_current_output, options={'verbose': 0},
-                 bounds=[(lower[i], upper[i]) for i in range(len(upper))],
-                 constraints=[linear_constraint], method='trust-constr')
-
-        # print("feasible_output: ", np.sum(feasible_output.x))
-        # assert total_load_demand_upper >= np.sum(feasible_output.x) >= total_load_demand_lower, \
-        #     f"feasible_output constraint violated: {total_load_demand_upper} >= {np.sum(feasible_output.x)} >= {total_load_demand_lower}"
-
-        custom_penalty = (np.sum(generators_current_output) - np.sum(feasible_output.x)) * 10 * 100
-        ramp = feasible_output.x - generators_current_output
-
-        # for i in range(ramp.size):
-        #     if ramp[i] > 0:
-        #         ramp[i] = ramp[i] if ramp[i] < generators_max_ramp[i] else generators_max_ramp[i]
-        #         ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] < generators_max_output[i] else generators_max_output[i] - generators_current_output[i]
-        #     else:
-        #         ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[i] else -generators_max_ramp[i]
-        #         ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] > generators_min_output[i] else generators_min_output[i] - generators_current_output[i]
-        #
-        #     if abs(ramp[i]) < 0.00001:
-        #         ramp[i] = 0.0
-
-        # print("generators set ramp: ", ramp)
-        return ramp, (custom_penalty, custom_penalty)
+    # def _clip_ramp_values(self, load_demand, generators_current_output, nn_output):
+    #     total_load_demand = np.sum(load_demand)
+    #     generators_min_output = self.generators.get_min_outputs()
+    #     generators_max_output = self.generators.get_max_outputs()
+    #     generators_max_ramp = self.generators.get_max_ramps()
+    #
+    #     # print("nn_output_sum: ", np.sum(nn_output))
+    #     epsilon_nn = 0.0001
+    #     epsilon_total = 0.000001
+    #     assert 1 + epsilon_nn > np.sum(nn_output) > 1-epsilon_nn, "Not total value is 1"
+    #     assert np.min(nn_output) >= 0, "value is negative"
+    #
+    #     for i in range(len(generators_current_output)):
+    #         if generators_current_output[i] == 0.0:
+    #             # print("generator ", self.generators.get_generators()[i], " output is 0; nn_output: ", nn_output[i])
+    #             generators_max_ramp[i] = 0
+    #             generators_min_output[i] = 0
+    #             generators_max_output[i] = 0
+    #             nn_output[i] = 0
+    #
+    #     lower = np.maximum(generators_current_output - generators_max_ramp, generators_min_output)
+    #     upper = np.minimum(generators_current_output + generators_max_ramp, generators_max_output)
+    #
+    #     # self.custom_writer.add_info(self.episode, self.step, total_load_demand, np.sum(generators_current_output), np.sum(lower), np.sum(upper))
+    #
+    #     # if np.sum(upper) - epsilon_total < total_load_demand:
+    #         # print("Adjust load demand: total_load_demand: ", total_load_demand, ", upper: ", np.sum(upper) - epsilon_total )
+    #         # total_load_demand = np.sum(upper) - epsilon_total
+    #
+    #     # print("generators max output: ", generators_max_output)
+    #     # print("generators min output: ", generators_min_output)
+    #     # print("generators max ramp: ", generators_max_ramp)
+    #     # print("generators current output: ", generators_current_output)
+    #     # print("generators_current_output_total: ", np.sum(generators_current_output), "; lower_total: ", np.sum(lower),
+    #     #       "; upper_total: ", np.sum(upper), "; actor_output_total: ", np.sum(actor_output))
+    #
+    #     assert (lower <= upper).all(), "lower, upper value constraint failed."
+    #     assert np.sum(lower) <= np.sum(generators_current_output) <= np.sum(upper), \
+    #         f"total_lower: {np.sum(lower)}, total_current_output: {np.sum(generators_current_output)}, total_upper: {np.sum(upper)}"
+    #     assert np.sum(lower) <= total_load_demand <= np.sum(upper), \
+    #         f"total_load_demand: {total_load_demand} is not in the range of lower: {np.sum(lower)} and upper: {np.sum(upper)} "
+    #
+    #     # if np.sum(nn_output):
+    #     #     nn_output = nn_output / np.sum(nn_output)
+    #     actor_output = nn_output * total_load_demand
+    #
+    #     total_load_demand_lower = np.array(total_load_demand - epsilon_total)
+    #     total_load_demand_upper = np.array(total_load_demand + epsilon_total)
+    #     linear_constraint = LinearConstraint(A=np.transpose(np.ones(len(generators_current_output))), lb=total_load_demand_lower, ub=total_load_demand_upper)
+    #     # print("load_demand_total: ", total_load_demand, "; load_demand_lower_total: ", total_load_demand_lower, "; load_demand_upper_total: ", total_load_demand_upper)
+    #
+    #     feasible_output = minimize(lambda feasible_output: np.sum(np.power((actor_output - feasible_output), 2)),
+    #              generators_current_output, options={'verbose': 0},
+    #              bounds=[(lower[i], upper[i]) for i in range(len(upper))],
+    #              constraints=[linear_constraint], method='trust-constr')
+    #
+    #     # print("feasible_output: ", np.sum(feasible_output.x))
+    #     # assert total_load_demand_upper >= np.sum(feasible_output.x) >= total_load_demand_lower, \
+    #     #     f"feasible_output constraint violated: {total_load_demand_upper} >= {np.sum(feasible_output.x)} >= {total_load_demand_lower}"
+    #
+    #     custom_penalty = (np.sum(generators_current_output) - np.sum(feasible_output.x)) * 10 * 100
+    #     ramp = feasible_output.x - generators_current_output
+    #
+    #     # for i in range(ramp.size):
+    #     #     if ramp[i] > 0:
+    #     #         ramp[i] = ramp[i] if ramp[i] < generators_max_ramp[i] else generators_max_ramp[i]
+    #     #         ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] < generators_max_output[i] else generators_max_output[i] - generators_current_output[i]
+    #     #     else:
+    #     #         ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[i] else -generators_max_ramp[i]
+    #     #         ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] > generators_min_output[i] else generators_min_output[i] - generators_current_output[i]
+    #     #
+    #     #     if abs(ramp[i]) < 0.00001:
+    #     #         ramp[i] = 0.0
+    #
+    #     # print("generators set ramp: ", ramp)
+    #     return ramp, (custom_penalty, custom_penalty)
 
     # def check_violations(self, np_action, state, ramp_scale):
     #     bus_status = copy.deepcopy(state["bus_status"])
@@ -312,7 +301,7 @@ class DataProcessor:
             "generator_injection": copy.deepcopy(nn_output),
         }
 
-        ramp, custom_reward = self._clip_ramp_values(load_demand, generators_current_output, nn_output)
+        ramp, custom_reward = self._clip_ramp_values(generators_current_output, nn_output)
 
         env_action = {
             "bus_status": bus_status,
@@ -320,13 +309,6 @@ class DataProcessor:
             "generator_selector": self.generators.get_generators(),
             "generator_injection": ramp,
         }
-
-        # env_action = {
-        #     "bus_status": np.ones(24),
-        #     "branch_status": np.ones(34),
-        #     "generator_selector": [24] * 10,
-        #     "generator_injection": np.zeros(10),
-        # }
 
         return nn_noise_action, env_action, custom_reward
 

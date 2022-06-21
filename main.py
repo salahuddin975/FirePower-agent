@@ -173,7 +173,7 @@ if __name__ == "__main__":
 
             next_state, reward, done, cells_info = env.step(env_action)
 
-            if train_network:
+            if train_network == False:
                 image = visualizer.draw_map(episode, step, cells_info, next_state)
                 image.save(f"fire_propagation_{episode}_{step}.png")
 

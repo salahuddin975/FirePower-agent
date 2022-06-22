@@ -139,7 +139,7 @@ if __name__ == "__main__":
 
     # agent training
     total_episode = 100001
-    start_step = 0
+    start_step = 225
     max_steps_per_episode = 300
     num_train_per_episode = 500         # canbe used by loading replay buffer
     episodic_rewards = []
@@ -204,8 +204,8 @@ if __name__ == "__main__":
             total_rl_reward += rl_reward[0]
             total_custom_reward += custom_reward[0]
 
-            if explore_network_flag == False:
-                print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward[0]}, target_myopic_reward: "
+            # if explore_network_flag == False:
+            print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward[0]}, target_myopic_reward: "
                       f"{target_myopic_reward[0]}, rl_reward: {rl_reward[0]}, custom_reward: {reward}")
 
             next_state = data_processor.preprocess(next_state, explore_network_flag)

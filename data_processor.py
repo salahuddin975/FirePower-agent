@@ -283,7 +283,7 @@ class DataProcessor:
         # print("fire_state:", state["fire_state"])
 
         # if explore_network_flag == False:
-        #     print("vulnerable equipment: ", vulnerable_equipment)
+        print("vulnerable equipment: ", vulnerable_equipment)
 
         return state
 

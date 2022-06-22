@@ -152,7 +152,7 @@ if __name__ == "__main__":
         episodic_penalty = 0
         episodic_load_loss = 0
 
-        for step in range(max_steps_per_episode):
+        for step in range(max_steps_per_episode-220):
             # tensorboard.generator_output_info(state["generator_injection"])
             # tensorboard.load_demand_info(state["load_demand"])
             # tensorboard.line_flow_info(state["line_flow"])
@@ -195,6 +195,9 @@ if __name__ == "__main__":
             episodic_penalty += reward[0]
             episodic_load_loss += reward[1]
             state = next_state
+
+            if (step < 20 and reward[0] < -4.5) or reward[0] < -6.0:
+                break
 
             if done or (step == max_steps_per_episode - 1):
                 print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total reward: {episodic_penalty}, total_load_loss: {episodic_load_loss}")

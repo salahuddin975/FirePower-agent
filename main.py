@@ -145,7 +145,7 @@ if __name__ == "__main__":
     episodic_rewards = []
     explore_network_flag = True if train_network else False
 
-    for episode in range(total_episode-start_step):
+    for episode in range(total_episode):
         generators.reset()
         state = env.reset()
 
@@ -157,7 +157,7 @@ if __name__ == "__main__":
 
         state = data_processor.preprocess(state, explore_network_flag)
 
-        for step in range(max_steps_per_episode):
+        for step in range(max_steps_per_episode-start_step):
             # tensorboard.generator_output_info(state["generator_injection"])
             # tensorboard.load_demand_info(state["load_demand"])
             # tensorboard.line_flow_info(state["line_flow"])

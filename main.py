@@ -139,7 +139,7 @@ if __name__ == "__main__":
 
     # agent training
     total_episode = 100001
-    start_step = 225
+    reload_step = 225
     max_steps_per_episode = 300
     num_train_per_episode = 500         # canbe used by loading replay buffer
     episodic_rewards = []
@@ -157,7 +157,7 @@ if __name__ == "__main__":
 
         state = data_processor.preprocess(state, explore_network_flag)
 
-        for step in range(max_steps_per_episode-start_step):
+        for step in range(max_steps_per_episode - 0 if episode==0 else reload_step):
             # tensorboard.generator_output_info(state["generator_injection"])
             # tensorboard.load_demand_info(state["load_demand"])
             # tensorboard.line_flow_info(state["line_flow"])
@@ -181,10 +181,10 @@ if __name__ == "__main__":
             nn_noise_action, env_action = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
 
             # print("ramp:", env_action['generator_injection'])
-            env_action["start_step"] = start_step
+            env_action["reload_step"] = reload_step
             next_state, rl_reward, done, cells_info = env.step(env_action)
 
-            if train_network == False:
+            if train_network == False or train_network:
                 image = visualizer.draw_map(episode, step, cells_info, next_state)
                 image.save(f"fire_propagation_{episode}_{step}.png")
 

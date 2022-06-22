@@ -40,7 +40,7 @@ class DataProcessor:
         self._state_spaces = state_spaces
         self._action_spaces = action_spaces
         self._power_generation_preprocess_scale = power_generation_preprocess_scale
-        self._considerable_fire_distance = 10
+        self._considerable_fire_distance = 5
 
         std_dev = .2
         self._ou_noise = OUActionNoise(mean=np.zeros(self.generators.get_num_generators()), std_deviation=np.ones(self.generators.get_num_generators()) * std_dev)

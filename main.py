@@ -139,12 +139,13 @@ if __name__ == "__main__":
 
     # agent training
     total_episode = 100001
+    start_step = 0
     max_steps_per_episode = 300
     num_train_per_episode = 500         # canbe used by loading replay buffer
     episodic_rewards = []
     explore_network_flag = True if train_network else False
 
-    for episode in range(total_episode):
+    for episode in range(total_episode-start_step):
         generators.reset()
         state = env.reset()
 
@@ -180,6 +181,7 @@ if __name__ == "__main__":
             nn_noise_action, env_action = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
 
             # print("ramp:", env_action['generator_injection'])
+            env_action["start_step"] = start_step
             next_state, rl_reward, done, cells_info = env.step(env_action)
 
             if train_network == False:

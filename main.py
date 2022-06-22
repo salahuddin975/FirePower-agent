@@ -139,6 +139,7 @@ if __name__ == "__main__":
     # agent training
     total_episode = 100001
     max_steps_per_episode = 300
+    start_step_from = 0
     num_train_per_episode = 500         # canbe used by loading replay buffer
     episodic_rewards = []
     explore_network_flag = True if train_network else False
@@ -152,7 +153,7 @@ if __name__ == "__main__":
         episodic_penalty = 0
         episodic_load_loss = 0
 
-        for step in range(max_steps_per_episode-220):
+        for step in range(max_steps_per_episode-start_step_from):
             # tensorboard.generator_output_info(state["generator_injection"])
             # tensorboard.load_demand_info(state["load_demand"])
             # tensorboard.line_flow_info(state["line_flow"])
@@ -170,6 +171,7 @@ if __name__ == "__main__":
             # print("ramp:", env_action['generator_injection'])
             env_action["episode"] = episode
             env_action["step_count"] = step
+            env_action["start_step_from"] = start_step_from
 
             next_state, reward, done, cells_info = env.step(env_action)
 

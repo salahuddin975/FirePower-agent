@@ -157,7 +157,7 @@ if __name__ == "__main__":
 
         state = data_processor.preprocess(state, explore_network_flag)
 
-        for step in range(max_steps_per_episode - 0 if episode==0 else reload_step):
+        for step in range(max_steps_per_episode - (0 if episode==0 else reload_step)):
             # tensorboard.generator_output_info(state["generator_injection"])
             # tensorboard.load_demand_info(state["load_demand"])
             # tensorboard.line_flow_info(state["line_flow"])

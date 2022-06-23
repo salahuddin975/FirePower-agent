@@ -139,7 +139,7 @@ if __name__ == "__main__":
 
     # agent training
     total_episode = 100001
-    reload_step = 120
+    reload_step = 105
     max_steps_per_episode = 300
     num_train_per_episode = 500         # canbe used by loading replay buffer
     episodic_rewards = []

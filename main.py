@@ -104,7 +104,7 @@ if __name__ == "__main__":
     # generators.print_info()
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power,
-                        num_tunable_gen=generators.get_num_generators(), scaling_factor=1, sampling_duration=1/ramp_frequency_in_hour, seed=seed_value if train_network else 50)
+                        num_tunable_gen=generators.get_num_generators(), scaling_factor=1, sampling_duration=1/ramp_frequency_in_hour, seed=50)
     state_spaces = get_state_spaces(env.observation_space)
     action_spaces = get_action_spaces(env.action_space)
 

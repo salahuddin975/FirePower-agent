@@ -212,10 +212,8 @@ if __name__ == "__main__":
             buffer.add_record((state, nn_noise_action, custom_reward, next_state, env_action, done))
             state = next_state
 
+            max_reached_step = step
             if done or (step == max_steps_per_episode - 1):
-                print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total myopic_reward: {total_myopic_reward},"
-                      f" total_target_myopic_reward: {total_target_myopic_reward}, total_rl_reward: {total_rl_reward}, total_custom_reward: {total_custom_reward}")
-                max_reached_step = step
                 break
 
             if train_network and episode >= 3:
@@ -223,6 +221,9 @@ if __name__ == "__main__":
                 tensorboard_info = ddpg.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
                 tensorboard.train_info(tensorboard_info)
                 # print("Episode:", episode, ", step: ", step, ", critic_value:", tensorboard_info.critic_value_with_original_action, ", critic_loss:", tensorboard_info.critic_loss)
+
+        print(f"Episode: V{save_model_version}_{episode}, max_reached_step:{max_reached_step}, total myopic_reward: {total_myopic_reward},"                                
+              f" total_target_myopic_reward: {total_target_myopic_reward}, total_rl_reward: {total_rl_reward}, total_custom_reward: {total_custom_reward}")
 
         tensorboard.episodic_info(total_rl_reward)
         summary_writer.add_info(episode, max_reached_step, total_rl_reward, total_rl_reward)

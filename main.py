@@ -184,7 +184,7 @@ if __name__ == "__main__":
             env_action["reload_step"] = reload_step
             next_state, rl_reward, done, cells_info = env.step(env_action)
 
-            if train_network == False or train_network:
+            if train_network == False:
                 image = visualizer.draw_map(episode, step, cells_info, next_state)
                 image.save(f"fire_propagation_{episode}_{step}.png")
 

@@ -238,6 +238,8 @@ class DataProcessor:
         #     # print("Adjust load demand: total_servable_load_demand: ", total_servable_load_demand, ", lower: ", np.sum(upper) - epsilon_total )
         #     total_servable_load_demand = np.sum(lower) + epsilon_total
 
+        # print("lower: ", lower)
+        # print("upper: ", upper)
         # print("generators max output: ", generators_max_output)
         # print("generators min output: ", generators_min_output)
         # print("generators max ramp: ", generators_max_ramp)
@@ -319,7 +321,8 @@ class DataProcessor:
             # print("connected_component: ", connected_component)
             # print("ramp_value: ", ramp_value)
             ramp += ramp_value
-        # print("ramp: ", ramp)
+        ramp = ramp * self._power_generation_preprocess_scale
+        print("ramp: ", ramp)
 
         env_action = {
             "episode": self.episode,

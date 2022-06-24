@@ -137,7 +137,7 @@ if __name__ == "__main__":
     tensorboard = Tensorboard(base_path)
     visualizer = Visualizer(generators, simulator_resources, args.path_geo)
     summary_writer = SummaryWriter(base_path, save_model_version, load_episode_num)
-    data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces, power_generation_preprocess_scale)
+    data_processor = DataProcessor(simulator_resources, generators, connected_components, state_spaces, action_spaces, power_generation_preprocess_scale)
 
     # agent training
     total_episode = 100001

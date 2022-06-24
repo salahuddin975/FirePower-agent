@@ -64,7 +64,7 @@ class ConnectedComponents:
                 component = [i]
                 self.connected_components.append(component)
 
-        print("all_connected_component: ", self.connected_components)
+        # print("all_connected_component: ", self.connected_components)
 
     def _remove_connected_components_if_no_active_generator(self, generator_output):
         if len(self.connected_components) == 1:
@@ -84,7 +84,7 @@ class ConnectedComponents:
             if flag == False:
                 self.connected_components.remove(connected_component)
 
-        print("active_generator_connected_components:", self.connected_components)
+        # print("active_generator_connected_components:", self.connected_components)
 
     def update_connected_components(self, state):
         branch_status = state["branch_status"]

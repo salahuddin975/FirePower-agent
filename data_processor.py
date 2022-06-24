@@ -304,7 +304,7 @@ class DataProcessor:
         }
 
         connected_components = self._connected_components.get_connected_components()
-        print("connected_components: ", connected_components)
+        # print("connected_components: ", connected_components)
 
         ramp = np.zeros(nn_output.size)
         for connected_component in connected_components:

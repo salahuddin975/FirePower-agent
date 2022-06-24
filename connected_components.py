@@ -66,13 +66,13 @@ class ConnectedComponents:
 
         print("all_connected_component: ", self.connected_components)
 
-    def _remove_connected_components_if_no_active_generator(self, bus_status):
+    def _remove_connected_components_if_no_active_generator(self, generator_output):
         if len(self.connected_components) == 1:
             return
 
         active_generators = []
         for i in self.generators.get_generators():
-            if bus_status[i]:
+            if generator_output[i]:
                 active_generators.append(i)
 
         for connected_component in reversed(self.connected_components):
@@ -86,14 +86,17 @@ class ConnectedComponents:
 
         print("active_generator_connected_components:", self.connected_components)
 
-    def update_connected_components(self, bus_status, branch_status):
+    def update_connected_components(self, state):
+        branch_status = state["branch_status"]
+        generator_output = state["generator_injection"]
+
         if (self._branch_status != branch_status).any():
             self._branch_status = copy.deepcopy(branch_status)
             for i, val in enumerate(self._branch_status):
                 if val == 0:
                     self._branches[i] = 0
             self._find_all_connected_components()
-            self._remove_connected_components_if_no_active_generator(bus_status)
+            self._remove_connected_components_if_no_active_generator(generator_output)
 
     def get_connected_components(self):
         return self.connected_components

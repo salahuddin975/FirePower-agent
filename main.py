@@ -163,7 +163,6 @@ if __name__ == "__main__":
             # tensorboard.generator_output_info(state["generator_injection"])
             # tensorboard.load_demand_info(state["load_demand"])
             # tensorboard.line_flow_info(state["line_flow"])
-            connected_components.update_connected_components(state)
 
             myopic_action = data_processor.get_myopic_action(episode, step)
             myopic_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
@@ -181,6 +180,7 @@ if __name__ == "__main__":
             state["episode"] = episode
             state["step"] = step
             state["servable_load_demand"] = target_myopic_state["generator_injection"]
+            connected_components.update_connected_components(state)
             nn_noise_action, env_action = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
 
             # print("ramp:", env_action['generator_injection'])

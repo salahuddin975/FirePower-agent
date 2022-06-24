@@ -88,7 +88,7 @@ class ConnectedComponents:
 
     def update_connected_components(self, state):
         branch_status = state["branch_status"]
-        generator_output = state["generator_injection"]
+        generator_output = state["servable_load_demand"]
 
         if (self._branch_status != branch_status).any():
             self._branch_status = copy.deepcopy(branch_status)

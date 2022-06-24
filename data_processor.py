@@ -206,9 +206,9 @@ class DataProcessor:
 
     def _clip_ramp_values(self, servable_load_demand, generators_current_output, nn_output):
         total_servable_load_demand = np.sum(servable_load_demand)
-        generators_min_output = self.generators.get_min_outputs()
-        generators_max_output = self.generators.get_max_outputs()
-        generators_max_ramp = self.generators.get_max_ramps()
+        generators_min_output = copy.deepcopy(self.generators.get_min_outputs())
+        generators_max_output = copy.deepcopy(self.generators.get_max_outputs())
+        generators_max_ramp = copy.deepcopy(self.generators.get_max_ramps())
 
         # print("nn_output_sum: ", np.sum(nn_output))
         epsilon_nn = 0.0001
@@ -285,11 +285,11 @@ class DataProcessor:
         # branch_status = self._check_network_violations_branch(bus_status, branch_status) # if bus is 0, then corresponding all branches are 0
         # self._adjust_load_demand_if_all_branches_out(branch_status, load_demand, current_output) # adjust load_demand and generation max output if all branches are 0
 
-        generators_current_output = np.zeros(self.generators.get_num_generators())
-        servable_load_demand = np.zeros(self.generators.get_num_generators())
-        for i in range(self.generators.get_num_generators()):
-            generators_current_output[i] = current_output[self.generators.get_generators()[i]]
-            servable_load_demand[i] = state["servable_load_demand"][self.generators.get_generators()[i]] / self._power_generation_preprocess_scale
+        # generators_current_output = np.zeros(self.generators.get_num_generators())
+        # servable_load_demand = np.zeros(self.generators.get_num_generators())
+        # for i in range(self.generators.get_num_generators()):
+        #     generators_current_output[i] = current_output[self.generators.get_generators()[i]]
+        #     servable_load_demand[i] = state["servable_load_demand"][self.generators.get_generators()[i]] / self._power_generation_preprocess_scale
 
         nn_output = np.array(tf.squeeze(nn_action))
         if explore_network:
@@ -304,7 +304,22 @@ class DataProcessor:
         connected_components = self._connected_components.get_connected_components()
         print("connected_components: ", connected_components)
 
-        ramp = self._clip_ramp_values(servable_load_demand, generators_current_output, nn_output)
+        ramp = np.zeros(nn_output.size)
+        for connected_component in connected_components:
+            servable_load_demand = np.zeros(self.generators.get_num_generators())
+            generators_current_output = np.zeros(self.generators.get_num_generators())
+
+            for i in connected_component:
+                for j, gen in enumerate(self.generators.get_generators()):
+                    if i == gen:
+                        servable_load_demand[j] = state["servable_load_demand"][i] / self._power_generation_preprocess_scale
+                        generators_current_output[j] = current_output[i]
+
+            ramp_value = self._clip_ramp_values(servable_load_demand, generators_current_output, nn_output)
+            # print("connected_component: ", connected_component)
+            # print("ramp_value: ", ramp_value)
+            ramp += ramp_value
+        # print("ramp: ", ramp)
 
         env_action = {
             "episode": self.episode,

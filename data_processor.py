@@ -321,8 +321,7 @@ class DataProcessor:
             # print("connected_component: ", connected_component)
             # print("ramp_value: ", ramp_value)
             ramp += ramp_value
-        ramp = ramp * self._power_generation_preprocess_scale
-        print("ramp: ", ramp)
+        # print("ramp: ", ramp)
 
         env_action = {
             "episode": self.episode,
@@ -331,7 +330,7 @@ class DataProcessor:
             "bus_status": bus_status,
             "branch_status": branch_status,
             "generator_selector": self.generators.get_generators(),
-            "generator_injection": ramp,
+            "generator_injection": ramp * self._power_generation_preprocess_scale,
         }
 
         return nn_noise_action, env_action

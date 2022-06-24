@@ -43,9 +43,9 @@ class ConnectedComponents:
         self._branches = [(0, 1),(0, 2),(0, 4),(1, 3),(1, 5),(2, 8),(2, 23),(3, 8),(4, 9),(5, 9),(6, 7),(7, 8),(7, 9),(8, 10),
                           (8, 11),(9, 10),(9, 11),(10, 12),(10, 13),(11, 12),(11, 22),(12, 22),(13, 15),(14, 15),(14, 20),
                           (14, 23),(15, 16),(15, 18),(16, 17),(16, 21),(17, 20),(18, 19),(19, 22),(20, 21)]
-        self.find_all_connected_components()
+        self._find_all_connected_components()
 
-    def find_all_connected_components(self):
+    def _find_all_connected_components(self):
         self.connected_components = []
         self.union_find = UnionFind(self.num_of_bus)
 
@@ -66,16 +66,7 @@ class ConnectedComponents:
 
         print("all_connected_component: ", self.connected_components)
 
-    def update_connected_components(self, bus_status, branch_status):
-        if (self._branch_status != branch_status).any():
-            self._branch_status = copy.deepcopy(branch_status)
-            for i, val in enumerate(self._branch_status):
-                if val == 0:
-                    self._branches[i] = 0
-            self.find_all_connected_components()
-            self.remove_connected_components_if_no_active_generator(bus_status)
-
-    def remove_connected_components_if_no_active_generator(self, bus_status):
+    def _remove_connected_components_if_no_active_generator(self, bus_status):
         if len(self.connected_components) == 1:
             return
 
@@ -94,3 +85,15 @@ class ConnectedComponents:
                 self.connected_components.remove(connected_component)
 
         print("active_generator_connected_components:", self.connected_components)
+
+    def update_connected_components(self, bus_status, branch_status):
+        if (self._branch_status != branch_status).any():
+            self._branch_status = copy.deepcopy(branch_status)
+            for i, val in enumerate(self._branch_status):
+                if val == 0:
+                    self._branches[i] = 0
+            self._find_all_connected_components()
+            self._remove_connected_components_if_no_active_generator(bus_status)
+
+    def get_connected_components(self):
+        return self.connected_components

@@ -84,7 +84,7 @@ class ConnectedComponents:
             if bus_status[i]:
                 active_generators.append(i)
 
-        for connected_component in self.connected_components:
+        for connected_component in reversed(self.connected_components):
             flag = False
             for i in connected_component:
                 if i in active_generators:

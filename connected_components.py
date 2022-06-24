@@ -32,9 +32,10 @@ class UnionFind:
 
 
 class ConnectedComponents:
-    def __init__(self):
+    def __init__(self, generators):
         self.num_of_bus = 24
         self.num_of_branch = 34
+        self.generators = generators
         self.reset()
 
     def reset(self):
@@ -65,10 +66,31 @@ class ConnectedComponents:
 
         print("all_connected_component: ", self.connected_components)
 
-    def update_connected_components(self, branch_status):
+    def update_connected_components(self, bus_status, branch_status):
         if (self._branch_status != branch_status).any():
             self._branch_status = copy.deepcopy(branch_status)
             for i, val in enumerate(self._branch_status):
                 if val == 0:
                     self._branches[i] = 0
             self.find_all_connected_components()
+            self.remove_connected_components_if_no_active_generator(bus_status)
+
+    def remove_connected_components_if_no_active_generator(self, bus_status):
+        if len(self.connected_components) == 1:
+            return
+
+        active_generators = []
+        for i in self.generators.get_generators():
+            if bus_status[i]:
+                active_generators.append(i)
+
+        for connected_component in self.connected_components:
+            flag = False
+            for i in connected_component:
+                if i in active_generators:
+                    flag = True
+                    break
+            if flag == False:
+                self.connected_components.remove(connected_component)
+
+        print("active_generator_connected_components:", self.connected_components)

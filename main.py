@@ -101,8 +101,8 @@ if __name__ == "__main__":
     ramp_frequency_in_hour = 12
     power_generation_preprocess_scale = 10
     simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)
-    connected_components = ConnectedComponents()
     generators = Generators(ppc=simulator_resources.ppc, power_generation_preprocess_scale=power_generation_preprocess_scale, ramp_frequency_in_hour=ramp_frequency_in_hour)
+    connected_components = ConnectedComponents(generators)
     # generators.print_info()
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power,
@@ -163,7 +163,7 @@ if __name__ == "__main__":
             # tensorboard.generator_output_info(state["generator_injection"])
             # tensorboard.load_demand_info(state["load_demand"])
             # tensorboard.line_flow_info(state["line_flow"])
-            connected_components.update_connected_components(state["branch_status"])
+            connected_components.update_connected_components(state["bus_status"], state["branch_status"])
 
             myopic_action = data_processor.get_myopic_action(episode, step)
             myopic_state, myopic_reward, myopic_done, _ = env.step(myopic_action)

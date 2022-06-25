@@ -146,11 +146,11 @@ class DDPG:
 
     def _actor_model(self):
         # bus -> MultiBinary(24)
-        bus_input = layers.Input(shape=(self._state_spaces[0],))
+        # bus_input = layers.Input(shape=(self._state_spaces[0],))
         # bus_input1 = layers.Dense(32, activation="tanh") (bus_input)
 
         # num_branch -> MultiBinary(34)
-        branch_input = layers.Input(shape=(self._state_spaces[1],))
+        # branch_input = layers.Input(shape=(self._state_spaces[1],))
         # branch_input1 = layers.Dense(32, activation="tanh") (branch_input)
 
         # fire_distance -> Box(58, )
@@ -173,25 +173,25 @@ class DDPG:
         line_flow_input = layers.Input(shape=(self._state_spaces[6], ))
 
         #-------------------------------------
-        st_bus_branch = layers.Concatenate() ([bus_input, branch_input])
-        st_bus_branch_layer1 = layers.Dense(64, activation="relu") (st_bus_branch)
+        # st_bus_branch = layers.Concatenate() ([bus_input, branch_input])
+        # st_bus_branch_layer1 = layers.Dense(64, activation="relu") (st_bus_branch)
+        #
+        # st_fire_distance_layer1 = layers.Dense(64, activation="relu") (fire_distance_input)
+        #
+        # st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_branch_layer1, st_fire_distance_layer1])
+        # st_bus_branch_fire_distance_comb_layer1 = layers.Dense(128, activation="relu") (st_bus_branch_fire_distance_comb)
+        #
+        # # st_gen_combine = layers.Concatenate() ([st_gen_output, act_gen_injection])
+        # st_gen_layer1 = layers.Dense(64, "relu") (gen_inj_input)
+        # st_load_demand1 = layers.Dense(64, "relu") (load_demand_input)
+        # st_line_flow_layer1 = layers.Dense(64, activation="relu") (line_flow_input)
+        #
+        # # st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_line_flow_layer1])
+        # st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_load_demand1, st_line_flow_layer1])
+        # st_gen_line_flow_layer1 = layers.Dense(128, activation="relu") (st_gen_line_flow_combine)
 
-        st_fire_distance_layer1 = layers.Dense(64, activation="relu") (fire_distance_input)
-
-        st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_branch_layer1, st_fire_distance_layer1])
-        st_bus_branch_fire_distance_comb_layer1 = layers.Dense(128, activation="relu") (st_bus_branch_fire_distance_comb)
-
-        # st_gen_combine = layers.Concatenate() ([st_gen_output, act_gen_injection])
-        st_gen_layer1 = layers.Dense(64, "relu") (gen_inj_input)
-        st_load_demand1 = layers.Dense(64, "relu") (load_demand_input)
-        st_line_flow_layer1 = layers.Dense(64, activation="relu") (line_flow_input)
-
-        # st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_line_flow_layer1])
-        st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_load_demand1, st_line_flow_layer1])
-        st_gen_line_flow_layer1 = layers.Dense(128, activation="relu") (st_gen_line_flow_combine)
-
-        # -------------------------------------
         # state = layers.Concatenate() ([st_bus_branch_fire_distance_comb_layer1, st_gen_line_flow_layer1])
+        # -------------------------------------
 
         state = layers.Concatenate() ([fire_distance_input, gen_inj_input, load_demand_input])
         # state = layers.Concatenate() ([fire_distance_input, gen_inj_input, load_demand_input, line_flow_input])
@@ -203,17 +203,17 @@ class DDPG:
         hidden = layers.Dense(512, activation="relu") (hidden)
         gen_inj_output = layers.Dense(self._num_of_active_generators, activation="softmax") (hidden)
 
-        model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input],
+        model = tf.keras.Model([fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input],
                                [gen_inj_output])
         return model
 
     def _critic_model(self):
         # bus -> MultiBinary(24)
-        st_bus = layers.Input(shape=(self._state_spaces[0],))
+        # st_bus = layers.Input(shape=(self._state_spaces[0],))
         # st_bus1 = layers.Dense(32, activation="relu") (st_bus)
 
         # num_branch -> MultiBinary(34)
-        st_branch = layers.Input(shape=(self._state_spaces[1],))
+        # st_branch = layers.Input(shape=(self._state_spaces[1],))
         # st_branch1 = layers.Dense(32, activation="relu") (st_branch)
 
         # fire_distance -> Box(58, )
@@ -248,25 +248,25 @@ class DDPG:
         # act_gen_injection1 = layers.Dense(32, activation="relu") (act_gen_injection)          # power ramping up/down
 
         #-------------------------------------
-        st_bus_branch = layers.Concatenate() ([st_bus, st_branch])
-        st_bus_branch_layer1 = layers.Dense(64, activation="relu") (st_bus_branch)
+        # st_bus_branch = layers.Concatenate() ([st_bus, st_branch])
+        # st_bus_branch_layer1 = layers.Dense(64, activation="relu") (st_bus_branch)
+        #
+        # st_fire_distance_layer1 = layers.Dense(64, activation="relu") (st_fire_distance)
+        #
+        # st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_branch_layer1, st_fire_distance_layer1])
+        # st_bus_branch_fire_distance_comb_layer1 = layers.Dense(128, activation="relu") (st_bus_branch_fire_distance_comb)
+        #
+        # st_gen_combine = layers.Concatenate() ([st_gen_output, act_gen_injection])
+        # st_gen_layer1 = layers.Dense(64, "relu") (st_gen_combine)
+        #
+        # st_load_demand1 = layers.Dense(64, "relu") (st_load_demand)
+        # st_line_flow_layer1 = layers.Dense(64, activation="relu") (st_line_flow)
+        #
+        # st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_load_demand1, st_line_flow_layer1])
+        # st_gen_line_flow_layer1 = layers.Dense(128, activation="relu") (st_gen_line_flow_combine)
 
-        st_fire_distance_layer1 = layers.Dense(64, activation="relu") (st_fire_distance)
-
-        st_bus_branch_fire_distance_comb = layers.Concatenate() ([st_bus_branch_layer1, st_fire_distance_layer1])
-        st_bus_branch_fire_distance_comb_layer1 = layers.Dense(128, activation="relu") (st_bus_branch_fire_distance_comb)
-
-        st_gen_combine = layers.Concatenate() ([st_gen_output, act_gen_injection])
-        st_gen_layer1 = layers.Dense(64, "relu") (st_gen_combine)
-
-        st_load_demand1 = layers.Dense(64, "relu") (st_load_demand)
-        st_line_flow_layer1 = layers.Dense(64, activation="relu") (st_line_flow)
-
-        st_gen_line_flow_combine = layers.Concatenate() ([st_gen_layer1, st_load_demand1, st_line_flow_layer1])
-        st_gen_line_flow_layer1 = layers.Dense(128, activation="relu") (st_gen_line_flow_combine)
-
-        # -------------------------------------
         # state = layers.Concatenate() ([st_bus_branch_fire_distance_comb_layer1, st_gen_line_flow_layer1])
+        # -------------------------------------
 
         state = layers.Concatenate() ([st_fire_distance, st_gen_output, st_load_demand, act_gen_injection])
         # state = layers.Concatenate() ([st_fire_distance, st_gen_output, st_load_demand, st_line_flow, act_gen_injection])
@@ -278,7 +278,7 @@ class DDPG:
         hidden = layers.Dense(512, activation="relu") (hidden)
         reward = layers.Dense(1, activation="linear") (hidden)
 
-        model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
+        model = tf.keras.Model([st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
                                 act_gen_injection], reward)
 
         return model

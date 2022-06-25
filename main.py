@@ -165,10 +165,10 @@ if __name__ == "__main__":
             # tensorboard.line_flow_info(state["line_flow"])
 
             myopic_action = data_processor.get_myopic_action(episode, step)
-            myopic_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
+            myopic_next_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
 
             target_myopic_action = data_processor.get_target_myopic_action(episode, step)
-            target_myopic_state, target_myopic_reward, target_myopic_done, _ = env.step(target_myopic_action)
+            target_myopic_next_state, target_myopic_reward, target_myopic_done, _ = env.step(target_myopic_action)
 
             # servable_load_demand = np.sum(target_myopic_state["generator_injection"])/power_generation_preprocess_scale
             # print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])}, generator_injection: {np.sum(state['generator_injection'])}, "
@@ -179,7 +179,7 @@ if __name__ == "__main__":
 
             state["episode"] = episode
             state["step"] = step
-            state["servable_load_demand"] = target_myopic_state["generator_injection"]
+            state["servable_load_demand"] = target_myopic_next_state["generator_injection"]
             connected_components.update_connected_components(state)
             nn_noise_action, env_action = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
 
@@ -197,7 +197,7 @@ if __name__ == "__main__":
             reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), rl_reward[0], done)
             tensorboard.step_info(main_loop_info, reward_info)
 
-            reward = np.sum(next_state["generator_injection"]) - np.sum(myopic_state["generator_injection"])
+            reward = np.sum(next_state["generator_injection"]) - np.sum(myopic_next_state["generator_injection"])
             custom_reward = (reward, reward)
 
             total_myopic_reward += myopic_reward[0]

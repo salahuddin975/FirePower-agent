@@ -41,8 +41,8 @@ class DDPG:
         actor_lr = 0.001
         critic_lr = 0.002
         self._save_weight_directory = os.path.join(base_path, "trained_model")
-        self._load_weight_directory = os.path.join(base_path, "trained_model")
-        # self._load_weight_directory = os.path.join("../../FirePower-agent-private", base_path, "trained_model")
+        # self._load_weight_directory = os.path.join(base_path, "trained_model")
+        self._load_weight_directory = os.path.join("../../FirePower-agent-private", base_path, "trained_model")
         self._create_dir()
 
         self._actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
@@ -146,11 +146,11 @@ class DDPG:
 
     def _actor_model(self):
         # bus -> MultiBinary(24)
-        # bus_input = layers.Input(shape=(self._state_spaces[0],))
+        bus_input = layers.Input(shape=(self._state_spaces[0],))
         # bus_input1 = layers.Dense(32, activation="tanh") (bus_input)
 
         # num_branch -> MultiBinary(34)
-        # branch_input = layers.Input(shape=(self._state_spaces[1],))
+        branch_input = layers.Input(shape=(self._state_spaces[1],))
         # branch_input1 = layers.Dense(32, activation="tanh") (branch_input)
 
         # fire_distance -> Box(58, )
@@ -203,17 +203,17 @@ class DDPG:
         hidden = layers.Dense(512, activation="relu") (hidden)
         gen_inj_output = layers.Dense(self._num_of_active_generators, activation="softmax") (hidden)
 
-        model = tf.keras.Model([fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input],
+        model = tf.keras.Model([bus_input, branch_input, fire_distance_input, gen_inj_input, load_demand_input, theta_input, line_flow_input],
                                [gen_inj_output])
         return model
 
     def _critic_model(self):
         # bus -> MultiBinary(24)
-        # st_bus = layers.Input(shape=(self._state_spaces[0],))
+        st_bus = layers.Input(shape=(self._state_spaces[0],))
         # st_bus1 = layers.Dense(32, activation="relu") (st_bus)
 
         # num_branch -> MultiBinary(34)
-        # st_branch = layers.Input(shape=(self._state_spaces[1],))
+        st_branch = layers.Input(shape=(self._state_spaces[1],))
         # st_branch1 = layers.Dense(32, activation="relu") (st_branch)
 
         # fire_distance -> Box(58, )
@@ -278,7 +278,7 @@ class DDPG:
         hidden = layers.Dense(512, activation="relu") (hidden)
         reward = layers.Dense(1, activation="linear") (hidden)
 
-        model = tf.keras.Model([st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
+        model = tf.keras.Model([st_bus, st_branch, st_fire_distance, st_gen_output, st_load_demand, st_theta, st_line_flow,
                                 act_gen_injection], reward)
 
         return model

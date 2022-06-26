@@ -634,13 +634,13 @@ class EpisodicReward:
             print(error)
 
     def _initialize(self):
-        with open(f'{self._path}/episodic_test_result_ep_{self._load_episode}', 'w') as fd:
+        with open(f'{self._path}/episodic_test_result_ep_{self._load_episode}.csv', 'w') as fd:
             writer = csv.writer(fd)
             writer.writerow(["episode", "myopic", "myopic_reward_rl_transition",
                              "rl", "myopic_reward_rl_transition-myopic", "rl-myopic"])
 
     def add_info(self, episode, myopic, myopic_reward_rl_transition, rl):
-        with open(f'{self._path}/episodic_test_result.csv', 'a') as fd:
+        with open(f'{self._path}/episodic_test_result_ep_{self._load_episode}.csv', 'a') as fd:
             writer = csv.writer(fd)
             writer.writerow([str(episode), str(myopic), str(myopic_reward_rl_transition), str(rl),
                              str(myopic_reward_rl_transition - myopic), str(rl - myopic)])
@@ -660,13 +660,13 @@ class StepByStepReward:
             print(error)
 
     def _initialize(self):
-        with open(f'{self._path}/step_by_step_test_result_ep_{self._load_episode}', 'w') as fd:
+        with open(f'{self._path}/step_by_step_test_result_ep_{self._load_episode}.csv', 'w') as fd:
             writer = csv.writer(fd)
             writer.writerow(["episode", "step", "myopic", "myopic_reward_rl_transition",
                              "rl", "myopic_reward_rl_transition-myopic", "rl-myopic"])
 
     def add_info(self, episode, step, myopic, myopic_reward_rl_transition, rl):
-        with open(f'{self._path}/step_by_step_test_result.csv', 'a') as fd:
+        with open(f'{self._path}/step_by_step_test_result_ep_{self._load_episode}.csv', 'a') as fd:
             writer = csv.writer(fd)
             writer.writerow([str(episode), str(step), str(myopic), str(myopic_reward_rl_transition), str(rl),
                              str(myopic_reward_rl_transition - myopic), str(rl - myopic)])

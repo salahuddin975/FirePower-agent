@@ -9,7 +9,7 @@ import tensorflow as tf
 from parameters import Parameters
 from ddpg import DDPG
 from replay_buffer import ReplayBuffer
-from data_processor import DataProcessor, Tensorboard, SummaryWriter, EpisodicTestResult, StepByStepTestResult
+from data_processor import DataProcessor, Tensorboard, EpisodicTestResult, StepByStepTestResult
 from simulator_resorces import SimulatorResources, Generators
 from fire_propagation_visualizer import Visualizer
 from connected_components import ConnectedComponents
@@ -136,7 +136,6 @@ if __name__ == "__main__":
 
     tensorboard = Tensorboard(base_path)
     visualizer = Visualizer(generators, simulator_resources, args.path_geo)
-    summary_writer = SummaryWriter(base_path, save_model_version, load_episode_num)
     data_processor = DataProcessor(simulator_resources, generators, connected_components, state_spaces, action_spaces, power_generation_preprocess_scale)
 
     # agent training
@@ -229,7 +228,6 @@ if __name__ == "__main__":
                 # print("Episode:", episode, ", step: ", step, ", critic_value:", tensorboard_info.critic_value_with_original_action, ", critic_loss:", tensorboard_info.critic_loss)
 
         tensorboard.episodic_info(total_rl_reward)
-        summary_writer.add_info(episode, max_reached_step, total_rl_reward, total_rl_reward)
         episodic_test_result.add_info(episode, total_myopic_reward, total_myopic_reward_rl_transition, total_rl_reward)
 
         # explore / Testing

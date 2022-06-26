@@ -9,7 +9,7 @@ import tensorflow as tf
 from parameters import Parameters
 from ddpg import DDPG
 from replay_buffer import ReplayBuffer
-from data_processor import DataProcessor, Tensorboard, EpisodicTestResult, StepByStepTestResult
+from data_processor import DataProcessor, Tensorboard, EpisodicReward, StepByStepReward
 from simulator_resorces import SimulatorResources, Generators
 from fire_propagation_visualizer import Visualizer
 from connected_components import ConnectedComponents
@@ -144,8 +144,8 @@ if __name__ == "__main__":
     num_train_per_episode = 500         # canbe used by loading replay buffer
     episodic_rewards = []
     explore_network_flag = True if train_network else False
-    episodic_test_result = EpisodicTestResult(base_path)
-    step_by_step_test_result = StepByStepTestResult(base_path)
+    episodic_reward = EpisodicReward(base_path)
+    step_by_step_reward = StepByStepReward(base_path)
 
     for episode in range(total_episode):
         connected_components.reset()
@@ -209,7 +209,7 @@ if __name__ == "__main__":
             if explore_network_flag == False:
                 print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward[0]}, target_myopic_reward: "
                       f"{myopic_reward_rl_transition[0]}, rl_reward: {rl_reward[0]}, custom_reward: {reward}")
-            step_by_step_test_result.add_info(episode, step, myopic_reward[0], myopic_reward_rl_transition[0], rl_reward[0])
+            step_by_step_reward.add_info(episode, step, myopic_reward[0], myopic_reward_rl_transition[0], rl_reward[0])
 
             next_state = data_processor.preprocess(next_state, explore_network_flag)
             buffer.add_record((state, nn_noise_action, custom_reward, next_state, env_action, done))
@@ -228,7 +228,7 @@ if __name__ == "__main__":
                 # print("Episode:", episode, ", step: ", step, ", critic_value:", tensorboard_info.critic_value_with_original_action, ", critic_loss:", tensorboard_info.critic_loss)
 
         tensorboard.episodic_info(total_rl_reward)
-        episodic_test_result.add_info(episode, total_myopic_reward, total_myopic_reward_rl_transition, total_rl_reward)
+        episodic_reward.add_info(episode, total_myopic_reward, total_myopic_reward_rl_transition, total_rl_reward)
 
         # explore / Testing
         if episode and (episode % parameters.test_after_episodes == 0):

@@ -620,9 +620,10 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
 #                              str(load_loss), str(active_line_removal_penalty), str(no_action_penalty), str(violation_penalty)])
 
 
-class EpisodicTestResult:
+class EpisodicReward:
     def __init__(self, path):
         self._path = os.path.join(path, "test_result")
+        self._create_dir()
         self._initialize()
 
     def _create_dir(self):
@@ -644,9 +645,10 @@ class EpisodicTestResult:
                              str(myopic_reward_rl_transition - myopic), str(rl - myopic)])
 
 
-class StepByStepTestResult:
+class StepByStepReward:
     def __init__(self, path):
         self._path = os.path.join(path, "test_result")
+        self._create_dir()
         self._initialize()
 
     def _create_dir(self):

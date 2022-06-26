@@ -638,7 +638,6 @@ class EpisodicTestResult:
                              "rl", "myopic_reward_rl_transition-myopic", "rl-myopic"])
 
     def add_info(self, episode, myopic, myopic_reward_rl_transition, rl):
-
         with open(f'gams_feasible.csv', 'a') as fd:
             writer = csv.writer(fd)
             writer.writerow([str(episode), str(myopic), str(myopic_reward_rl_transition), str(rl),
@@ -663,7 +662,6 @@ class StepByStepTestResult:
                              "rl", "myopic_reward_rl_transition-myopic", "rl-myopic"])
 
     def add_info(self, episode, step, myopic, myopic_reward_rl_transition, rl):
-
         with open(f'gams_feasible.csv', 'a') as fd:
             writer = csv.writer(fd)
             writer.writerow([str(episode), str(step), str(myopic), str(myopic_reward_rl_transition), str(rl),

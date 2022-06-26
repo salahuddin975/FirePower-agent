@@ -41,8 +41,8 @@ class DDPG:
         actor_lr = 0.001
         critic_lr = 0.002
         self._save_weight_directory = os.path.join(base_path, "trained_model")
-        # self._load_weight_directory = os.path.join(base_path, "trained_model")
-        self._load_weight_directory = os.path.join("../../FirePower-agent-private", base_path, "trained_model")
+        self._load_weight_directory = os.path.join(base_path, "trained_model")
+        # self._load_weight_directory = os.path.join("../../FirePower-agent-private", base_path, "trained_model")
         self._create_dir()
 
         self._actor_optimizer = tf.keras.optimizers.Adam(actor_lr)

@@ -620,6 +620,24 @@ class SummaryWriter:
                              str(load_loss), str(active_line_removal_penalty), str(no_action_penalty), str(violation_penalty)])
 
 
+class EpisodicTestResult:
+    def __init__(self):
+        self._initialize()
+
+    def _initialize(self):
+        with open(f'episodic_test_result.csv', 'w') as fd:
+            writer = csv.writer(fd)
+            writer.writerow(["episode", "myopic", "myopic_score_rl_transition",
+                             "rl", "myopic_score_rl_transition-myopic", "rl-myopic"])
+
+    def add_info(self, episode, myopic, myopic_score_rl_transition, rl):
+
+        with open(f'gams_feasible.csv', 'a') as fd:
+            writer = csv.writer(fd)
+            writer.writerow([str(episode), str(myopic), str(myopic_score_rl_transition), str(rl),
+                             str(myopic_score_rl_transition - myopic), str(rl - myopic)])
+
+
 class CustomWriter:
     def __init__(self):
         self._initialize()

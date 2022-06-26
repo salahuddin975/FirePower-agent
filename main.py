@@ -9,7 +9,7 @@ import tensorflow as tf
 from parameters import Parameters
 from ddpg import DDPG
 from replay_buffer import ReplayBuffer
-from data_processor import DataProcessor, Tensorboard, SummaryWriter
+from data_processor import DataProcessor, Tensorboard, SummaryWriter, EpisodicTestResult
 from simulator_resorces import SimulatorResources, Generators
 from fire_propagation_visualizer import Visualizer
 from connected_components import ConnectedComponents
@@ -145,6 +145,7 @@ if __name__ == "__main__":
     num_train_per_episode = 500         # canbe used by loading replay buffer
     episodic_rewards = []
     explore_network_flag = True if train_network else False
+    episodic_test_result = EpisodicTestResult()
 
     for episode in range(total_episode):
         connected_components.reset()
@@ -153,7 +154,7 @@ if __name__ == "__main__":
 
         max_reached_step = 0
         total_myopic_reward = 0
-        total_target_myopic_reward = 0
+        total_myopic_score_rl_transition_reward = 0
         total_rl_reward = 0
         total_custom_reward = 0
 
@@ -167,8 +168,8 @@ if __name__ == "__main__":
             myopic_action = data_processor.get_myopic_action(episode, step)
             myopic_next_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
 
-            target_myopic_action = data_processor.get_target_myopic_action(episode, step)
-            target_myopic_next_state, target_myopic_reward, target_myopic_done, _ = env.step(target_myopic_action)
+            myopic_score_rl_transition = data_processor.get_target_myopic_action(episode, step)
+            target_myopic_next_state, target_myopic_reward, target_myopic_done, _ = env.step(myopic_score_rl_transition)
 
             # servable_load_demand = np.sum(target_myopic_state["generator_injection"])/power_generation_preprocess_scale
             # print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])}, generator_injection: {np.sum(state['generator_injection'])}, "
@@ -201,7 +202,7 @@ if __name__ == "__main__":
             custom_reward = (reward, reward)
 
             total_myopic_reward += myopic_reward[0]
-            total_target_myopic_reward += target_myopic_reward[0]
+            total_myopic_score_rl_transition_reward += target_myopic_reward[0]
             total_rl_reward += rl_reward[0]
             total_custom_reward += custom_reward[0]
 
@@ -215,7 +216,7 @@ if __name__ == "__main__":
 
             if done or (step == max_steps_per_episode - 1):
                 print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total myopic_reward: {total_myopic_reward},"
-                      f" total_target_myopic_reward: {total_target_myopic_reward}, total_rl_reward: {total_rl_reward}, total_custom_reward: {total_custom_reward}")
+                      f" total_target_myopic_reward: {total_myopic_score_rl_transition_reward}, total_rl_reward: {total_rl_reward}, total_custom_reward: {total_custom_reward}")
                 max_reached_step = step
                 break
 
@@ -227,6 +228,7 @@ if __name__ == "__main__":
 
         tensorboard.episodic_info(total_rl_reward)
         summary_writer.add_info(episode, max_reached_step, total_rl_reward, total_rl_reward)
+        episodic_test_result.add_info(episode, total_myopic_reward, total_myopic_score_rl_transition_reward, total_rl_reward)
 
         # explore / Testing
         if episode and (episode % parameters.test_after_episodes == 0):

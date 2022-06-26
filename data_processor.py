@@ -627,15 +627,34 @@ class EpisodicTestResult:
     def _initialize(self):
         with open(f'episodic_test_result.csv', 'w') as fd:
             writer = csv.writer(fd)
-            writer.writerow(["episode", "myopic", "myopic_score_rl_transition",
-                             "rl", "myopic_score_rl_transition-myopic", "rl-myopic"])
+            writer.writerow(["episode", "myopic", "myopic_reward_rl_transition",
+                             "rl", "myopic_reward_rl_transition-myopic", "rl-myopic"])
 
-    def add_info(self, episode, myopic, myopic_score_rl_transition, rl):
+    def add_info(self, episode, myopic, myopic_reward_rl_transition, rl):
 
         with open(f'gams_feasible.csv', 'a') as fd:
             writer = csv.writer(fd)
-            writer.writerow([str(episode), str(myopic), str(myopic_score_rl_transition), str(rl),
-                             str(myopic_score_rl_transition - myopic), str(rl - myopic)])
+            writer.writerow([str(episode), str(myopic), str(myopic_reward_rl_transition), str(rl),
+                             str(myopic_reward_rl_transition - myopic), str(rl - myopic)])
+
+
+class StepByStepTestResult:
+    def __init__(self):
+        self._initialize()
+
+    def _initialize(self):
+        with open(f'step_by_step_test_result.csv', 'w') as fd:
+            writer = csv.writer(fd)
+            writer.writerow(["episode", "step", "myopic", "myopic_reward_rl_transition",
+                             "rl", "myopic_reward_rl_transition-myopic", "rl-myopic"])
+
+    def add_info(self, episode, step, myopic, myopic_reward_rl_transition, rl):
+
+        with open(f'gams_feasible.csv', 'a') as fd:
+            writer = csv.writer(fd)
+            writer.writerow([str(episode), str(step), str(myopic), str(myopic_reward_rl_transition), str(rl),
+                             str(myopic_reward_rl_transition - myopic), str(rl - myopic)])
+
 
 
 class CustomWriter:

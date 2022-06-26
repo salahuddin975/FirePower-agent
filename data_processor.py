@@ -621,8 +621,9 @@ class Tensorboard:                 # $ tensorboard --logdir ./logs
 
 
 class EpisodicReward:
-    def __init__(self, path):
+    def __init__(self, path, load_episode):
         self._path = os.path.join(path, "test_result")
+        self._load_episode = load_episode
         self._create_dir()
         self._initialize()
 
@@ -633,7 +634,7 @@ class EpisodicReward:
             print(error)
 
     def _initialize(self):
-        with open(f'{self._path}/episodic_test_result.csv', 'w') as fd:
+        with open(f'{self._path}/episodic_test_result_ep_{self._load_episode}', 'w') as fd:
             writer = csv.writer(fd)
             writer.writerow(["episode", "myopic", "myopic_reward_rl_transition",
                              "rl", "myopic_reward_rl_transition-myopic", "rl-myopic"])
@@ -646,8 +647,9 @@ class EpisodicReward:
 
 
 class StepByStepReward:
-    def __init__(self, path):
+    def __init__(self, path, load_episode):
         self._path = os.path.join(path, "test_result")
+        self._load_episode = load_episode
         self._create_dir()
         self._initialize()
 
@@ -658,7 +660,7 @@ class StepByStepReward:
             print(error)
 
     def _initialize(self):
-        with open(f'{self._path}/step_by_step_test_result.csv', 'w') as fd:
+        with open(f'{self._path}/step_by_step_test_result_ep_{self._load_episode}', 'w') as fd:
             writer = csv.writer(fd)
             writer.writerow(["episode", "step", "myopic", "myopic_reward_rl_transition",
                              "rl", "myopic_reward_rl_transition-myopic", "rl-myopic"])

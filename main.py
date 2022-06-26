@@ -144,8 +144,8 @@ if __name__ == "__main__":
     num_train_per_episode = 500         # canbe used by loading replay buffer
     episodic_rewards = []
     explore_network_flag = True if train_network else False
-    episodic_reward = EpisodicReward(base_path)
-    step_by_step_reward = StepByStepReward(base_path)
+    episodic_reward = EpisodicReward(base_path, 0 if train_network else load_episode_num)
+    step_by_step_reward = StepByStepReward(base_path, 0 if train_network else load_episode_num)
 
     for episode in range(total_episode):
         connected_components.reset()

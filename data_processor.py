@@ -621,11 +621,18 @@ class SummaryWriter:
 
 
 class EpisodicTestResult:
-    def __init__(self):
+    def __init__(self, path):
+        self._path = os.path.join(path, "test_result")
         self._initialize()
 
+    def _create_dir(self):
+        try:
+            os.makedirs(self._path)
+        except OSError as error:
+            print(error)
+
     def _initialize(self):
-        with open(f'episodic_test_result.csv', 'w') as fd:
+        with open(f'{self._path}/episodic_test_result.csv', 'w') as fd:
             writer = csv.writer(fd)
             writer.writerow(["episode", "myopic", "myopic_reward_rl_transition",
                              "rl", "myopic_reward_rl_transition-myopic", "rl-myopic"])
@@ -639,11 +646,18 @@ class EpisodicTestResult:
 
 
 class StepByStepTestResult:
-    def __init__(self):
+    def __init__(self, path):
+        self._path = os.path.join(path, "test_result")
         self._initialize()
 
+    def _create_dir(self):
+        try:
+            os.makedirs(self._path)
+        except OSError as error:
+            print(error)
+
     def _initialize(self):
-        with open(f'step_by_step_test_result.csv', 'w') as fd:
+        with open(f'{self._path}/step_by_step_test_result.csv', 'w') as fd:
             writer = csv.writer(fd)
             writer.writerow(["episode", "step", "myopic", "myopic_reward_rl_transition",
                              "rl", "myopic_reward_rl_transition-myopic", "rl-myopic"])

@@ -16,5 +16,6 @@ episode=400
 
 
 scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/fire_propagation_0_\*.png  .
+#scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/database_seed_10004/test_result/episodic_test_result_ep_400.csv  .
 #scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/gams_feasible.csv   .
 #scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/gym-firepower/gym_firepower/envs/gams/temp/\*.zip   .

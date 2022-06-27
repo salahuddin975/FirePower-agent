@@ -1,15 +1,34 @@
-import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageColor
+import copy
 import json
 import random
-import copy
-from pypower.idx_brch import *
-
+from PIL import Image, ImageDraw, ImageFont, ImageColor
 
 PPC = 6  # pixel per cell
 LINE_WIDTH = PPC // 3
 FONT_SIZE = PPC * 6
-FONT_STROKE_WIDTH = FONT_SIZE // 16
+FONT_STROKE_WIDTH = FONT_SIZE // 24
+
+CELL_TYPES = {
+    'LAND': ((148, 210, 165), 90),
+    'WATER': ((138, 180, 248), 0),
+    'DESERT': ((245, 240, 228), 20),
+    'FOREST': ((143, 203, 160), 100),
+    'LOW_VEGETATION': ((187, 226, 198), 80),
+    'DEEP_DESERT': ((255, 255, 255), 10),
+}
+
+COLORS = {
+    'ACTIVE_BRANCH': ImageColor.getrgb('black'),
+    'INACTIVE_BRANCH': ImageColor.getrgb('red'),
+    'ACTIVE_BUS': ImageColor.getrgb('black'),
+    'INACTIVE_BUS': ImageColor.getrgb('brown'),
+    'ACTIVE_TEXT': ImageColor.getrgb('black'),
+    'ACTIVE_TEXT_OUTLINE': ImageColor.getrgb('white'),
+    'INACTIVE_TEXT': ImageColor.getrgb('brown'),
+    'INACTIVE_TEXT_OUTLINE': ImageColor.getrgb('white'),
+    'FIRE_BURNING': ImageColor.getrgb('orange'),
+    'FIRE_BURNT': ImageColor.getrgb('brown')
+}
 
 
 class Visualizer:
@@ -25,20 +44,6 @@ class Visualizer:
             if i not in self.branches:
                 self.branches.append(i)
 
-
-    # def _check_network_violations_branch(self, bus_status, branch_status):
-    #     from_buses = self.simulator_resources.ppc["branch"][:, F_BUS].astype('int')
-    #     to_buses = self.simulator_resources.ppc["branch"][:, T_BUS].astype('int')
-    #
-    #     for bus in range(bus_status.size):
-    #         is_active = bus_status[bus]
-    #         for branch in range(branch_status.size):
-    #             if bus in [from_buses[branch], to_buses[branch]]:
-    #                 if is_active == 0:
-    #                     branch_status[branch] = 0
-    #
-    #     return branch_status
-
     def draw_map(self, episode, step, cells_info, state):
         burning_cells = cells_info[0]
         burnt_cells = cells_info[1]
@@ -48,17 +53,18 @@ class Visualizer:
         load_demand = copy.deepcopy(state["load_demand"])
         # branch_status = self._check_network_violations_branch(bus_status, branch_status)
 
-        image = Image.new('RGB', (self.conf_data['cols'], self.conf_data['rows']), ImageColor.getrgb('darkgreen'))
+        image = Image.new('RGB', (self.conf_data['cols'], self.conf_data['rows']))
 
-        for cell in self.conf_data['fuel_type']:
-            assert (cell[2] == 0)
-            image.putpixel((cell[0], cell[1]), ImageColor.getrgb('midnightblue'))
+        for cell in self.conf_data["fuel_amt"]:
+            for type in CELL_TYPES.values():
+                if cell[2] == type[1]:
+                    image.putpixel((cell[0], cell[1]), type[0])
 
         for fire_cell in burning_cells:
-            image.putpixel((fire_cell[1], fire_cell[0]), ImageColor.getrgb('crimson'))
+            image.putpixel(fire_cell, COLORS['FIRE_BURNING'])
 
         for burnt_cell in burnt_cells:
-            image.putpixel((burnt_cell[1], burnt_cell[0]), ImageColor.getrgb('brown'))
+            image.putpixel(burnt_cell, COLORS['FIRE_BURNT'])
 
         draw = ImageDraw.Draw(image)
 
@@ -66,7 +72,7 @@ class Visualizer:
         for i, branch in enumerate(self.branches):
             xy_from = buses[branch[0]][1:3]
             xy_to = buses[branch[1]][1:3]
-            color = ImageColor.getrgb('gold') if branch_status[i] else ImageColor.getrgb('black')
+            color = COLORS["ACTIVE_BRANCH"] if branch_status[i] else COLORS["INACTIVE_BRANCH"]
             draw.line(xy_from + xy_to, fill=color)
 
         for bus in self.conf_data['bus_ids']:
@@ -76,8 +82,6 @@ class Visualizer:
         image = image.resize((self.conf_data['cols'] * PPC, self.conf_data['rows'] * PPC), Image.NEAREST)
 
         font = ImageFont.truetype("FreeSansBold.ttf", FONT_SIZE)
-        # font = ImageFont.truetype("FreeSansBold.ttf", FONT_SIZE)
-
         draw = ImageDraw.Draw(image)
         draw.text((FONT_SIZE // 2, FONT_SIZE // 2),
                   f"Episode: {episode}   Step: {step}   Generation: {sum(generation):.1f}",

@@ -29,5 +29,5 @@ with Image.open("WECC area - water cleaned - scaled.png").convert('RGB') as imag
           fuel_type = type[1]
       map.append([x, y, fuel_type])
 
-with open('fuel_type.json', 'w') as fout:
+with open('fuel_amount.json', 'w') as fout:
   json.dump(map, fout)

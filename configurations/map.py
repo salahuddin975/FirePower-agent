@@ -32,7 +32,7 @@ COLORS = {
 with open("configuration.json") as fin:
     data = json.load(fin)
 
-with open("../fuel_type.json") as fin:
+with open("fuel_amount.json") as fin:
     fuel_type = json.load(fin)
 
 

@@ -134,7 +134,7 @@ if __name__ == "__main__":
     tensorboard = Tensorboard(base_path)
     visualizer = Visualizer(generators, simulator_resources, args.path_geo)
     summary_writer = SummaryWriter(base_path, save_model_version, load_episode_num)
-    data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces)
+    data_processor = DataProcessor(simulator_resources, generators, state_spaces, action_spaces, power_generation_preprocess_scale)
 
     # agent training
     total_episode = 100001
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     for episode in range(total_episode):
         generators.reset()
         state = env.reset()
-        state = data_processor.preprocess(state, power_generation_preprocess_scale, explore_network_flag)
+        state = data_processor.preprocess(state)
 
         max_reached_step = 0
         episodic_penalty = 0
@@ -189,7 +189,7 @@ if __name__ == "__main__":
             print(f"Episode: {episode}, at step: {step}, load_demand: {np.sum(state['load_demand'])},"
                       f" generator_injection: {np.sum(state['generator_injection'])}, reward: {reward[0]}")
 
-            next_state = data_processor.preprocess(next_state, power_generation_preprocess_scale, explore_network_flag)
+            next_state = data_processor.preprocess(next_state)
             buffer.add_record((state, nn_noise_action, reward, next_state, env_action, done))
 
             episodic_penalty += reward[0]

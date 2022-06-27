@@ -61,10 +61,10 @@ class Visualizer:
                     image.putpixel((cell[0], cell[1]), type[0])
 
         for fire_cell in burning_cells:
-            image.putpixel(fire_cell, COLORS['FIRE_BURNING'])
+            image.putpixel((fire_cell[1], fire_cell[0]), COLORS["FIRE_BURNING"])
 
         for burnt_cell in burnt_cells:
-            image.putpixel(burnt_cell, COLORS['FIRE_BURNT'])
+            image.putpixel((burnt_cell[1], burnt_cell[0]), COLORS["FIRE_BURNT"])
 
         draw = ImageDraw.Draw(image)
 

@@ -39,6 +39,10 @@ class Visualizer:
         with open(conf_file) as fin:
             self.conf_data = json.load(fin)
 
+        fuel_amt_path = "configurations/fuel_amount.json"
+        with open(fuel_amt_path, 'r') as fuel_amount:
+            self.conf_data.update(json.load(fuel_amount))
+
         self.branches = []
         for i in  self.conf_data['branches']:
             if i not in self.branches:

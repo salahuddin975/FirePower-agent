@@ -173,9 +173,8 @@ if __name__ == "__main__":
 
             next_state, reward, done, cells_info = env.step(env_action)
 
-            if train_network:
-                image = visualizer.draw_map(episode, step, cells_info, next_state)
-                image.save(f"fire_propagation_{episode}_{step}.png")
+            # image = visualizer.draw_map(episode, step, cells_info, next_state)
+            # image.save(f"fire_propagation_{episode}_{step}.png")
 
             main_loop_info = MainLoopInfo(tf.math.reduce_mean(nn_action), agent.get_critic_value(tf_state, nn_action),
                                           tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),

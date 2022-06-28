@@ -12,5 +12,5 @@
         ],
     "random_source": true,
     "boxes": [ [[62, 16], [230,328]] ],
-    "num_sources": 1
+    "num_sources": 3
 }

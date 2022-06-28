@@ -39,7 +39,8 @@ class ConnectedComponents:
         self.reset()
 
     def reset(self):
-        self._branch_status = np.ones(34)
+        self._bus_status = np.ones(self.num_of_bus)
+        self._branch_status = np.ones(self.num_of_branch)
         self._branches = [(0, 1),(0, 2),(0, 4),(1, 3),(1, 5),(2, 8),(2, 23),(3, 8),(4, 9),(5, 9),(6, 7),(7, 8),(7, 9),(8, 10),
                           (8, 11),(9, 10),(9, 11),(10, 12),(10, 13),(11, 12),(11, 22),(12, 22),(13, 15),(14, 15),(14, 20),
                           (14, 23),(15, 16),(15, 18),(16, 17),(16, 21),(17, 20),(18, 19),(19, 22),(20, 21)]
@@ -66,13 +67,13 @@ class ConnectedComponents:
 
         # print("all_connected_component: ", self.connected_components)
 
-    def _remove_connected_components_if_no_active_generator(self, generator_output):
+    def _remove_connected_components_if_no_active_generator(self, generator_servable_load_demand):
         if len(self.connected_components) == 1:
             return
 
         active_generators = []
         for i in self.generators.get_generators():
-            if generator_output[i]:
+            if generator_servable_load_demand[i]:
                 active_generators.append(i)
 
         for connected_component in reversed(self.connected_components):
@@ -87,16 +88,18 @@ class ConnectedComponents:
         # print("active_generator_connected_components:", self.connected_components)
 
     def update_connected_components(self, state):
+        bus_status = state["bus_status"]
         branch_status = state["branch_status"]
-        generator_output = state["servable_load_demand"]
+        generators_servable_load_demand = state["servable_load_demand"]
 
-        if (self._branch_status != branch_status).any():
+        if (self._branch_status != branch_status).any() or (self._bus_status != bus_status).any():
             self._branch_status = copy.deepcopy(branch_status)
+            self._bus_status = copy.deepcopy(bus_status)
             for i, val in enumerate(self._branch_status):
                 if val == 0:
                     self._branches[i] = 0
             self._find_all_connected_components()
-            self._remove_connected_components_if_no_active_generator(generator_output)
+            self._remove_connected_components_if_no_active_generator(generators_servable_load_demand)
 
     def get_connected_components(self):
         return self.connected_components

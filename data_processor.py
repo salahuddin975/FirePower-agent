@@ -309,6 +309,7 @@ class DataProcessor:
 
         ramp = np.zeros(nn_output.size)
         for connected_component in connected_components:
+            # print("connected_component: ", connected_component)
             servable_load_demand = np.zeros(self.generators.get_num_generators())
             generators_current_output = np.zeros(self.generators.get_num_generators())
 

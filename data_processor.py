@@ -249,7 +249,7 @@ class DataProcessor:
         #       "; upper_total: ", np.sum(upper), "; total_servable_load_demand:", total_servable_load_demand)
 
         if np.sum(lower) >= total_servable_load_demand * (1 - epsilon_total):
-            ramp = generators_current_output - lower
+            ramp = generators_current_output - servable_load_demand
             print("lower: ", np.sum(lower), ">= total_servable_load_demand_lower:", total_servable_load_demand * (1 - epsilon_total), " condition applied")
             return ramp
 

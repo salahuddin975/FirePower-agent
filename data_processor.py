@@ -249,7 +249,7 @@ class DataProcessor:
         #       "; upper_total: ", np.sum(upper), "; total_servable_load_demand:", total_servable_load_demand)
 
         if np.sum(lower) >= total_servable_load_demand * (1 - epsilon_total):
-            ramp = generators_current_output - servable_load_demand
+            ramp = generators_current_output - lower
             print("lower: ", np.sum(lower), ">= total_servable_load_demand_lower:", total_servable_load_demand * (1 - epsilon_total), " condition applied")
             return ramp
 
@@ -323,6 +323,9 @@ class DataProcessor:
                         generators_current_output[j] = current_output[i]
 
             ramp_value = self._clip_ramp_values(servable_load_demand, generators_current_output, nn_output)
+            for i, val in enumerate(servable_load_demand):
+                if val == 0:
+                    ramp_value[i] = 0
             # print("connected_component: ", connected_component)
             # print("ramp_value: ", ramp_value)
             ramp += ramp_value

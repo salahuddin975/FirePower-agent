@@ -261,7 +261,7 @@ class DataProcessor:
                                              lb=total_load_demand_lower, ub=total_load_demand_upper)
 
         assert (lower <= upper).all(), "lower, upper value constraint failed."
-        assert np.sum(upper) < total_load_demand_upper, f"uppper < total_load_demand_upper violation: {np.sum(upper)} < {total_load_demand_upper}"
+        assert np.sum(upper) >= total_load_demand_upper, f"uppper < total_load_demand_upper violation: {np.sum(upper)} < {total_load_demand_upper}"
         assert np.sum(lower) <= total_load_demand_upper and total_load_demand_lower <= np.sum(upper), \
             f"{np.sum(lower)} <= {total_load_demand_upper} and {total_load_demand_lower} <= {np.sum(upper)} violation"
 

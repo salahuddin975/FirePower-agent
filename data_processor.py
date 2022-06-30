@@ -204,7 +204,7 @@ class DataProcessor:
     #
     #     return action
 
-    def _clip_ramp_values(self, servable_load_demand, generators_current_output, nn_output):
+    def _clip_ramp_values(self, servable_load_demand, generators_current_output, nn_output, selected_generators):
         total_servable_load_demand = np.sum(servable_load_demand)
         generators_min_output = copy.deepcopy(self.generators.get_min_outputs())
         generators_max_output = copy.deepcopy(self.generators.get_max_outputs())
@@ -250,7 +250,10 @@ class DataProcessor:
 
         if np.sum(lower) >= total_servable_load_demand * (1 - epsilon_total):
             ramp = generators_current_output - lower
-            print("lower: ", np.sum(lower), ">= total_servable_load_demand_lower:", total_servable_load_demand * (1 - epsilon_total), " condition applied")
+            for i, val in enumerate(generators_current_output):
+                if round(val) > 0:
+                    selected_generators[i] = 24
+            print("lower: ", np.sum(lower), ">= total_servable_load_demand_lower:", total_servable_load_demand * (1 - epsilon_total), " violations; use myopic")
             return ramp
 
         actor_output = nn_output * total_servable_load_demand * (1 - epsilon_total)
@@ -311,6 +314,7 @@ class DataProcessor:
         # print("connected_components: ", connected_components)
 
         ramp = np.zeros(nn_output.size)
+        selected_generators = copy.deepcopy(self.generators.get_generators())
         for connected_component in connected_components:
             # print("connected_component: ", connected_component)
             servable_load_demand = np.zeros(self.generators.get_num_generators())
@@ -322,13 +326,14 @@ class DataProcessor:
                         servable_load_demand[j] = state["servable_load_demand"][i] / self._power_generation_preprocess_scale
                         generators_current_output[j] = current_output[i]
 
-            ramp_value = self._clip_ramp_values(servable_load_demand, generators_current_output, nn_output)
+            ramp_value = self._clip_ramp_values(servable_load_demand, generators_current_output, nn_output, selected_generators)
             for i, val in enumerate(servable_load_demand):
                 if val == 0:
                     ramp_value[i] = 0
             # print("connected_component: ", connected_component)
             # print("ramp_value: ", ramp_value)
             ramp += ramp_value
+        # print("selected_generators: ", selected_generators)
         # print("ramp: ", ramp)
 
         env_action = {
@@ -337,7 +342,7 @@ class DataProcessor:
             "action_type": "rl",
             "bus_status": bus_status,
             "branch_status": branch_status,
-            "generator_selector": self.generators.get_generators(),
+            "generator_selector": selected_generators,
             "generator_injection": ramp * self._power_generation_preprocess_scale,
         }
 

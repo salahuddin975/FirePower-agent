@@ -251,7 +251,7 @@ class DataProcessor:
         if np.sum(lower) >= total_servable_load_demand * (1 - epsilon_total):
             ramp = generators_current_output - lower
             for i, val in enumerate(generators_current_output):
-                if round(val) > 0:
+                if np.around(val, 3) > 0:
                     selected_generators[i] = 24
             print("lower: ", np.sum(lower), ">= total_servable_load_demand_lower:", total_servable_load_demand * (1 - epsilon_total), " violations; use myopic")
             return ramp

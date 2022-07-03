@@ -209,7 +209,7 @@ if __name__ == "__main__":
             if explore_network_flag == False:
                 print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward[0]}, target_myopic_reward: "
                       f"{myopic_reward_rl_transition[0]}, rl_reward: {rl_reward[0]}, custom_reward: {reward}")
-            step_by_step_reward.add_info(episode, step, myopic_reward[0], myopic_reward_rl_transition[0], rl_reward[0])
+            step_by_step_reward.add_info(episode, step, round(myopic_reward[0], 2), round(myopic_reward_rl_transition[0], 2), round(rl_reward[0], 2))
 
             next_state = data_processor.preprocess(next_state, explore_network_flag)
             buffer.add_record((state, nn_noise_action, custom_reward, next_state, env_action, done))
@@ -228,7 +228,7 @@ if __name__ == "__main__":
                 # print("Episode:", episode, ", step: ", step, ", critic_value:", tensorboard_info.critic_value_with_original_action, ", critic_loss:", tensorboard_info.critic_loss)
 
         tensorboard.episodic_info(total_rl_reward)
-        episodic_reward.add_info(episode, total_myopic_reward, total_myopic_reward_rl_transition, total_rl_reward)
+        episodic_reward.add_info(episode, round(total_myopic_reward, 2), round(total_myopic_reward_rl_transition, 2), round(total_rl_reward, 2))
 
         # explore / Testing
         if episode and (episode % parameters.test_after_episodes == 0):

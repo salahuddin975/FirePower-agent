@@ -168,9 +168,10 @@ if __name__ == "__main__":
             generators_output_rl.add_info(episode, 0, state["generator_injection"] * power_generation_preprocess_scale)
 
         for step in range(max_steps_per_episode):
-            # tensorboard.generator_output_info(state["generator_injection"])
-            # tensorboard.load_demand_info(state["load_demand"])
-            # tensorboard.line_flow_info(state["line_flow"])
+            if not train_network:
+                tensorboard.generator_output_info(state["generator_injection"])
+                tensorboard.load_demand_info(state["load_demand"])
+                tensorboard.line_flow_info(state["line_flow"])
 
             myopic_action = data_processor.get_myopic_action(episode, step)
             myopic_next_state, myopic_reward, myopic_done, _ = env.step(myopic_action)

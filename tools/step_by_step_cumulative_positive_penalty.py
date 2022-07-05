@@ -17,9 +17,9 @@ for index in range(len(df1)):
         total_rl_transition = 0
         total_rl = 0
 
-    myopic = abs(float(row["myopic"]))
-    rl_transition = abs(float(row["myopic_reward_rl_transition"]))
-    rl = abs(float(row["rl"]))
+    myopic = float(row["myopic"])
+    rl_transition = float(row["myopic_reward_rl_transition"])
+    rl = float(row["rl"])
 
     total_myopic += myopic
     total_rl_transition += rl_transition
@@ -28,7 +28,7 @@ for index in range(len(df1)):
     val = {"episode":row["episode"], "step":row["step"], "myopic":total_myopic,
            "myopic_reward_rl_transition":total_rl_transition, "rl":total_rl}
     df = df.append(val, ignore_index=True)
-df.to_csv("step_by_step_cumulative_positive_penalty.csv")
+df.to_csv("step_by_step_cumulative_penalty.csv")
 
 
 

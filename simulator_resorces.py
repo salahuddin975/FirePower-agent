@@ -12,6 +12,7 @@ class Generators:
         self.ramp_frequency_in_hour = ramp_frequency_in_hour
 
         self.reset()
+        # self.print_info()
 
     def reset(self):
         self._generators = np.copy(self.ppc["gen"][:, GEN_BUS].astype("int"))

@@ -683,6 +683,32 @@ class StepByStepReward:
             writer.writerow([str(episode), str(step), str(myopic), str(myopic_reward_rl_transition), str(rl),
                              str(myopic_reward_rl_transition - myopic), str(rl - myopic)])
 
+class GeneratorsOutput:
+    def __init__(self, path, file_name, load_episode):
+        self._path = os.path.join(path, "test_result")
+        self._file_name = f"{self._path}/generators_output_ep_{load_episode}_{file_name}.csv"
+        self._create_dir()
+        self._initialize()
+
+    def _create_dir(self):
+        try:
+            os.makedirs(self._path)
+        except OSError as error:
+            print(error)
+
+    def _initialize(self):
+        with open(self._file_name, 'w') as fd:
+            writer = csv.writer(fd)
+            writer.writerow(["episode", "step", "1", "2", "7", "13", "15", "16", "18", "21", "22", "23"])
+
+    def add_info(self, episode, step, generator_outputs):
+        with open(self._file_name, 'a') as fd:
+            writer = csv.writer(fd)
+            writer.writerow([str(episode), str(step), str(generator_outputs[0]), str(generator_outputs[1]),
+                             str(generator_outputs[6]), str(generator_outputs[12]), str(generator_outputs[14]),
+                             str(generator_outputs[15]), str(generator_outputs[17]), str(generator_outputs[20]),
+                             str(generator_outputs[21]), str(generator_outputs[22])]
+                            )
 
 
 class CustomWriter:

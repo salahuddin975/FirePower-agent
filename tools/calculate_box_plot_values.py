@@ -2,14 +2,14 @@ import math
 
 import pandas as pd
 
-file1 = "episodic_test_result_ep_800.csv"
+file1 = "episodic_test_result_ep_1920.csv"
 # file1 = "episodic_test_result_ep_800_sp_015.csv"
 # file1 = "episodic_test_result_ep_800_sp_025.csv"
 df1 = pd.read_csv(file1)
 
 df = pd.DataFrame(columns=["step", "myopic", "myopic_reward_rl_transition"])
 
-num_of_episodes = 30
+num_of_episodes = 100
 myopic_penalties = []
 rl_penalties = []
 

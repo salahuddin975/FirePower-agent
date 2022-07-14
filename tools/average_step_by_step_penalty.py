@@ -1,6 +1,7 @@
 import pandas as pd
 
-file1 = "step_by_step_test_result_ep_1920.csv"
+episode = 1920
+file1 = f"step_by_step_test_result_ep_{episode}.csv"
 df1 = pd.read_csv(file1)
 
 df = pd.DataFrame(columns=["step", "myopic", "myopic_reward_rl_transition"])
@@ -30,7 +31,7 @@ for step in range(300):
     row = {"step": step, "myopic": average_myopic_penalty, "myopic_reward_rl_transition": average_rl_penalty}
     df = df.append(row, ignore_index=True)
 
-df.to_csv("average_step_by_step_test_result.csv")
+df.to_csv(f"average_step_by_step_test_result_ep_{episode}.csv")
 
 
 

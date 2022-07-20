@@ -6,7 +6,7 @@ from pypower.ext2int import ext2int
 
 
 class Generators:
-    def __init__(self, ppc, power_generation_preprocess_scale, ramp_frequency_in_hour = 6):
+    def __init__(self, ppc, power_generation_preprocess_scale, ramp_frequency_in_hour):
         self.ppc = ppc
         self.power_generation_preprocess_scale = power_generation_preprocess_scale
         self.ramp_frequency_in_hour = ramp_frequency_in_hour

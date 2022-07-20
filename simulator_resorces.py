@@ -89,11 +89,12 @@ class Generators:
 
 
 class SimulatorResources():
-    def __init__(self, power_file_path, geo_file_path):
+    def __init__(self, power_file_path, power_generation_preprocess_scale):
         self._ppc = loadcase(power_file_path)
         self._merge_generators()
         self._merge_branches()
         self.ppc = ext2int(self._ppc)
+        self._power_generation_preprocess_scale = power_generation_preprocess_scale
 
     def _merge_generators(self):
         ppc_gen_trim = []
@@ -135,5 +136,5 @@ class SimulatorResources():
         print (self.ppc)
 
     def get_load_demand(self):
-        load_demand = self._ppc["bus"][:, PD] / self._ppc["baseMVA"]
+        load_demand = self._ppc["bus"][:, PD] / (self._ppc["baseMVA"] * self._power_generation_preprocess_scale)
         return load_demand

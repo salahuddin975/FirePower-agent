@@ -100,7 +100,7 @@ if __name__ == "__main__":
 
     ramp_frequency_in_hour = 12
     power_generation_preprocess_scale = 10
-    simulator_resources = SimulatorResources(power_file_path=args.path_power, geo_file_path=args.path_geo)
+    simulator_resources = SimulatorResources(power_file_path=args.path_power, power_generation_preprocess_scale=power_generation_preprocess_scale)
     generators = Generators(ppc=simulator_resources.ppc, power_generation_preprocess_scale=power_generation_preprocess_scale, ramp_frequency_in_hour=ramp_frequency_in_hour)
     connected_components = ConnectedComponents(generators)
     # generators.print_info()
@@ -142,6 +142,7 @@ if __name__ == "__main__":
     total_episode = 100001
     max_steps_per_episode = 300
     num_train_per_episode = 500         # canbe used by loading replay buffer
+    generator_shut_off_penalty_multiplier = 10000
     episodic_rewards = []
     explore_network_flag = True if train_network else False
 
@@ -194,7 +195,7 @@ if __name__ == "__main__":
             state["step"] = step
             state["servable_load_demand"] = target_myopic_next_state["generator_injection"]
             connected_components.update_connected_components(state)
-            nn_noise_action, env_action = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
+            nn_noise_action, env_action, generator_shut_off_penalty = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
 
             # print("ramp:", env_action['generator_injection'])
             next_state, rl_reward, done, cells_info = env.step(env_action)
@@ -211,6 +212,7 @@ if __name__ == "__main__":
             tensorboard.step_info(main_loop_info, reward_info)
 
             reward = np.sum(next_state["generator_injection"]) - np.sum(myopic_next_state["generator_injection"])
+            reward = reward + generator_shut_off_penalty * generator_shut_off_penalty_multiplier
             custom_reward = (reward, reward)
 
             total_myopic_reward += myopic_reward[0]

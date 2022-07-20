@@ -42,6 +42,7 @@ class DataProcessor:
         self._action_spaces = action_spaces
         self._power_generation_preprocess_scale = power_generation_preprocess_scale
         self._considerable_fire_distance = 5
+        self._num_of_connected_component = 1
 
         std_dev = .2
         self._ou_noise = OUActionNoise(mean=np.zeros(self.generators.get_num_generators()), std_deviation=np.ones(self.generators.get_num_generators()) * std_dev)
@@ -312,19 +313,28 @@ class DataProcessor:
 
         connected_components = self._connected_components.get_connected_components()
         # print("connected_components: ", connected_components)
+        flag = True if len(connected_components) > self._num_of_connected_component else False
+        self._num_of_connected_component = len(connected_components)
 
         ramp = np.zeros(nn_output.size)
         selected_generators = copy.deepcopy(self.generators.get_generators())
         for connected_component in connected_components:
             # print("connected_component: ", connected_component)
+            total_load_demand = 0
             servable_load_demand = np.zeros(self.generators.get_num_generators())
             generators_current_output = np.zeros(self.generators.get_num_generators())
 
             for i in connected_component:
+                total_load_demand += self.simulator_resources.get_load_demand()[i]
                 for j, gen in enumerate(self.generators.get_generators()):
                     if i == gen:
                         servable_load_demand[j] = state["servable_load_demand"][i] / self._power_generation_preprocess_scale
                         generators_current_output[j] = current_output[i]
+
+            total_generators_current_output = sum(generators_current_output)
+            generator_shut_off_penalty = total_load_demand - total_generators_current_output
+            generator_shut_off_penalty = generator_shut_off_penalty if (generator_shut_off_penalty < 0) and flag else 0
+            # print("total_load_demand: ", total_load_demand, ", total_output: ", total_generators_current_output, ", generator_shut_off_penalty: ", generator_shut_off_penalty)
 
             ramp_value = self._clip_ramp_values(servable_load_demand, generators_current_output, nn_output, selected_generators)
             for i, val in enumerate(servable_load_demand):
@@ -346,7 +356,7 @@ class DataProcessor:
             "generator_injection": ramp * self._power_generation_preprocess_scale,
         }
 
-        return nn_noise_action, env_action
+        return nn_noise_action, env_action, generator_shut_off_penalty
 
     def get_myopic_action(self, episode, step):
         return {

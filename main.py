@@ -212,7 +212,7 @@ if __name__ == "__main__":
             tensorboard.step_info(main_loop_info, reward_info)
 
             reward = np.sum(next_state["generator_injection"]) - np.sum(myopic_next_state["generator_injection"])
-            reward = reward + generator_shut_off_penalty * generator_shut_off_penalty_multiplier
+            reward = reward + generator_shut_off_penalty * generator_shut_off_penalty_multiplier      # comment this line while testing
             custom_reward = (reward, reward)
 
             total_myopic_reward += myopic_reward[0]

@@ -1,6 +1,7 @@
 import numpy as np
 from pypower.idx_gen import *
 from pypower.idx_brch import *
+from pypower.idx_bus import *
 from pypower.loadcase import loadcase
 from pypower.ext2int import ext2int
 
@@ -132,3 +133,7 @@ class SimulatorResources():
 
     def print_ppc(self):
         print (self.ppc)
+
+    def get_load_demand(self):
+        load_demand = self._ppc["bus"][:, PD] / self._ppc["baseMVA"]
+        return load_demand

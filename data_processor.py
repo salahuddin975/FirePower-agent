@@ -336,7 +336,8 @@ class DataProcessor:
             total_generators_current_output = sum(generators_current_output)
             generator_shut_off_penalty = total_load_demand + total_ramp - total_generators_current_output
             generator_shut_off_penalty = generator_shut_off_penalty if (generator_shut_off_penalty < 0) and flag else 0
-            # print("total_load_demand: ", total_load_demand, ", total_ramp:", total_ramp, ", total_output: ", total_generators_current_output, ", generator_shut_off_penalty: ", generator_shut_off_penalty)
+            if generator_shut_off_penalty:
+                print("total_load_demand: ", total_load_demand, ", total_ramp:", total_ramp, ", total_output: ", total_generators_current_output, ", generator_shut_off_penalty: ", generator_shut_off_penalty)
 
             ramp_value = self._clip_ramp_values(servable_load_demand, generators_current_output, nn_output, selected_generators)
             for i, val in enumerate(servable_load_demand):

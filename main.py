@@ -83,6 +83,24 @@ def get_action_spaces(action_space):
     return action_spaces
 
 
+class LoadOutByFire:
+    def __init__(self, simulator_resources, power_generation_preprocess_scale):
+        self.total_load_out = 0
+        self._bus_status = np.ones(24)
+        self._power_generation_preprocess_scale = power_generation_preprocess_scale
+        self._simulator_resources = simulator_resources
+
+    def get_total_load_out_by_fire(self, bus_status):
+        if (self._bus_status != bus_status).any():
+            self._bus_status = copy.deepcopy(bus_status)
+            self.total_load_out = 0
+            for i, status in enumerate(bus_status):
+                if status == 0:
+                    self.total_load_out += self._simulator_resources.get_load_demand()[i]
+
+        return self.total_load_out * self._power_generation_preprocess_scale
+
+
 MainLoopInfo = namedtuple("MainLoopInfo", ["nn_actions", "nn_critic_value",
                                            "nn_actions_with_noise", "nn_noise_critic_value",
                                            "env_actions", "env_critic_value"])
@@ -105,6 +123,8 @@ if __name__ == "__main__":
     simulator_resources = SimulatorResources(power_file_path=args.path_power, power_generation_preprocess_scale=power_generation_preprocess_scale)
     generators = Generators(ppc=simulator_resources.ppc, power_generation_preprocess_scale=power_generation_preprocess_scale, ramp_frequency_in_hour=ramp_frequency_in_hour)
     connected_components = ConnectedComponents(generators)
+    myopic_load_out_by_fire = LoadOutByFire(simulator_resources, power_generation_preprocess_scale)
+    rl_load_out_by_fire = LoadOutByFire(simulator_resources, power_generation_preprocess_scale)
     # generators.print_info()
 
     env = gym.envs.make("gym_firepower:firepower-v0", geo_file=args.path_geo, network_file=args.path_power,
@@ -177,7 +197,9 @@ if __name__ == "__main__":
 
             myopic_action = data_processor.get_myopic_action(episode, step)           #Myopic
             myopic_next_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
+            myopic_load_out = myopic_load_out_by_fire.get_total_load_out_by_fire(myopic_next_state["bus_status"])
 
+            start_time = datetime.now()
             myopic_action_rl_transition = data_processor.get_target_myopic_action(episode, step)    # RL environment Myopic action
             target_myopic_next_state, myopic_reward_rl_transition, target_myopic_done, _ = env.step(myopic_action_rl_transition)
 
@@ -200,6 +222,8 @@ if __name__ == "__main__":
 
             # print("ramp:", env_action['generator_injection'])
             next_state, rl_reward, done, cells_info = env.step(env_action)       # RL environment RL action
+            rl_computation_time = (datetime.now() - start_time).total_seconds()
+            rl_load_out = rl_load_out_by_fire.get_total_load_out_by_fire(next_state["bus_status"])
 
             # image = visualizer.draw_map(episode, step, cells_info, next_state)
             # image.save(f"fire_propagation_{episode}_{step}.png")
@@ -216,15 +240,17 @@ if __name__ == "__main__":
             reward = reward + generator_shut_off_penalty * generator_shut_off_penalty_multiplier      # comment this line while testing
             custom_reward = (reward, reward)
 
-            total_myopic_reward += myopic_reward[0]
-            total_myopic_reward_rl_transition += myopic_reward_rl_transition[0]
-            total_rl_reward += rl_reward[0]
+            total_myopic_reward += (myopic_reward[0] + myopic_load_out)
+            total_myopic_reward_rl_transition += (myopic_reward_rl_transition[0] + rl_load_out)
+            total_rl_reward += (rl_reward[0] + rl_load_out)
             total_custom_reward += custom_reward[0]
 
             if explore_network_flag == False:
                 print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward[0]}, target_myopic_reward: "
-                      f"{myopic_reward_rl_transition[0]}, rl_reward: {rl_reward[0]}, custom_reward: {reward}")
-            step_by_step_reward.add_info(episode, step, round(myopic_reward[0], 2), round(myopic_reward_rl_transition[0], 2), round(rl_reward[0], 2))
+                      f"{myopic_reward_rl_transition[0]}, rl_reward: {rl_reward[0]}, custom_reward: {reward}, myopic_load_out: {myopic_load_out}, "
+                      f"rl_load_out: {rl_load_out}, computation_time:{rl_computation_time}")
+            step_by_step_reward.add_info(episode, step, round(myopic_reward[0] + myopic_load_out, 2), round(myopic_reward_rl_transition[0] + rl_load_out, 2),
+                                         round(rl_reward[0] + rl_load_out, 2), myopic_load_out, rl_load_out, rl_computation_time)
 
             next_state = data_processor.preprocess(next_state, explore_network_flag)
             buffer.add_record((state, nn_noise_action, custom_reward, next_state, env_action, done))

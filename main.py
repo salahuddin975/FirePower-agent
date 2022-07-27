@@ -175,10 +175,10 @@ if __name__ == "__main__":
                 tensorboard.load_demand_info(state["load_demand"])
                 tensorboard.line_flow_info(state["line_flow"])
 
-            myopic_action = data_processor.get_myopic_action(episode, step)
+            myopic_action = data_processor.get_myopic_action(episode, step)           #Myopic
             myopic_next_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
 
-            myopic_action_rl_transition = data_processor.get_target_myopic_action(episode, step)
+            myopic_action_rl_transition = data_processor.get_target_myopic_action(episode, step)    # RL environment Myopic action
             target_myopic_next_state, myopic_reward_rl_transition, target_myopic_done, _ = env.step(myopic_action_rl_transition)
 
             if not train_network:
@@ -199,7 +199,7 @@ if __name__ == "__main__":
             nn_noise_action, env_action, generator_shut_off_penalty = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
 
             # print("ramp:", env_action['generator_injection'])
-            next_state, rl_reward, done, cells_info = env.step(env_action)
+            next_state, rl_reward, done, cells_info = env.step(env_action)       # RL environment RL action
 
             # image = visualizer.draw_map(episode, step, cells_info, next_state)
             # image.save(f"fire_propagation_{episode}_{step}.png")

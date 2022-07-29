@@ -15,7 +15,8 @@ episode=400
 #scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/FirePower-agent-private/fire-power-${seed}.log  ./../logs/
 
 
-#scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/removed_load_database_seed_10032/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/removed_bus_load/fire_spread_020/seed_10032/
-scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/removed_load_sp20_database_seed_10032/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/removed_bus_load/fire_spread_020/seed_10032/
+#scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/removed_load_database_seed_10032/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/removed_load_seed_10032/fire_spread_020/
+#scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/removed_load_sp10_database_seed_10032/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/removed_load_seed_10032/fire_spread_010/
+
 #scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/database_seed_10043/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/fire_spread_020/seed_10043/
 

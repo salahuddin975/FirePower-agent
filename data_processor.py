@@ -688,14 +688,13 @@ class StepByStepReward:
         with open(f'{self._path}/step_by_step_test_result_ep_{self._load_episode}.csv', 'w') as fd:
             writer = csv.writer(fd)
             writer.writerow(["episode", "step", "myopic", "myopic_reward_rl_transition",
-                             "rl", "myopic_reward_rl_transition-myopic", "rl-myopic", "myopic_load_out", "rl_load_out", "rl_computation_time"])
+                             "rl", "myopic_reward_rl_transition-myopic", "rl-myopic", "total_load_out_by_fire", "rl_computation_time"])
 
-    def add_info(self, episode, step, myopic, myopic_reward_rl_transition, rl, myopic_load_out, rl_load_out, rl_computation_time):
+    def add_info(self, episode, step, myopic, myopic_reward_rl_transition, rl, total_load_out_by_fire, rl_computation_time):
         with open(f'{self._path}/step_by_step_test_result_ep_{self._load_episode}.csv', 'a') as fd:
             writer = csv.writer(fd)
             writer.writerow([str(episode), str(step), str(myopic), str(myopic_reward_rl_transition), str(rl),
-                             str(myopic_reward_rl_transition - myopic), str(rl - myopic), str(myopic_load_out),
-                             str(rl_load_out), str(rl_computation_time/2)])
+                             str(myopic_reward_rl_transition - myopic), str(rl - myopic), str(total_load_out_by_fire), str(rl_computation_time/2)])
 
 class GeneratorsOutput:
     def __init__(self, path, file_name, load_episode):

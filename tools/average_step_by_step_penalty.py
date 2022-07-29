@@ -1,7 +1,7 @@
 import pandas as pd
 
 load_episode = 1920
-file1 = f"step_by_step_test_result_ep_{load_episode}.csv"
+file1 = f"/Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/removed_bus_load/fire_spread_020/seed_10032/step_by_step_test_result_ep_{load_episode}.csv"
 df1 = pd.read_csv(file1)
 
 df = pd.DataFrame(columns=["step", "myopic", "myopic_reward_rl_transition"])

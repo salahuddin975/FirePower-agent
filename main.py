@@ -115,6 +115,7 @@ if __name__ == "__main__":
     set_seed(seed_value if train_network else 50)
     set_gpu_memory_limit()
     base_path = "database_seed_" + str(seed_value)
+    # base_path = "fire_spread_020_seed_" + str(seed_value)   # canbe used during testing
 
     ramp_frequency_in_hour = 12
     power_generation_preprocess_scale = 10
@@ -142,7 +143,7 @@ if __name__ == "__main__":
     parameters.save_parameters()
     parameters.print_parameters()
 
-    ddpg = DDPG(base_path, state_spaces, action_spaces, generators)
+    ddpg = DDPG(base_path, state_spaces, action_spaces, generators, seed_value)
     if load_model:
         ddpg.load_weight(version=load_model_version, episode_num=load_episode_num)
 

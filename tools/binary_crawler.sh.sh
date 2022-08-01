@@ -28,11 +28,11 @@ scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FireP
 scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/database_seed_10048/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/fire_spread_020/seed_10048/
 scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/database_seed_10049/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/fire_spread_020/seed_10049/
 
-#scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/fire_spread_010_seed_10043/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/fire_spread_010/seed_10043/
-#scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/fire_spread_015_seed_10043/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/fire_spread_015/seed_10043/
-#scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/fire_spread_018_seed_10043/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/fire_spread_018/seed_10043/
-#scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/fire_spread_020_seed_10043/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/fire_spread_020/seed_10043/
-#scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/fire_spread_022_seed_10043/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/fire_spread_022/seed_10043/
-#scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/fire_spread_025_seed_10043/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/fire_spread_025/seed_10043/
+scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/fire_spread_010_seed_10043/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/fire_spread_010/seed_10043/
+scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/fire_spread_015_seed_10043/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/fire_spread_015/seed_10043/
+scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/fire_spread_018_seed_10043/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/fire_spread_018/seed_10043/
+scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/fire_spread_020_seed_10043/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/fire_spread_020/seed_10043/
+scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/fire_spread_022_seed_10043/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/fire_spread_022/seed_10043/
+scp ssalahud@rnslab2.hpcc.uh.edu:/home/ssalahud/fire_power/remote_compiler/FirePower-agent-private/fire_spread_025_seed_10043/test_result/\*  /Users/smsalahuddinkadir/Documents/Projects/FirePower/test_results/fire_spread_025/seed_10043/
 
 

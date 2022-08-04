@@ -3,11 +3,11 @@ import pandas as pd
 file1 = f"/Users/smsalahuddinkadir/Desktop/test_results/seed_10043/fire_spread_020/step_by_step_test_result.csv"
 df1 = pd.read_csv(file1)
 
-df = pd.DataFrame(columns=["step", "myopic", "myopic_reward_rl_transition", "rl_improvement"])
+df = pd.DataFrame(columns=["step", "myopic", "myopic_reward_rl_transition", "cumulative_myopic", "cumulative_rl"])
 
 num_of_episode = 100
-# myopic_cumulative_penalty = 0
-# rl_cumulative_penalty = 0
+myopic_cumulative_penalty = 0
+rl_cumulative_penalty = 0
 
 for step in range(300):
     total_myopic_penalty = 0
@@ -24,14 +24,15 @@ for step in range(300):
     average_myopic_penalty = total_myopic_penalty/num_of_episode
     average_rl_penalty = total_rl_penalty/num_of_episode
 
-    # myopic_cumulative_penalty += average_myopic_penalty
-    # rl_cumulative_penalty += average_rl_penalty
+    myopic_cumulative_penalty += average_myopic_penalty
+    rl_cumulative_penalty += average_rl_penalty
 
-    rl_improvement = 0
-    if average_myopic_penalty:
-        rl_improvement = ((average_myopic_penalty - average_rl_penalty) / average_myopic_penalty) * 100
+    # rl_improvement = 0
+    # if average_myopic_penalty:
+    #     rl_improvement = ((average_myopic_penalty - average_rl_penalty) / average_myopic_penalty) * 100
 
-    row = {"step": step, "myopic": average_myopic_penalty, "myopic_reward_rl_transition": average_rl_penalty, "rl_improvement": rl_improvement}
+    row = {"step": step, "myopic": average_myopic_penalty, "myopic_reward_rl_transition": average_rl_penalty,
+           "cumulative_myopic": myopic_cumulative_penalty, "cumulative_rl":rl_cumulative_penalty}
     df = df.append(row, ignore_index=True)
 
 df.to_csv(f"average_step_by_step_test_result.csv")

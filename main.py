@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
     ramp_frequency_in_hour = 12
     power_generation_preprocess_scale = 10
-    generator_shut_off_penalty_multiplier = 10
+    generator_shut_off_penalty_multiplier = 50
 
     simulator_resources = SimulatorResources(power_file_path=args.path_power, power_generation_preprocess_scale=power_generation_preprocess_scale)
     generators = Generators(ppc=simulator_resources.ppc, power_generation_preprocess_scale=power_generation_preprocess_scale, ramp_frequency_in_hour=ramp_frequency_in_hour)

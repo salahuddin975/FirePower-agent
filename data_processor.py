@@ -302,7 +302,7 @@ class DataProcessor:
         #     servable_load_demand[i] = state["servable_load_demand"][self.generators.get_generators()[i]] / self._power_generation_preprocess_scale
 
         nn_output = np.array(tf.squeeze(nn_action))
-        if explore_network:
+        if explore_network or sum(nn_output) > 1.0:
             nn_output *= np.exp(self._ou_noise())
             nn_output = nn_output / np.sum(nn_output)
         # print("step: ", self.step, ", exploration: ", ((np.array(tf.squeeze(nn_action)) - nn_output)/nn_output) * 100)
@@ -317,6 +317,7 @@ class DataProcessor:
         self._num_of_connected_component = len(connected_components)
 
         ramp = np.zeros(nn_output.size)
+        total_generator_shut_off_penalty = 0
         selected_generators = copy.deepcopy(self.generators.get_generators())
         for connected_component in connected_components:
             # print("connected_component: ", connected_component)
@@ -336,6 +337,7 @@ class DataProcessor:
             total_generators_current_output = sum(generators_current_output)
             generator_shut_off_penalty = total_load_demand + total_ramp - total_generators_current_output
             generator_shut_off_penalty = generator_shut_off_penalty if (generator_shut_off_penalty < 0) and flag else 0
+            total_generator_shut_off_penalty += generator_shut_off_penalty
             if generator_shut_off_penalty:
                 print("total_load_demand: ", total_load_demand, ", total_ramp:", total_ramp, ", total_output: ", total_generators_current_output, ", generator_shut_off_penalty: ", generator_shut_off_penalty)
 
@@ -359,7 +361,7 @@ class DataProcessor:
             "generator_injection": ramp * self._power_generation_preprocess_scale,
         }
 
-        return nn_noise_action, env_action, generator_shut_off_penalty
+        return nn_noise_action, env_action, total_generator_shut_off_penalty
 
     def get_myopic_action(self, episode, step):
         return {

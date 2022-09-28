@@ -215,8 +215,8 @@ class DataProcessor:
         epsilon_nn = 0.0001
         epsilon_total = 0.0001
         # assert 1 + epsilon_nn > np.sum(nn_output) > 1-epsilon_nn, "Not total value is 1"
-        if np.min(nn_output) < 0:
-            print ("nn_output: ", nn_output)
+        if np.min(nn_output) < 0.0:
+            print ("nn_output3: ", nn_output)
         assert np.min(nn_output) >= 0, "value is negative"
 
         for i in range(len(servable_load_demand)):
@@ -304,10 +304,15 @@ class DataProcessor:
         #     servable_load_demand[i] = state["servable_load_demand"][self.generators.get_generators()[i]] / self._power_generation_preprocess_scale
 
         nn_output = np.array(tf.squeeze(nn_action))
+        if np.min(nn_output) < 0.0:
+            print ("nn_output1: ", nn_output)
         if explore_network or sum(nn_output) > 1.0:
             nn_output *= np.exp(self._ou_noise())
             nn_output = nn_output / np.sum(nn_output)
         # print("step: ", self.step, ", exploration: ", ((np.array(tf.squeeze(nn_action)) - nn_output)/nn_output) * 100)
+        if np.min(nn_output) < 0.0:
+            print ("nn_output2: ", nn_output)
+
 
         nn_noise_action = {
             "generator_injection": copy.deepcopy(nn_output),

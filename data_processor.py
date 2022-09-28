@@ -215,6 +215,8 @@ class DataProcessor:
         epsilon_nn = 0.0001
         epsilon_total = 0.0001
         # assert 1 + epsilon_nn > np.sum(nn_output) > 1-epsilon_nn, "Not total value is 1"
+        if np.min(nn_output) < 0:
+            print ("nn_output: ", nn_output)
         assert np.min(nn_output) >= 0, "value is negative"
 
         for i in range(len(servable_load_demand)):

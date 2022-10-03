@@ -215,9 +215,7 @@ class DataProcessor:
         epsilon_nn = 0.0001
         epsilon_total = 0.0001
         # assert 1 + epsilon_nn > np.sum(nn_output) > 1-epsilon_nn, "Not total value is 1"
-        if np.min(nn_output) < 0.0:
-            print ("nn_output3: ", nn_output)
-        assert np.min(nn_output) >= 0, "value is negative"
+        assert np.min(nn_output) >= 0, f"value is negative: {nn_output}"
 
         for i in range(len(servable_load_demand)):
             if servable_load_demand[i] == 0.0:
@@ -232,15 +230,6 @@ class DataProcessor:
         upper = np.minimum(generators_current_output + generators_max_ramp, generators_max_output)
 
         # self.custom_writer.add_info(self.episode, self.step, total_servable_load_demand, np.sum(generators_current_output), np.sum(lower), np.sum(upper))
-
-        # if np.sum(upper) - epsilon_total < total_servable_load_demand:
-        #     # print("Adjust load demand: total_servable_load_demand: ", total_servable_load_demand, ", upper: ", np.sum(upper) - epsilon_total )
-        #     total_servable_load_demand = np.sum(upper) - epsilon_total
-        #
-        # if np.sum(lower) + epsilon_total > total_servable_load_demand:
-        #     # print("Adjust load demand: total_servable_load_demand: ", total_servable_load_demand, ", lower: ", np.sum(upper) - epsilon_total )
-        #     total_servable_load_demand = np.sum(lower) + epsilon_total
-
         # print("lower: ", lower)
         # print("upper: ", upper)
         # print("generators max output: ", generators_max_output)
@@ -251,15 +240,12 @@ class DataProcessor:
         # print("generators_current_output_total: ", np.sum(generators_current_output), "; lower_total: ", np.sum(lower),
         #       "; upper_total: ", np.sum(upper), "; total_servable_load_demand:", total_servable_load_demand)
 
-        if np.sum(lower) >= total_servable_load_demand * (1 - epsilon_total):
-            ramp = generators_current_output - lower
-            for i, val in enumerate(generators_current_output):
-                if np.around(val, 3) > 0:
-                    selected_generators[i] = 24
-            print("lower: ", np.sum(lower), ">= total_servable_load_demand_lower:", total_servable_load_demand * (1 - epsilon_total), " violations; use myopic")
-            return ramp
-
         actor_output = nn_output * total_servable_load_demand * (1 - epsilon_total)
+
+        if sum(actor_output) < sum(lower):
+            print("Resetting servable load demand from:", total_servable_load_demand, ", to:", sum(lower))
+            total_servable_load_demand = sum(lower)
+            total_servable_load_demand = total_servable_load_demand * (1 + 2 * epsilon_total)
 
         total_load_demand_lower = np.array(total_servable_load_demand * (1 - epsilon_total))
         total_load_demand_upper = np.array(total_servable_load_demand * (1 - 0.5 * epsilon_total))

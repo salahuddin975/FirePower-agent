@@ -246,6 +246,8 @@ class DataProcessor:
             print("Resetting servable load demand from:", total_servable_load_demand, ", to:", sum(lower))
             total_servable_load_demand = sum(lower)
             total_servable_load_demand = total_servable_load_demand * (1 + 2 * epsilon_total)
+        else:
+            total_servable_load_demand = sum(actor_output)
 
         total_load_demand_lower = np.array(total_servable_load_demand * (1 - epsilon_total))
         total_load_demand_upper = np.array(total_servable_load_demand * (1 - 0.5 * epsilon_total))

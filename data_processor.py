@@ -265,7 +265,7 @@ class DataProcessor:
                  constraints=[linear_constraint], method='trust-constr')
 
         assert(total_load_demand_lower * (1 - epsilon_total) <= sum(feasible_output.x) < total_load_demand_upper), \
-            f"feasible_output constraint violated: {total_load_demand_lower * (1 - epsilon_total)} <= {np.sum(feasible_output.x)} >= {total_load_demand_upper}"
+            f"feasible_output constraint violated: {total_load_demand_lower * (1 - epsilon_total)} <= {np.sum(feasible_output.x)} < {total_load_demand_upper}"
 
         # print("feasible_output: ", np.sum(feasible_output.x))
 

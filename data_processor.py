@@ -245,12 +245,13 @@ class DataProcessor:
         if sum(actor_output) < sum(lower):
             print("Resetting servable load demand from:", total_servable_load_demand, ", to:", sum(lower))
             total_servable_load_demand = sum(lower)
-            total_servable_load_demand = total_servable_load_demand * (1 + 2 * epsilon_total)
+            total_load_demand_lower = np.array(total_servable_load_demand * (1 + epsilon_total))
+            total_load_demand_upper = total_servable_load_demand * (1 + 2 * epsilon_total)
         else:
             total_servable_load_demand = sum(actor_output)
+            total_load_demand_lower = np.array(total_servable_load_demand * (1 - epsilon_total))
+            total_load_demand_upper = np.array(total_servable_load_demand * (1 - 0.5 * epsilon_total))
 
-        total_load_demand_lower = np.array(total_servable_load_demand * (1 - epsilon_total))
-        total_load_demand_upper = np.array(total_servable_load_demand * (1 - 0.5 * epsilon_total))
         linear_constraint = LinearConstraint(A=np.transpose(np.ones(len(generators_current_output))),
                                              lb=total_load_demand_lower, ub=total_load_demand_upper)
 

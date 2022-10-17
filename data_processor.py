@@ -358,7 +358,7 @@ class DataProcessor:
         }
 
         total_penalty = total_generator_shut_off_penalty + excess_output_penalty + lower_bound_limit_penalty
-        print(f"total_penalty:{total_penalty}, shut_off_penalty:{total_generator_shut_off_penalty}, "
+        print(f"episode:{self.episode}, step:{self.step}, total_penalty:{total_penalty}, shut_off_penalty:{total_generator_shut_off_penalty}, "
               f"excess_output_penalty:{excess_output_penalty}, lower_bound_limit_penalty:{lower_bound_limit_penalty}")
         return nn_noise_action, env_action, total_penalty
 

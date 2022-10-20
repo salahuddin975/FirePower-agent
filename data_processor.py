@@ -314,6 +314,7 @@ class DataProcessor:
 
         ramp = np.zeros(nn_output.size)
         total_generator_shut_off_penalty = 0
+        total_lower_bound_limit_penalty = 0
         selected_generators = copy.deepcopy(self.generators.get_generators())
         for connected_component in connected_components:
             # print("connected_component: ", connected_component)
@@ -338,6 +339,7 @@ class DataProcessor:
                 print("total_load_demand: ", total_load_demand, ", total_ramp:", total_ramp, ", total_output: ", total_generators_current_output, ", generator_shut_off_penalty: ", generator_shut_off_penalty)
 
             ramp_value, lower_bound_limit_penalty = self._clip_ramp_values(servable_load_demand, generators_current_output, nn_output, selected_generators)
+            total_lower_bound_limit_penalty += lower_bound_limit_penalty
             for i, val in enumerate(servable_load_demand):
                 if val == 0:
                     ramp_value[i] = 0
@@ -357,7 +359,7 @@ class DataProcessor:
             "generator_injection": ramp * self._power_generation_preprocess_scale,
         }
 
-        total_penalty = total_generator_shut_off_penalty + excess_output_penalty + lower_bound_limit_penalty
+        total_penalty = total_generator_shut_off_penalty + excess_output_penalty + total_lower_bound_limit_penalty
         print(f"episode:{self.episode}, step:{self.step}, total_penalty:{total_penalty}, shut_off_penalty:{total_generator_shut_off_penalty}, "
               f"excess_output_penalty:{excess_output_penalty}, lower_bound_limit_penalty:{lower_bound_limit_penalty}")
         return nn_noise_action, env_action, total_penalty

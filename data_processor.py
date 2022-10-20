@@ -243,7 +243,7 @@ class DataProcessor:
         actor_output = nn_output * total_servable_load_demand * (1 - epsilon_total)
         lower_bound_limit_penalty = 0
         if (sum(actor_output) * (1 - epsilon_total)) < sum(lower):
-            lower_bound_limit_penalty = sum(lower) - sum(actor_output)
+            lower_bound_limit_penalty = sum(actor_output) - sum(lower)
             # print("Resetting servable load demand from:", total_servable_load_demand, ", to:", sum(lower))
             total_servable_load_demand = sum(lower)
             total_load_demand_lower = np.array(total_servable_load_demand * (1 + epsilon_total))
@@ -294,7 +294,7 @@ class DataProcessor:
         #     servable_load_demand[i] = state["servable_load_demand"][self.generators.get_generators()[i]] / self._power_generation_preprocess_scale
 
         nn_output = np.array(tf.squeeze(nn_action))
-        excess_output_penalty = sum(nn_output) - 1 if sum(nn_output) > 1 else 0
+        excess_output_penalty = 1 - sum(nn_output) if sum(nn_output) > 1 else 0
         # print ("nn_output1: ", nn_output)
         if explore_network:
             nn_output *= np.exp(self._ou_noise())
@@ -359,9 +359,9 @@ class DataProcessor:
             "generator_injection": ramp * self._power_generation_preprocess_scale,
         }
 
-        total_action_processing_penalty = -1 * (total_generator_shut_off_penalty + excess_output_penalty + total_lower_bound_limit_penalty)
-        print(f"episode:{self.episode}, step:{self.step}, total_penalty:{total_action_processing_penalty}, shut_off_penalty:{total_generator_shut_off_penalty}, "
-              f"excess_output_penalty:{excess_output_penalty}, lower_bound_limit_penalty:{total_lower_bound_limit_penalty}")
+        total_action_processing_penalty = total_generator_shut_off_penalty + excess_output_penalty + total_lower_bound_limit_penalty
+        # print(f"episode:{self.episode}, step:{self.step}, total_penalty:{total_action_processing_penalty}, shut_off_penalty:{total_generator_shut_off_penalty}, "
+        #       f"excess_output_penalty:{excess_output_penalty}, lower_bound_limit_penalty:{total_lower_bound_limit_penalty}")
         return nn_noise_action, env_action, total_action_processing_penalty
 
     def get_myopic_action(self, episode, step):

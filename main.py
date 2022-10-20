@@ -213,7 +213,7 @@ if __name__ == "__main__":
             state["step"] = step
             state["servable_load_demand"] = target_myopic_next_state["generator_injection"]
             connected_components.update_connected_components(state)
-            nn_noise_action, env_action, generator_shut_off_penalty = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
+            nn_noise_action, env_action, action_processing_penalty = data_processor.process_nn_action(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
             next_state, rl_reward, done, cells_info = env.step(env_action)       # RL environment RL action
             rl_computation_time = (datetime.now() - start_time).total_seconds()
 
@@ -229,7 +229,8 @@ if __name__ == "__main__":
             tensorboard.step_info(main_loop_info, reward_info)
 
             reward = np.sum(next_state["generator_injection"]) - np.sum(myopic_next_state["generator_injection"])
-            reward = reward + generator_shut_off_penalty * generator_shut_off_penalty_multiplier
+            # print("reward:", reward, ", action_processing_penalty:", action_processing_penalty)
+            reward = reward + action_processing_penalty * generator_shut_off_penalty_multiplier
             custom_reward = (reward, reward)
 
             total_load_out_by_fire = load_out_by_fire.get_total_load_out_by_fire(state["bus_status"])

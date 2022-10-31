@@ -276,7 +276,7 @@ class DataProcessor:
 
         return ramp, lower_bound_limit_penalty
 
-    def process_nn_action(self, state, nn_action, explore_network, noise_range=0.5):
+    def process_nn_action(self, state, nn_action, explore_network, noise_range=0.1):
         self.episode = state["episode"]
         self.step = state["step"]
         bus_status = copy.deepcopy(state["bus_status"])
@@ -294,14 +294,18 @@ class DataProcessor:
         #     servable_load_demand[i] = state["servable_load_demand"][self.generators.get_generators()[i]] / self._power_generation_preprocess_scale
 
         nn_output = np.array(tf.squeeze(nn_action))
-        excess_output_penalty = 1 - sum(nn_output) if sum(nn_output) > 1 else 0
-        # print ("nn_output1: ", nn_output)
+        # print ("nn_output (before exploration): ", nn_output)
         if explore_network:
-            nn_output *= np.exp(self._ou_noise())
+            for i in range(len(nn_output)):
+                nn_output[i] = nn_output[i] + random.uniform(0, noise_range)
+            # nn_output *= np.exp(self._ou_noise())
+        # print ("nn_output (after exploration): ", nn_output)
+        excess_output_penalty = 1 - sum(nn_output) if sum(nn_output) > 1 else 0
+
         if sum(nn_output) > 1.0:
             nn_output = nn_output / np.sum(nn_output)
         # print("step: ", self.step, ", exploration: ", ((np.array(tf.squeeze(nn_action)) - nn_output)/nn_output) * 100)
-        # print ("nn_output2: ", nn_output)
+        # print ("nn_output (after normalization): ", nn_output)
 
         nn_noise_action = {
             "generator_injection": copy.deepcopy(nn_output),

@@ -358,10 +358,10 @@ class DataProcessor:
             "generator_selector": selected_generators,
             "generator_injection": ramp * self._power_generation_preprocess_scale,
         }
-
+        total_lower_bound_limit_penalty = total_lower_bound_limit_penalty * 2.5
         total_action_processing_penalty = total_generator_shut_off_penalty + excess_output_penalty + total_lower_bound_limit_penalty
-        # print(f"episode:{self.episode}, step:{self.step}, total_penalty:{total_action_processing_penalty}, shut_off_penalty:{total_generator_shut_off_penalty}, "
-        #       f"excess_output_penalty:{excess_output_penalty}, lower_bound_limit_penalty:{total_lower_bound_limit_penalty}")
+        print(f"episode:{self.episode}, step:{self.step}, total_penalty:{total_action_processing_penalty}, shut_off_penalty:{total_generator_shut_off_penalty}, "
+              f"excess_output_penalty:{excess_output_penalty}, lower_bound_limit_penalty:{total_lower_bound_limit_penalty}")
         return nn_noise_action, env_action, total_action_processing_penalty
 
     def get_myopic_action(self, episode, step):

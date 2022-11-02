@@ -296,9 +296,9 @@ class DataProcessor:
         nn_output = np.array(tf.squeeze(nn_action))
         # print ("nn_output (before exploration): ", nn_output)
         if explore_network:
-            for i in range(len(nn_output)):
-                nn_output[i] = nn_output[i] + random.uniform(0, noise_range)
-            # nn_output *= np.exp(self._ou_noise())
+            # for i in range(len(nn_output)):
+            #     nn_output[i] = nn_output[i] + random.uniform(0, noise_range)
+            nn_output *= np.exp(self._ou_noise())
         # print ("nn_output (after exploration): ", nn_output)
         excess_output_penalty = 1 - sum(nn_output) if sum(nn_output) > 1 else 0
 

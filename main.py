@@ -233,7 +233,7 @@ if __name__ == "__main__":
             reward = reward + action_processing_penalty * generator_shut_off_penalty_multiplier
             custom_reward = (reward, reward)
             print("episode:", episode, ",step:",step, ",total_reward:", reward, ", action_processing_penalty:", action_processing_penalty * generator_shut_off_penalty_multiplier,
-                  ", load_loss(custom_reward):", reward1)
+                  ", load_loss(custom_reward):", reward1, "\n")
 
             total_load_out_by_fire = load_out_by_fire.get_total_load_out_by_fire(state["bus_status"])
             myopic_reward = myopic_reward[0] + total_load_out_by_fire

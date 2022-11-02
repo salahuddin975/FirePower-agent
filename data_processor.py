@@ -294,18 +294,18 @@ class DataProcessor:
         #     servable_load_demand[i] = state["servable_load_demand"][self.generators.get_generators()[i]] / self._power_generation_preprocess_scale
 
         nn_output = np.array(tf.squeeze(nn_action))
-        # print ("nn_output (before exploration): ", nn_output)
+        print ("nn_output (before exploration): ", nn_output)
         if explore_network:
             # for i in range(len(nn_output)):
             #     nn_output[i] = nn_output[i] + random.uniform(0, noise_range)
             nn_output *= np.exp(self._ou_noise())
-        # print ("nn_output (after exploration): ", nn_output)
+        print ("nn_output (after exploration): ", nn_output)
         excess_output_penalty = 1 - sum(nn_output) if sum(nn_output) > 1 else 0
 
         if sum(nn_output) > 1.0:
             nn_output = nn_output / np.sum(nn_output)
         # print("step: ", self.step, ", exploration: ", ((np.array(tf.squeeze(nn_action)) - nn_output)/nn_output) * 100)
-        # print ("nn_output (after normalization): ", nn_output)
+        print ("nn_output (after normalization): ", nn_output)
 
         nn_noise_action = {
             "generator_injection": copy.deepcopy(nn_output),
@@ -364,7 +364,7 @@ class DataProcessor:
         }
         total_lower_bound_limit_penalty = total_lower_bound_limit_penalty * 2.5
         total_action_processing_penalty = total_generator_shut_off_penalty + excess_output_penalty + total_lower_bound_limit_penalty
-        print(f"episode:{self.episode}, step:{self.step}, total_penalty:{total_action_processing_penalty}, shut_off_penalty:{total_generator_shut_off_penalty}, "
+        print(f"total_action_processing_penalty:{total_action_processing_penalty}, shut_off_penalty:{total_generator_shut_off_penalty}, "
               f"excess_output_penalty:{excess_output_penalty}, lower_bound_limit_penalty:{total_lower_bound_limit_penalty}")
         return nn_noise_action, env_action, total_action_processing_penalty
 

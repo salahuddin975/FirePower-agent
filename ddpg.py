@@ -1,8 +1,8 @@
 import os
 import copy
+import json
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras
 from tensorflow.keras import layers
 from collections import namedtuple
 
@@ -55,13 +55,23 @@ class DDPG:
         self._generators = generators
         self._num_of_active_generators = self._action_spaces[3]
 
-        self.actor = self._actor_model()
-        self._target_actor = self._actor_model()
-        self._target_actor.set_weights(self.actor.get_weights())
+        # self.actor = self._actor_model()
+        # self._target_actor = self._actor_model()
+        # self._target_actor.set_weights(self.actor.get_weights())
+        #
+        # self._critic = self._critic_model()
+        # self._target_critic = self._critic_model()
+        # self._target_critic.set_weights(self._critic.get_weights())
 
-        self._critic = self._critic_model()
-        self._target_critic = self._critic_model()
-        self._target_critic.set_weights(self._critic.get_weights())
+        self.actor = GNN(True)
+        self._target_actor = GNN(True)
+        # self._target_actor.set_weights(self.actor)
+
+        self._critic = GNN(False)
+        self._target_critic = GNN(False)
+        # self._target_critic.set_weights(self._critic)
+        print("get weight set weight doen")
+
 
     def get_critic_value(self, state, action):
         value = self._critic([state, action])
@@ -293,7 +303,7 @@ def create_ffn(hidden_units, dropout_rate, name=None):
         fnn_layers.append(layers.BatchNormalization())
         fnn_layers.append(layers.Dropout(dropout_rate))
         fnn_layers.append(layers.Dense(units, activation=tf.nn.gelu))
-    return keras.Sequential(fnn_layers, name=name)
+    return tf.keras.Sequential(fnn_layers, name=name)
 
 class GraphConvLayer(layers.Layer):
     def __init__(self, hidden_units, dropout_rate=0.2, aggregation_type="mean",
@@ -310,6 +320,10 @@ class GraphConvLayer(layers.Layer):
                                                 dropout=dropout_rate, return_state=True, recurrent_dropout=dropout_rate, )
         else:
             self.node_embedding_fn = create_ffn(hidden_units, dropout_rate)
+
+    def set_weights(self, conv_obj):
+        self.prepare_neighbor_messages_ffn.set_weights(conv_obj.prepare_neighbor_messages_ffn.get_weights())
+        self.node_embedding_fn.set_weights(conv_obj.node_embedding_fn.get_weights())
 
     def prepare_neighbor_messages(self, node_repesentations, weights=None):
         messages = self.prepare_neighbor_messages_ffn(node_repesentations)        # node_repesentations shape is [num_edges, embedding_dim].
@@ -358,31 +372,53 @@ class GraphConvLayer(layers.Layer):
         return self.create_node_embedding(node_repesentations, aggregated_messages)        # Update the node embedding with the neighbour messages; # Returns: node_embeddings of shape [num_nodes, representation_dim].
 
 
-class GNNNodeClassifier(tf.keras.Model):
-    def __init__(self, graph_info, num_classes, hidden_units, aggregation_type="sum",
-        combination_type="concat", dropout_rate=0.2, normalize=True, *args, **kwargs,):
-        super().__init__(*args, **kwargs)
-        self.node_features, self.edges, self.edge_weights = graph_info
+class GNN:
+    def __init__(self, is_actor=True):
+        hidden_units = [32, 32]
+        dropout_rate = 0.2
+        normalize = True
+        combination_type = "concat"
+        aggregation_type = "sum"
+        num_classes = 10
 
-        if self.edge_weights is None:            # Set edge_weights to ones if not provided.
-            self.edge_weights = tf.ones(shape=self.edges.shape[1])
-        self.edge_weights = self.edge_weights / tf.math.reduce_sum(self.edge_weights)
+        conf_file_path = "configurations/configuration.json"
+        args = {"cols": 40, "rows": 40, "sources": [[5, 5]], "seed": 30, "random_source":False, "num_sources":1}
+        with open(conf_file_path, 'r') as config_file:
+            args.update(json.load(config_file))
+
+        self.branches = [[],[]]
+        for a, b in args["branches"]:
+            self.branches[0].append(a)
+            self.branches[1].append(b)
+        self.branches = np.array(self.branches).T
 
         self.node_feature_processing_ffn = create_ffn(hidden_units, dropout_rate, name="preprocess")
         self.conv1 = GraphConvLayer(hidden_units, dropout_rate, aggregation_type, combination_type, normalize, name="graph_conv1",)
         self.conv2 = GraphConvLayer(hidden_units, dropout_rate, aggregation_type, combination_type, normalize, name="graph_conv2",)
         self.node_embedding_processing_ffn = create_ffn(hidden_units, dropout_rate, name="postprocess")
-        self.compute_logits = layers.Dense(units=num_classes, name="logits")         # Create a compute logits layer.
+        if is_actor:
+            self.compute_output = layers.Dense(units=num_classes, activation="relu", name="logits")    # logits layer for actor
+        else:
+            self.compute_output = layers.Dense(units=1, activation="linear", name="logits")    # output value layer for critic
 
-    def call(self, input_node_indices):
-        x = self.node_feature_processing_ffn(self.node_features)      # process the node_features to produce node representations.
-        x1 = self.conv1((x, self.edges, self.edge_weights))
+    def set_weights(self, gnn_obj):
+        self.node_feature_processing_ffn.set_weights(gnn_obj.node_feature_processing_ffn.get_weights())
+        self.conv1.set_weights(gnn_obj.conv1)
+        self.conv2.set_weights(gnn_obj.conv2)
+        self.node_embedding_processing_ffn.set_weights(gnn_obj.node_embedding_processing_ffn)
+
+    def call(self, node_info, branch_info):
+        x = self.node_feature_processing_ffn(node_info)      # process the node_features to produce node representations.
+        x1 = self.conv1((x, self.branches, branch_info))
         x = x1 + x                                                    # Skip connection.
-        x2 = self.conv2((x, self.edges, self.edge_weights))
+        x2 = self.conv2((x, self.branches, branch_info))
         x = x2 + x                                                    # Skip connection.
         x = self.node_embedding_processing_ffn(x)
-        node_embeddings = tf.gather(x, input_node_indices)            # Fetch node embeddings for the input node_indices
-        logits = self.compute_logits(node_embeddings)                 # Compute logits
-        return logits
+        output = self.compute_output(x)                       # Compute logits-actor, value-critic
+        return output
 
+
+
+# node_info = [fire_distance, power_generation_output]
+# branch_info = [fire_distance]
 

@@ -206,8 +206,8 @@ if __name__ == "__main__":
                 generators_output_myopic.add_info(episode, step+1, myopic_next_state["generator_injection"])
                 generators_output_rl.add_info(episode, step+1, target_myopic_next_state["generator_injection"])
 
-            tf_state = data_processor.get_tf_state(state)
-            nn_action = ddpg.actor(tf_state)
+            tf_state_node, tf_state_branch = data_processor.get_tf_state(state)
+            nn_action = ddpg.actor(tf_state_node, tf_state_branch)
 
             state["episode"] = episode
             state["step"] = step
@@ -220,13 +220,13 @@ if __name__ == "__main__":
             # image = visualizer.draw_map(episode, step, cells_info, next_state)
             # image.save(f"fire_propagation_{episode}_{step}.png")
 
-            main_loop_info = MainLoopInfo(tf.math.reduce_mean(nn_action), ddpg.get_critic_value(tf_state, nn_action),
-                                          tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
-                                          ddpg.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
-                                          tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)),
-                                          ddpg.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)))
-            reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), rl_reward[0], done)
-            tensorboard.step_info(main_loop_info, reward_info)
+            # main_loop_info = MainLoopInfo(tf.math.reduce_mean(nn_action), ddpg.get_critic_value(tf_state, nn_action),
+            #                               tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
+            #                               ddpg.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
+            #                               tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)),
+            #                               ddpg.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)))
+            # reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), rl_reward[0], done)
+            # tensorboard.step_info(main_loop_info, reward_info)
 
             reward = np.sum(next_state["generator_injection"]) - np.sum(myopic_next_state["generator_injection"])
             reward1 = reward

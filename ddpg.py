@@ -2,6 +2,7 @@ import os
 import copy
 import json
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from tensorflow.keras import layers
 from collections import namedtuple
@@ -328,7 +329,7 @@ class GraphConvLayer(layers.Layer):
     def prepare_neighbor_messages(self, node_repesentations, weights=None):
         messages = self.prepare_neighbor_messages_ffn(node_repesentations)        # node_repesentations shape is [num_edges, embedding_dim].
         if weights is not None:
-            messages = messages * tf.expand_dims(weights, -1)
+            messages = messages * weights
         return messages
 
     def aggregate_neighbor_messages(self, node_indices, neighbour_messages, num_nodes):
@@ -366,14 +367,22 @@ class GraphConvLayer(layers.Layer):
         node_indices, neighbour_indices = edges[0], edges[1]
         num_nodes = node_repesentations.shape[0]                # node_repesentations shape is [num_nodes, representation_dim]
 
+        # print("node_indices:", node_indices)
+        # print("neighbour_indices:", neighbour_indices)
+        # print("node_representation:", node_repesentations.shape)
         neighbour_repesentations = tf.gather(node_repesentations, neighbour_indices)     # neighbour_repesentations shape is [num_edges, representation_dim].
+        # print("neighbour_representations:", neighbour_repesentations.shape)
         neighbour_messages = self.prepare_neighbor_messages(neighbour_repesentations, edge_weights)
+        # print("neighbour_messages:", neighbour_messages.shape)
         aggregated_messages = self.aggregate_neighbor_messages(node_indices, neighbour_messages, num_nodes)
+        # print("aggregated_messages:", aggregated_messages.shape)
         return self.create_node_embedding(node_repesentations, aggregated_messages)        # Update the node embedding with the neighbour messages; # Returns: node_embeddings of shape [num_nodes, representation_dim].
 
 
-class GNN:
-    def __init__(self, is_actor=True):
+class GNN(tf.keras.Model):
+    def __init__(self, is_actor, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
         hidden_units = [32, 32]
         dropout_rate = 0.2
         normalize = True
@@ -381,23 +390,17 @@ class GNN:
         aggregation_type = "sum"
         num_classes = 10
 
-        conf_file_path = "configurations/configuration.json"
-        args = {"cols": 40, "rows": 40, "sources": [[5, 5]], "seed": 30, "random_source":False, "num_sources":1}
-        with open(conf_file_path, 'r') as config_file:
-            args.update(json.load(config_file))
-
-        self.branches = [[],[]]
-        for a, b in args["branches"]:
-            self.branches[0].append(a)
-            self.branches[1].append(b)
-        self.branches = np.array(self.branches).T
+        branch_path = "configurations/branches.csv"
+        branches = pd.read_csv(branch_path, header=None, names=["node_a", "node_b"])
+        self.branches = branches[["node_a", "node_b"]].to_numpy().T
+        # print(self.branches)
 
         self.node_feature_processing_ffn = create_ffn(hidden_units, dropout_rate, name="preprocess")
         self.conv1 = GraphConvLayer(hidden_units, dropout_rate, aggregation_type, combination_type, normalize, name="graph_conv1",)
         self.conv2 = GraphConvLayer(hidden_units, dropout_rate, aggregation_type, combination_type, normalize, name="graph_conv2",)
         self.node_embedding_processing_ffn = create_ffn(hidden_units, dropout_rate, name="postprocess")
         if is_actor:
-            self.compute_output = layers.Dense(units=num_classes, activation="relu", name="logits")    # logits layer for actor
+            self.compute_output = layers.Dense(units=1, activation="relu", name="logits")    # logits layer for actor
         else:
             self.compute_output = layers.Dense(units=1, activation="linear", name="logits")    # output value layer for critic
 

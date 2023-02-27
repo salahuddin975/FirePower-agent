@@ -3,6 +3,8 @@ import csv
 import random
 import datetime
 import copy
+
+import numpy
 import numpy as np
 import tensorflow as tf
 from pypower.idx_brch import *
@@ -400,27 +402,27 @@ class DataProcessor:
         vulnerable_equipment = {}
         for i, dist in enumerate(state["fire_distance"]):
             if dist < self._considerable_fire_distance:
-                val = round(1 - dist/self._considerable_fire_distance, 3)
+                val = round(dist/self._considerable_fire_distance, 3)
                 # if dist < 2.0:
                 # if dist == 0.0:
                 #     val = 1
                 fire_distance.append(val)
                 vulnerable_equipment[i] = val
             else:
-                fire_distance.append(0)
+                fire_distance.append(1)
 
         state["fire_distance"] = fire_distance
 
         num_bus = len(state["bus_status"])
         for i in range(num_bus):
             if state["bus_status"][i] == 0:
-                fire_distance[i] = 1
-                vulnerable_equipment[i] = 1
+                fire_distance[i] = 0
+                vulnerable_equipment[i] = 0
 
         for i in range(len(state["branch_status"])):
             if state["branch_status"][i] == 0:
-                fire_distance[num_bus + i] = 1
-                vulnerable_equipment[num_bus + i] = 1
+                fire_distance[num_bus + i] = 0
+                vulnerable_equipment[num_bus + i] = 0
 
         # print("bus_status:", state["bus_status"])
         # print("branch_status:", state["branch_status"])
@@ -438,16 +440,26 @@ class DataProcessor:
 
 
     def get_tf_state(self, state):
-        tf_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
-        tf_branch_status = tf.expand_dims(tf.convert_to_tensor(state["branch_status"]), 0)
-        # tf_fire_state = tf.expand_dims(tf.convert_to_tensor(state["fire_state"]), 0)
-        tf_fire_distance = tf.expand_dims(tf.convert_to_tensor(state["fire_distance"]), 0)
-        tf_generator_injection = tf.expand_dims(tf.convert_to_tensor(state["generator_injection"]), 0)
-        tf_load_demand = tf.expand_dims(tf.convert_to_tensor(state["load_demand"]), 0)
-        tf_theta = tf.expand_dims(tf.convert_to_tensor(state["theta"]), 0)
-        tf_line_flow = tf.expand_dims(tf.convert_to_tensor(state["line_flow"]), 0)
+        # tf_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
+        # tf_branch_status = tf.expand_dims(tf.convert_to_tensor(state["branch_status"]), 0)
+        # # tf_fire_state = tf.expand_dims(tf.convert_to_tensor(state["fire_state"]), 0)
+        # tf_fire_distance = tf.expand_dims(tf.convert_to_tensor(state["fire_distance"]), 0)
+        # tf_generator_injection = tf.expand_dims(tf.convert_to_tensor(state["generator_injection"]), 0)
+        # tf_load_demand = tf.expand_dims(tf.convert_to_tensor(state["load_demand"]), 0)
+        # tf_theta = tf.expand_dims(tf.convert_to_tensor(state["theta"]), 0)
+        # tf_line_flow = tf.expand_dims(tf.convert_to_tensor(state["line_flow"]), 0)
 
-        return [tf_bus_status, tf_branch_status, tf_fire_distance, tf_generator_injection, tf_load_demand, tf_theta, tf_line_flow]
+        node_features = []
+        for i in range(24):
+            node_features.append([state["fire_distance"][i], state["generator_injection"][i], state["load_demand"][i]])
+        branch_features = []
+        for i in range(34):
+            branch_features.append([state["fire_distance"][i+24]])
+
+        tf_node_features = tf.convert_to_tensor(node_features, dtype=float)
+        tf_branch_features = tf.convert_to_tensor(branch_features, dtype=float)
+        return tf_node_features, tf_branch_features
+        # return [tf_bus_status, tf_branch_status, tf_fire_distance, tf_generator_injection, tf_load_demand, tf_theta, tf_line_flow]
 
     def get_tf_critic_input(self, state, action):
         st_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)

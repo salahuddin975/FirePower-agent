@@ -381,6 +381,56 @@ class DataProcessor:
             "generator_injection": np.zeros(10),
         }
 
+    def process_nn_action_gnn(self, state, nn_action, explore_network, noise_range=0.1):
+        self.episode = state["episode"]
+        self.step = state["step"]
+        bus_status = copy.deepcopy(state["bus_status"])
+        branch_status = copy.deepcopy(state["branch_status"])
+        generators_current_output = state["generator_injection"]
+
+        selected_generators = copy.deepcopy(self.generators.get_generators())
+        generators_min_output = copy.deepcopy(self.generators.get_min_outputs())
+        generators_max_output = copy.deepcopy(self.generators.get_max_outputs())
+        generators_max_ramp = copy.deepcopy(self.generators.get_max_ramps())
+
+        # print("generators_min_output:", generators_min_output)
+        # print("generators_max_output:", generators_max_output)
+        # print("generators_max_ramp:", generators_max_ramp)
+        # print("current_output:", generators_current_output)
+
+        net_output = numpy.array(tf.squeeze(nn_action))
+        ramp_diff = net_output - generators_current_output
+        ramp = ramp_diff[selected_generators]
+        generators_current_output = copy.deepcopy(generators_current_output[selected_generators])
+        # print("generators initial ramp: ", ramp)
+
+        nn_noise_action = {
+            "generator_injection": copy.deepcopy(net_output[selected_generators]),
+        }
+
+        for i in range(ramp.size):
+            if ramp[i] > 0:
+                ramp[i] = ramp[i] if ramp[i] < generators_max_ramp[i] else generators_max_ramp[i]
+                ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] < generators_max_output[i] else generators_max_output[i] - generators_current_output[i]
+            else:
+                ramp[i] = ramp[i] if abs(ramp[i]) < generators_max_ramp[i] else -generators_max_ramp[i]
+                ramp[i] = ramp[i] if ramp[i] + generators_current_output[i] > generators_min_output[i] else generators_min_output[i] - generators_current_output[i]
+
+            if abs(ramp[i]) < 0.00001:
+                ramp[i] = 0.0
+
+        env_action = {
+            "episode": self.episode,
+            "step_count": self.step,
+            "action_type": "rl",
+            "bus_status": bus_status,
+            "branch_status": branch_status,
+            "generator_selector": selected_generators,
+            "generator_injection": ramp * self._power_generation_preprocess_scale,
+        }
+
+        return nn_noise_action, env_action, 0
+
     def get_target_myopic_action(self, episode, step):
         return {
             "episode": episode,

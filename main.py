@@ -195,27 +195,27 @@ if __name__ == "__main__":
                 tensorboard.load_demand_info(state["load_demand"])
                 tensorboard.line_flow_info(state["line_flow"])
 
-            myopic_action = data_processor.get_myopic_action(episode, step)           #Myopic
-            myopic_next_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
+            # myopic_action = data_processor.get_myopic_action(episode, step)           #Myopic
+            # myopic_next_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
 
-            start_time = datetime.now()
-            myopic_action_rl_transition = data_processor.get_target_myopic_action(episode, step)    # RL environment Myopic action
-            target_myopic_next_state, myopic_reward_rl_transition, target_myopic_done, _ = env.step(myopic_action_rl_transition)
+            # start_time = datetime.now()
+            # myopic_action_rl_transition = data_processor.get_target_myopic_action(episode, step)    # RL environment Myopic action
+            # target_myopic_next_state, myopic_reward_rl_transition, target_myopic_done, _ = env.step(myopic_action_rl_transition)
 
-            if not train_network:
-                generators_output_myopic.add_info(episode, step+1, myopic_next_state["generator_injection"])
-                generators_output_rl.add_info(episode, step+1, target_myopic_next_state["generator_injection"])
+            # if not train_network:
+            #     generators_output_myopic.add_info(episode, step+1, myopic_next_state["generator_injection"])
+            #     generators_output_rl.add_info(episode, step+1, target_myopic_next_state["generator_injection"])
 
             tf_state_node, tf_state_branch = data_processor.get_tf_state(state)
             nn_action = ddpg.actor(tf_state_node, tf_state_branch)
 
             state["episode"] = episode
             state["step"] = step
-            state["servable_load_demand"] = target_myopic_next_state["generator_injection"]
-            connected_components.update_connected_components(state)
+            # state["servable_load_demand"] = target_myopic_next_state["generator_injection"]
+            # connected_components.update_connected_components(state)
             nn_noise_action, env_action, action_processing_penalty = data_processor.process_nn_action_gnn(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
             next_state, rl_reward, done, cells_info = env.step(env_action)       # RL environment RL action
-            rl_computation_time = (datetime.now() - start_time).total_seconds()
+            # rl_computation_time = (datetime.now() - start_time).total_seconds()
 
             # image = visualizer.draw_map(episode, step, cells_info, next_state)
             # image.save(f"fire_propagation_{episode}_{step}.png")
@@ -228,49 +228,49 @@ if __name__ == "__main__":
             # reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), rl_reward[0], done)
             # tensorboard.step_info(main_loop_info, reward_info)
 
-            reward = np.sum(next_state["generator_injection"]) - np.sum(myopic_next_state["generator_injection"])
-            reward1 = reward
-            reward = reward + action_processing_penalty * generator_shut_off_penalty_multiplier
-            custom_reward = (reward, reward)
-            print("episode:", episode, ",step:",step, ",total_reward:", reward, ", action_processing_penalty:", action_processing_penalty * generator_shut_off_penalty_multiplier,
-                  ", load_loss(custom_reward):", reward1, "\n")
+            # reward = np.sum(next_state["generator_injection"]) - np.sum(myopic_next_state["generator_injection"])
+            # reward1 = reward
+            # reward = reward + action_processing_penalty * generator_shut_off_penalty_multiplier
+            # custom_reward = (reward, reward)
+            # print("episode:", episode, ",step:",step, ",total_reward:", reward, ", action_processing_penalty:", action_processing_penalty * generator_shut_off_penalty_multiplier,
+            #       ", load_loss(custom_reward):", reward1, "\n")
+            print("episode:", episode, ", step:", step, ", reward:", rl_reward[0])
 
-            total_load_out_by_fire = load_out_by_fire.get_total_load_out_by_fire(state["bus_status"])
-            myopic_reward = myopic_reward[0] + total_load_out_by_fire
-            myopic_reward_rl_transition = myopic_reward_rl_transition[0] + total_load_out_by_fire
-            rl_reward = rl_reward[0] + total_load_out_by_fire
+            # total_load_out_by_fire = load_out_by_fire.get_total_load_out_by_fire(state["bus_status"])
+            # myopic_reward = myopic_reward[0] + total_load_out_by_fire
+            # myopic_reward_rl_transition = myopic_reward_rl_transition[0] + total_load_out_by_fire
+            # rl_reward = rl_reward[0] + total_load_out_by_fire
 
-            total_myopic_reward += myopic_reward
-            total_myopic_reward_rl_transition += myopic_reward_rl_transition
-            total_rl_reward += rl_reward
-            total_custom_reward += custom_reward[0]
+            # total_myopic_reward += myopic_reward
+            # total_myopic_reward_rl_transition += myopic_reward_rl_transition
+            total_rl_reward += rl_reward[0]
+            # total_custom_reward += custom_reward[0]
 
-            step_by_step_reward.add_info(episode, step, round(myopic_reward, 2), round(myopic_reward_rl_transition, 2),
-                                         round(rl_reward, 2), total_load_out_by_fire, rl_computation_time)
-            if explore_network_flag == False:
-                print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward}, myopic_reward_rl_transition: "
-                      f"{myopic_reward_rl_transition}, rl_reward: {rl_reward}, custom_reward: {reward}, load_out_by_fire: {total_load_out_by_fire}, "
-                      f"computation_time:{rl_computation_time}")
+            # step_by_step_reward.add_info(episode, step, round(myopic_reward, 2), round(myopic_reward_rl_transition, 2),
+            #                              round(rl_reward, 2), total_load_out_by_fire, rl_computation_time)
+            # if explore_network_flag == False:
+            #     print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward}, myopic_reward_rl_transition: "
+            #           f"{myopic_reward_rl_transition}, rl_reward: {rl_reward}, custom_reward: {reward}, load_out_by_fire: {total_load_out_by_fire}, "
+            #           f"computation_time:{rl_computation_time}")
 
             next_state = data_processor.preprocess(next_state, explore_network_flag)
-            buffer.add_record((state, nn_noise_action, custom_reward, next_state, env_action, done))
+            buffer.add_record((state, nn_noise_action, rl_reward, next_state, env_action, done))
             state = next_state
 
             if train_network and episode >= 3:
                 state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
                 tensorboard_info = ddpg.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
-                tensorboard.train_info(tensorboard_info)
+                # tensorboard.train_info(tensorboard_info)
                 # print("Episode:", episode, ", step: ", step, ", critic_value:", tensorboard_info.critic_value_with_original_action, ", critic_loss:", tensorboard_info.critic_loss)
 
             if done:
                 max_reached_step = step
                 break
 
-        print(f"Episode: V{save_model_version}_{episode}, done at step: {max_reached_step}, total myopic_reward: {total_myopic_reward},"
-            f" total_target_myopic_reward: {total_myopic_reward_rl_transition}, total_rl_reward: {total_rl_reward}, total_custom_reward: {total_custom_reward}")
+        print(f"Episode: V{save_model_version}_{episode}, done at step: {max_reached_step}, total_rl_reward: {total_rl_reward}")
 
-        tensorboard.episodic_info(total_rl_reward)
-        episodic_reward.add_info(episode, round(total_myopic_reward, 2), round(total_myopic_reward_rl_transition, 2), round(total_rl_reward, 2))
+        # tensorboard.episodic_info(total_rl_reward)
+        # episodic_reward.add_info(episode, round(total_myopic_reward, 2), round(total_myopic_reward_rl_transition, 2), round(total_rl_reward, 2))
 
         # explore / Testing
         if episode and (episode % parameters.test_after_episodes == 0):

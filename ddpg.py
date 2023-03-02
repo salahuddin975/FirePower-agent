@@ -307,72 +307,74 @@ def create_ffn(hidden_units, dropout_rate, name=None):
     return tf.keras.Sequential(fnn_layers, name=name)
 
 class GraphConvLayer(layers.Layer):
-    def __init__(self, hidden_units, dropout_rate=0.2, aggregation_type="mean",
-        combination_type="concat", normalize=False, *args, **kwargs,):
+    def __init__(self, hidden_units, dropout_rate=0.2, normalize=True, *args, **kwargs,):
 
         super().__init__(*args, **kwargs)
-        self.aggregation_type = aggregation_type
-        self.combination_type = combination_type
+        self.aggregation_type = "sum"
+        self.combination_type = "concat"
         self.normalize = normalize
 
         self.prepare_neighbor_messages_ffn = create_ffn(hidden_units, dropout_rate)
-        if self.combination_type == "gated":
-            self.node_embedding_fn = layers.GRU(units=hidden_units, activation="tanh", recurrent_activation="sigmoid",
-                                                dropout=dropout_rate, return_state=True, recurrent_dropout=dropout_rate, )
-        else:
-            self.node_embedding_fn = create_ffn(hidden_units, dropout_rate)
+        # if self.combination_type == "gated":
+        #     self.node_embedding_fn = layers.GRU(units=hidden_units, activation="tanh", recurrent_activation="sigmoid",
+        #                                         dropout=dropout_rate, return_state=True, recurrent_dropout=dropout_rate, )
+        # else:
+        self.node_embedding_fn = create_ffn(hidden_units, dropout_rate)
 
     def set_weights(self, conv_obj):
         self.prepare_neighbor_messages_ffn.set_weights(conv_obj.prepare_neighbor_messages_ffn.get_weights())
         self.node_embedding_fn.set_weights(conv_obj.node_embedding_fn.get_weights())
 
-    def prepare_neighbor_messages(self, node_repesentations, weights=None):
+    def prepare_neighbor_messages(self, node_repesentations, branch_weights):
         messages = self.prepare_neighbor_messages_ffn(node_repesentations)        # node_repesentations shape is [num_edges, embedding_dim].
-        if weights is not None:
-            messages = messages * weights
+        messages = messages * branch_weights
         return messages
 
     def aggregate_neighbor_messages(self, node_indices, neighbour_messages, num_nodes):
         # node_indices shape is [num_edges], neighbour_messages shape: [num_edges, representation_dim].
-        if self.aggregation_type == "sum":
-            aggregated_message = tf.math.unsorted_segment_sum(neighbour_messages, node_indices, num_segments=num_nodes)
-        elif self.aggregation_type == "mean":
-            aggregated_message = tf.math.unsorted_segment_mean(neighbour_messages, node_indices, num_segments=num_nodes)
-        elif self.aggregation_type == "max":
-            aggregated_message = tf.math.unsorted_segment_max(neighbour_messages, node_indices, num_segments=num_nodes)
-        else:
-            raise ValueError(f"Invalid aggregation type: {self.aggregation_type}.")
+        # if self.aggregation_type == "sum":
+        agg = []
+        for neigh in neighbour_messages:
+            agg.append(tf.math.unsorted_segment_sum(neigh, node_indices, num_segments=num_nodes))
+        aggregated_message = tf.stack(agg)
+        # aggregated_message = tf.stack(tf.math.unsorted_segment_sum(neigh_message, node_indices, num_segments=num_nodes) for neigh_message in tf.unstack(neighbour_messages))
+        # elif self.aggregation_type == "mean":
+        #     aggregated_message = tf.math.unsorted_segment_mean(neighbour_messages, node_indices, num_segments=num_nodes)
+        # elif self.aggregation_type == "max":
+        #     aggregated_message = tf.math.unsorted_segment_max(neighbour_messages, node_indices, num_segments=num_nodes)
+        # else:
+        #     raise ValueError(f"Invalid aggregation type: {self.aggregation_type}.")
         return aggregated_message
 
     def create_node_embedding(self, node_repesentations, aggregated_messages):
         # node_repesentations shape is [num_nodes, representation_dim], aggregated_messages shape is [num_nodes, representation_dim].
-        if self.combination_type == "gru":
-            h = tf.stack([node_repesentations, aggregated_messages], axis=1)
-        elif self.combination_type == "concat":
-            h = tf.concat([node_repesentations, aggregated_messages], axis=1)
-        elif self.combination_type == "add":
-            h = node_repesentations + aggregated_messages
-        else:
-            raise ValueError(f"Invalid combination type: {self.combination_type}.")
+        # if self.combination_type == "gru":
+        #     h = tf.stack([node_repesentations, aggregated_messages], axis=1)
+        # elif self.combination_type == "concat":
+        h = tf.concat([node_repesentations, aggregated_messages], axis=2)
+        # elif self.combination_type == "add":
+        #     h = node_repesentations + aggregated_messages
+        # else:
+        #     raise ValueError(f"Invalid combination type: {self.combination_type}.")
 
         node_embeddings = self.node_embedding_fn(h)
-        if self.combination_type == "gru":
-            node_embeddings = tf.unstack(node_embeddings, axis=1)[-1]
+        # if self.combination_type == "gru":
+        #     node_embeddings = tf.unstack(node_embeddings, axis=1)[-1]
         if self.normalize:
             node_embeddings = tf.nn.l2_normalize(node_embeddings, axis=-1)
         return node_embeddings
 
     def call(self, inputs):
-        node_repesentations, edges, edge_weights = inputs
-        node_indices, neighbour_indices = edges[0], edges[1]
-        num_nodes = node_repesentations.shape[0]                # node_repesentations shape is [num_nodes, representation_dim]
+        node_repesentations, branches, branch_weights = inputs
+        node_indices, neighbour_indices = branches[0], branches[1]
+        num_nodes = node_repesentations.shape[1]                # node_repesentations shape is [num_nodes, representation_dim]
 
-        # print("node_indices:", node_indices)
-        # print("neighbour_indices:", neighbour_indices)
+        # print("node_indices:", node_indices.shape)
+        # print("neighbour_indices:", neighbour_indices.shape)
         # print("node_representation:", node_repesentations.shape)
-        neighbour_repesentations = tf.gather(node_repesentations, neighbour_indices)     # neighbour_repesentations shape is [num_edges, representation_dim].
+        neighbour_repesentations = tf.gather(node_repesentations, neighbour_indices, axis=1, batch_dims=-1)     # neighbour_repesentations shape is [num_edges, representation_dim].
         # print("neighbour_representations:", neighbour_repesentations.shape)
-        neighbour_messages = self.prepare_neighbor_messages(neighbour_repesentations, edge_weights)
+        neighbour_messages = self.prepare_neighbor_messages(neighbour_repesentations, branch_weights)
         # print("neighbour_messages:", neighbour_messages.shape)
         aggregated_messages = self.aggregate_neighbor_messages(node_indices, neighbour_messages, num_nodes)
         # print("aggregated_messages:", aggregated_messages.shape)
@@ -386,8 +388,6 @@ class GNN(tf.keras.Model):
         hidden_units = [32, 32]
         dropout_rate = 0.2
         normalize = True
-        combination_type = "concat"
-        aggregation_type = "sum"
         num_classes = 10
 
         branch_path = "configurations/branches.csv"
@@ -396,8 +396,8 @@ class GNN(tf.keras.Model):
         # print(self.branches)
 
         self.node_feature_processing_ffn = create_ffn(hidden_units, dropout_rate, name="preprocess")
-        self.conv1 = GraphConvLayer(hidden_units, dropout_rate, aggregation_type, combination_type, normalize, name="graph_conv1",)
-        self.conv2 = GraphConvLayer(hidden_units, dropout_rate, aggregation_type, combination_type, normalize, name="graph_conv2",)
+        self.conv1 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv1",)
+        self.conv2 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv2",)
         self.node_embedding_processing_ffn = create_ffn(hidden_units, dropout_rate, name="postprocess")
         if is_actor:
             self.compute_output = layers.Dense(units=1, activation="relu", name="logits")    # logits layer for actor
@@ -410,14 +410,21 @@ class GNN(tf.keras.Model):
         self.conv2.set_weights(gnn_obj.conv2)
         self.node_embedding_processing_ffn.set_weights(gnn_obj.node_embedding_processing_ffn)
 
-    def call(self, node_info, branch_info):
+    def call(self, graph_info):
+        node_info, branch_info = graph_info
+        # print("node_info_shape:", node_info.shape, ", branch_info_shape:", branch_info.shape)
         x = self.node_feature_processing_ffn(node_info)      # process the node_features to produce node representations.
+        # print("x_shape:", x.shape)
         x1 = self.conv1((x, self.branches, branch_info))
+        # print("x1_shape:", x1.shape)
         x = x1 + x                                                    # Skip connection.
         x2 = self.conv2((x, self.branches, branch_info))
+        # print("x2_shape:", x2.shape)
         x = x2 + x                                                    # Skip connection.
         x = self.node_embedding_processing_ffn(x)
+        # print("x_shape1:", x.shape)
         output = self.compute_output(x)                       # Compute logits-actor, value-critic
+        # print("Ouput_shape:", output.shape)
         return output
 
 

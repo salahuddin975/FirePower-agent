@@ -506,8 +506,8 @@ class DataProcessor:
         for i in range(34):
             branch_features.append([state["fire_distance"][i+24]])
 
-        tf_node_features = tf.convert_to_tensor(node_features, dtype=float)
-        tf_branch_features = tf.convert_to_tensor(branch_features, dtype=float)
+        tf_node_features = tf.expand_dims(tf.convert_to_tensor(node_features, dtype=float), 0)
+        tf_branch_features = tf.expand_dims(tf.convert_to_tensor(branch_features, dtype=float), 0)
         return tf_node_features, tf_branch_features
         # return [tf_bus_status, tf_branch_status, tf_fire_distance, tf_generator_injection, tf_load_demand, tf_theta, tf_line_flow]
 

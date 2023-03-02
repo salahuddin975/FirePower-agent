@@ -207,7 +207,7 @@ if __name__ == "__main__":
             #     generators_output_rl.add_info(episode, step+1, target_myopic_next_state["generator_injection"])
 
             tf_state_node, tf_state_branch = data_processor.get_tf_state(state)
-            nn_action = ddpg.actor(tf_state_node, tf_state_branch)
+            nn_action = ddpg.actor((tf_state_node, tf_state_branch))
 
             state["episode"] = episode
             state["step"] = step

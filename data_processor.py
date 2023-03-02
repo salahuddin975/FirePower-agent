@@ -405,7 +405,7 @@ class DataProcessor:
         # print("generators initial ramp: ", ramp)
 
         nn_noise_action = {
-            "generator_injection": copy.deepcopy(net_output[selected_generators]),
+            "generator_injection": copy.deepcopy(net_output),
         }
 
         for i in range(ramp.size):

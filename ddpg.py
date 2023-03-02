@@ -107,12 +107,12 @@ class DDPG:
         # update critic network
         with tf.GradientTape() as tape:
             target_actor_actions = self._target_actor(next_state_batch)
-            target_critic_values = self._target_critic([next_state_batch, target_actor_actions]) * (1 - episode_end_flag_batch)
+            target_critic_state = tf.concat([next_state_batch[0], target_actor_actions], axis=-1)
+            target_critic_values = self._target_critic((target_critic_state, next_state_batch[1])) #* (1 - episode_end_flag_batch)
             return_y = reward_batch + self._gamma * target_critic_values
-            # y = reward_batch[0] + self._gamma * self._target_critic([next_state_batch, target_actor_actions]) * (1 - episode_end_flag_batch)
-            # y = reward_batch[0] + reward_batch[1] +  reward_batch[2] +  reward_batch[3] +  reward_batch[4]
 
-            critic_value_with_original_actions = self._critic([state_batch, action_batch])
+            critic_state = tf.concat([state_batch[0], action_batch], axis=-1)
+            critic_value_with_original_actions = self._critic((critic_state, state_batch[1]))
             critic_loss = tf.math.reduce_mean(tf.math.square(return_y - critic_value_with_original_actions))
 
         critic_grad = tape.gradient(critic_loss, self._critic.trainable_variables)
@@ -121,7 +121,8 @@ class DDPG:
         # update actor network
         with tf.GradientTape() as tape:
             actor_actions = self.actor(state_batch)
-            critic_value_with_actor_actions = self._critic([state_batch, actor_actions])
+            critic_state = tf.concat([state_batch[0], actor_actions], axis=-1)
+            critic_value_with_actor_actions = self._critic((critic_state, state_batch[1]))
             actor_loss = -1 * tf.math.reduce_mean(critic_value_with_actor_actions)
 
         actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
@@ -385,6 +386,7 @@ class GNN(tf.keras.Model):
     def __init__(self, is_actor, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.is_actor = is_actor
         hidden_units = [32, 32]
         dropout_rate = 0.2
         normalize = True
@@ -403,6 +405,7 @@ class GNN(tf.keras.Model):
             self.compute_output = layers.Dense(units=1, activation="relu", name="logits")    # logits layer for actor
         else:
             self.compute_output = layers.Dense(units=1, activation="linear", name="logits")    # output value layer for critic
+            self.compute_critic_value = layers.Dense(units=1, activation="linear", name="logits")    # output value layer for critic
 
     def set_weights(self, gnn_obj):
         self.node_feature_processing_ffn.set_weights(gnn_obj.node_feature_processing_ffn.get_weights())
@@ -425,6 +428,11 @@ class GNN(tf.keras.Model):
         # print("x_shape1:", x.shape)
         output = self.compute_output(x)                       # Compute logits-actor, value-critic
         # print("Ouput_shape:", output.shape)
+
+        if not self.is_actor:
+            output = tf.squeeze(output, axis=-1)
+            output = self.compute_critic_value(output)
+            # print("critic_output_shape:", output.shape)
         return output
 
 

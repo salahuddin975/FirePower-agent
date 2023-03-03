@@ -66,13 +66,15 @@ class DDPG:
 
         self.actor = GNN(True)
         self._target_actor = GNN(True)
-        # self._target_actor.set_weights(self.actor)
 
         self._critic = GNN(False)
         self._target_critic = GNN(False)
-        # self._target_critic.set_weights(self._critic)
-        print("get weight set weight doen")
+        self.is_set_weight = 0
 
+    def set_weights(self):
+        self._target_actor.set_weights(self.actor)
+        self._target_critic.set_weights(self._critic)
+        return True
 
     def get_critic_value(self, state, action):
         value = self._critic([state, action])
@@ -105,6 +107,8 @@ class DDPG:
     # @tf.function
     def train(self, state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch):
         # update critic network
+        self.is_set_weight += self.set_weights() if self.is_set_weight == 1 else 1
+
         with tf.GradientTape() as tape:
             target_actor_actions = self._target_actor(next_state_batch)
             target_critic_state = tf.concat([next_state_batch[0], target_actor_actions], axis=-1)
@@ -411,7 +415,10 @@ class GNN(tf.keras.Model):
         self.node_feature_processing_ffn.set_weights(gnn_obj.node_feature_processing_ffn.get_weights())
         self.conv1.set_weights(gnn_obj.conv1)
         self.conv2.set_weights(gnn_obj.conv2)
-        self.node_embedding_processing_ffn.set_weights(gnn_obj.node_embedding_processing_ffn)
+        self.node_embedding_processing_ffn.set_weights(gnn_obj.node_embedding_processing_ffn.get_weights())
+        self.compute_output.set_weights(gnn_obj.compute_output.get_weights())
+        if not self.is_actor:
+            self.compute_critic_value.set_weights(gnn_obj.compute_critic_value.get_weights())
 
     def call(self, graph_info):
         node_info, branch_info = graph_info

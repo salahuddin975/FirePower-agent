@@ -92,21 +92,17 @@ class DDPG:
             print(error)
 
     def save_weight(self, version, episode_num):
-        self.actor.save_weights(f"{self._save_weight_directory}/agent_actor{version}_{episode_num}.h5")
-        self._critic.save_weights(f"{self._save_weight_directory}/agent_critic{version}_{episode_num}.h5")
-        self._target_actor.save_weights(f"{self._save_weight_directory}/agent_target_actor{version}_{episode_num}.h5")
-        self._target_critic.save_weights(f"{self._save_weight_directory}/agent_target_critic{version}_{episode_num}.h5")
-
-        # self.actor.save_weight("actor", version, episode_num)
-        # self._target_actor.save_weight("target_actor", version, episode_num)
-        # self._critic.save_weight("critic", version, episode_num)
-        # self._target_critic.save_weight("target_critic", version, episode_num)
+        print(self.actor.summary())
+        self.actor.save_weights(f"{self._save_weight_directory}/agent_actor{version}_{episode_num}", save_format='tf')
+        self._critic.save_weights(f"{self._save_weight_directory}/agent_critic{version}_{episode_num}", save_format='tf')
+        self._target_actor.save_weights(f"{self._save_weight_directory}/agent_target_actor{version}_{episode_num}", save_format="tf")
+        self._target_critic.save_weights(f"{self._save_weight_directory}/agent_target_critic{version}_{episode_num}", save_format="tf")
 
     def load_weight(self, version, episode_num):
-        self.actor.load_weights(f"{self._load_weight_directory}/agent_actor{version}_{episode_num}.h5")
-        self._target_actor.load_weights(f"{self._load_weight_directory}/agent_target_actor{version}_{episode_num}.h5")
-        self._critic.load_weights(f"{self._load_weight_directory}/agent_critic{version}_{episode_num}.h5")
-        self._target_critic.load_weights(f"{self._load_weight_directory}/agent_target_critic{version}_{episode_num}.h5")
+        self.actor.load_weights(f"{self._load_weight_directory}/agent_actor{version}_{episode_num}")
+        self._target_actor.load_weights(f"{self._load_weight_directory}/agent_target_actor{version}_{episode_num}")
+        self._critic.load_weights(f"{self._load_weight_directory}/agent_critic{version}_{episode_num}")
+        self._target_critic.load_weights(f"{self._load_weight_directory}/agent_target_critic{version}_{episode_num}")
         print("weights are loaded successfully!")
 
     # @tf.function
@@ -449,12 +445,3 @@ class GNN(tf.keras.Model):
         self.compute_output.set_weights(gnn_obj.compute_output.get_weights())
         if self.is_critic:
             self.compute_critic_value.set_weights(gnn_obj.compute_critic_value.get_weights())
-
-    def save_weight(self, obj_name, version, episode_num):
-        self.node_feature_processing_ffn.save_weights(f"{self._save_weight_directory}/{obj_name}_node_feature-{version}_{episode_num}.h5")
-        self.conv1.save_weight(obj_name, version, episode_num)
-        self.conv2.save_weight(obj_name, version, episode_num)
-        self.node_embedding_processing_ffn.save_weights(f"{self._save_weight_directory}/{obj_name}_node_embedding-{version}_{episode_num}.h5")
-        self.compute_output.save_weights(f"{self._save_weight_directory}/{obj_name}_compute_output-{version}_{episode_num}.h5")
-        if self.is_critic:
-            self.compute_critic_value.save_weights(f"{self._save_weight_directory}/{obj_name}_critic_value-{version}_{episode_num}.h5")

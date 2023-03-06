@@ -64,11 +64,11 @@ class DDPG:
         # self._target_critic = self._critic_model()
         # self._target_critic.set_weights(self._critic.get_weights())
 
-        self.actor = GNN(True)
-        self._target_actor = GNN(True)
+        self.actor = GNN(True, self._save_weight_directory)
+        self._target_actor = GNN(True, self._save_weight_directory)
 
-        self._critic = GNN(False)
-        self._target_critic = GNN(False)
+        self._critic = GNN(False, self._save_weight_directory)
+        self._target_critic = GNN(False, self._save_weight_directory)
         self.is_set_weight = 0
 
     def set_weights(self):
@@ -92,10 +92,10 @@ class DDPG:
             print(error)
 
     def save_weight(self, version, episode_num):
-        self.actor.save_weights(f"{self._save_weight_directory}/agent_actor{version}_{episode_num}.h5")
-        self._critic.save_weights(f"{self._save_weight_directory}/agent_critic{version}_{episode_num}.h5")
-        self._target_actor.save_weights(f"{self._save_weight_directory}/agent_target_actor{version}_{episode_num}.h5")
-        self._target_critic.save_weights(f"{self._save_weight_directory}/agent_target_critic{version}_{episode_num}.h5")
+        self.actor.save_weight("actor", version, episode_num)
+        self._target_actor.save_weight("target_actor", version, episode_num)
+        self._critic.save_weight("critic", version, episode_num)
+        self._target_critic.save_weight("target_critic", version, episode_num)
 
     def load_weight(self, version, episode_num):
         self.actor.load_weights(f"{self._load_weight_directory}/agent_actor{version}_{episode_num}.h5")
@@ -312,12 +312,13 @@ def create_ffn(hidden_units, dropout_rate, name=None):
     return tf.keras.Sequential(fnn_layers, name=name)
 
 class GraphConvLayer(layers.Layer):
-    def __init__(self, hidden_units, dropout_rate=0.2, normalize=True, *args, **kwargs,):
+    def __init__(self, hidden_units, dropout_rate, normalize, save_weight_dir, *args, **kwargs,):
 
         super().__init__(*args, **kwargs)
         self.aggregation_type = "sum"
         self.combination_type = "concat"
         self.normalize = normalize
+        self._save_weight_directory = save_weight_dir
 
         self.prepare_neighbor_messages_ffn = create_ffn(hidden_units, dropout_rate)
         # if self.combination_type == "gated":
@@ -325,10 +326,6 @@ class GraphConvLayer(layers.Layer):
         #                                         dropout=dropout_rate, return_state=True, recurrent_dropout=dropout_rate, )
         # else:
         self.node_embedding_fn = create_ffn(hidden_units, dropout_rate)
-
-    def set_weights(self, conv_obj):
-        self.prepare_neighbor_messages_ffn.set_weights(conv_obj.prepare_neighbor_messages_ffn.get_weights())
-        self.node_embedding_fn.set_weights(conv_obj.node_embedding_fn.get_weights())
 
     def prepare_neighbor_messages(self, node_repesentations, branch_weights):
         messages = self.prepare_neighbor_messages_ffn(node_repesentations)        # node_repesentations shape is [num_edges, embedding_dim].
@@ -385,9 +382,16 @@ class GraphConvLayer(layers.Layer):
         # print("aggregated_messages:", aggregated_messages.shape)
         return self.create_node_embedding(node_repesentations, aggregated_messages)        # Update the node embedding with the neighbour messages; # Returns: node_embeddings of shape [num_nodes, representation_dim].
 
+    def set_weights(self, conv_obj):
+        self.prepare_neighbor_messages_ffn.set_weights(conv_obj.prepare_neighbor_messages_ffn.get_weights())
+        self.node_embedding_fn.set_weights(conv_obj.node_embedding_fn.get_weights())
+
+    def save_weight(self, obj_name, version, episode_num):
+        self.prepare_neighbor_messages_ffn.save_weights(f"{self._save_weight_directory}/{obj_name}_conv_neighbor_messages-{version}_{episode_num}.h5")
+        self.node_embedding_fn.save_weights(f"{self._save_weight_directory}/{obj_name}_conv_node_embedding-{version}_{episode_num}.h5")
 
 class GNN(tf.keras.Model):
-    def __init__(self, is_actor, *args, **kwargs):
+    def __init__(self, is_actor, save_weight_dir, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.is_actor = is_actor
@@ -395,6 +399,7 @@ class GNN(tf.keras.Model):
         dropout_rate = 0.2
         normalize = True
         num_classes = 10
+        self._save_weight_directory = save_weight_dir
 
         branch_path = "configurations/branches.csv"
         branches = pd.read_csv(branch_path, header=None, names=["node_a", "node_b"])
@@ -402,23 +407,14 @@ class GNN(tf.keras.Model):
         # print(self.branches)
 
         self.node_feature_processing_ffn = create_ffn(hidden_units, dropout_rate, name="preprocess")
-        self.conv1 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv1",)
-        self.conv2 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv2",)
+        self.conv1 = GraphConvLayer(hidden_units, dropout_rate, normalize, save_weight_dir, name="graph_conv1",)
+        self.conv2 = GraphConvLayer(hidden_units, dropout_rate, normalize, save_weight_dir, name="graph_conv2",)
         self.node_embedding_processing_ffn = create_ffn(hidden_units, dropout_rate, name="postprocess")
         if is_actor:
             self.compute_output = layers.Dense(units=1, activation="relu", name="logits")    # logits layer for actor
         else:
             self.compute_output = layers.Dense(units=1, activation="linear", name="logits")    # output value layer for critic
             self.compute_critic_value = layers.Dense(units=1, activation="linear", name="logits")    # output value layer for critic
-
-    def set_weights(self, gnn_obj):
-        self.node_feature_processing_ffn.set_weights(gnn_obj.node_feature_processing_ffn.get_weights())
-        self.conv1.set_weights(gnn_obj.conv1)
-        self.conv2.set_weights(gnn_obj.conv2)
-        self.node_embedding_processing_ffn.set_weights(gnn_obj.node_embedding_processing_ffn.get_weights())
-        self.compute_output.set_weights(gnn_obj.compute_output.get_weights())
-        if not self.is_actor:
-            self.compute_critic_value.set_weights(gnn_obj.compute_critic_value.get_weights())
 
     def call(self, graph_info):
         node_info, branch_info = graph_info
@@ -442,8 +438,20 @@ class GNN(tf.keras.Model):
             # print("critic_output_shape:", output.shape)
         return output
 
+    def set_weights(self, gnn_obj):
+        self.node_feature_processing_ffn.set_weights(gnn_obj.node_feature_processing_ffn.get_weights())
+        self.conv1.set_weights(gnn_obj.conv1)
+        self.conv2.set_weights(gnn_obj.conv2)
+        self.node_embedding_processing_ffn.set_weights(gnn_obj.node_embedding_processing_ffn.get_weights())
+        self.compute_output.set_weights(gnn_obj.compute_output.get_weights())
+        if not self.is_actor:
+            self.compute_critic_value.set_weights(gnn_obj.compute_critic_value.get_weights())
 
-
-# node_info = [fire_distance, power_generation_output]
-# branch_info = [fire_distance]
-
+    def save_weight(self, obj_name, version, episode_num):
+        self.node_feature_processing_ffn.save_weights(f"{self._save_weight_directory}/{obj_name}_node_feature-{version}_{episode_num}.h5")
+        self.conv1.save_weight(obj_name, version, episode_num)
+        self.conv2.save_weight(obj_name, version, episode_num)
+        self.node_embedding_processing_ffn.save_weights(f"{self._save_weight_directory}/{obj_name}_node_embedding-{version}_{episode_num}.h5")
+        self.compute_output.save_weights(f"{self._save_weight_directory}/{obj_name}_compute_output-{version}_{episode_num}.h5")
+        if not self.is_actor:
+            self.compute_critic_value.save_weights(f"{self._save_weight_directory}/{obj_name}_critic_value-{version}_{episode_num}.h5")

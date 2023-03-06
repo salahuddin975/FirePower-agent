@@ -72,8 +72,9 @@ class DDPG:
         self.is_set_weight = 0
 
     def set_weights(self):
-        self._target_actor.set_weights(self.actor)
-        self._target_critic.set_weights(self._critic)
+        self._target_actor.set_weights(self.actor.get_weights())
+        self._target_critic.set_weights(self._critic.get_weights())
+        # print("set weights successfully!")
         return True
 
     def get_critic_value(self, state, action):
@@ -107,7 +108,6 @@ class DDPG:
 
     # @tf.function
     def train(self, state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch):
-        # update critic network
         self.is_set_weight += self.set_weights() if self.is_set_weight == 1 else 1
 
         with tf.GradientTape() as tape:
@@ -383,14 +383,6 @@ class GraphConvLayer(layers.Layer):
         # print("aggregated_messages:", aggregated_messages.shape)
         return self.create_node_embedding(node_repesentations, aggregated_messages)        # Update the node embedding with the neighbour messages; # Returns: node_embeddings of shape [num_nodes, representation_dim].
 
-    def set_weights(self, conv_obj):
-        self.prepare_neighbor_messages_ffn.set_weights(conv_obj.prepare_neighbor_messages_ffn.get_weights())
-        self.node_embedding_fn.set_weights(conv_obj.node_embedding_fn.get_weights())
-
-    def save_weight(self, obj_name, version, episode_num):
-        self.prepare_neighbor_messages_ffn.save_weights(f"{self._save_weight_directory}/{obj_name}_conv_neighbor_messages-{version}_{episode_num}.h5")
-        self.node_embedding_fn.save_weights(f"{self._save_weight_directory}/{obj_name}_conv_node_embedding-{version}_{episode_num}.h5")
-
 class GNN(tf.keras.Model):
     def __init__(self, is_critic, save_weight_dir, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -437,11 +429,3 @@ class GNN(tf.keras.Model):
             # print("critic_output_shape:", output.shape)
         return output
 
-    def set_weights(self, gnn_obj):
-        self.node_feature_processing_ffn.set_weights(gnn_obj.node_feature_processing_ffn.get_weights())
-        self.conv1.set_weights(gnn_obj.conv1)
-        self.conv2.set_weights(gnn_obj.conv2)
-        self.node_embedding_processing_ffn.set_weights(gnn_obj.node_embedding_processing_ffn.get_weights())
-        self.compute_output.set_weights(gnn_obj.compute_output.get_weights())
-        if self.is_critic:
-            self.compute_critic_value.set_weights(gnn_obj.compute_critic_value.get_weights())

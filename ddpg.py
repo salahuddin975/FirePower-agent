@@ -64,11 +64,11 @@ class DDPG:
         # self._target_critic = self._critic_model()
         # self._target_critic.set_weights(self._critic.get_weights())
 
-        self.actor = GNN(True, self._save_weight_directory)
-        self._target_actor = GNN(True, self._save_weight_directory)
+        self.actor = GNN(False, self._save_weight_directory)
+        self._target_actor = GNN(False, self._save_weight_directory)
 
-        self._critic = GNN(False, self._save_weight_directory)
-        self._target_critic = GNN(False, self._save_weight_directory)
+        self._critic = GNN(True, self._save_weight_directory)
+        self._target_critic = GNN(True, self._save_weight_directory)
         self.is_set_weight = 0
 
     def set_weights(self):
@@ -391,10 +391,10 @@ class GraphConvLayer(layers.Layer):
         self.node_embedding_fn.save_weights(f"{self._save_weight_directory}/{obj_name}_conv_node_embedding-{version}_{episode_num}.h5")
 
 class GNN(tf.keras.Model):
-    def __init__(self, is_actor, save_weight_dir, *args, **kwargs):
+    def __init__(self, is_critic, save_weight_dir, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.is_actor = is_actor
+        self.is_critic = is_critic
         hidden_units = [32, 32]
         dropout_rate = 0.2
         normalize = True
@@ -410,10 +410,8 @@ class GNN(tf.keras.Model):
         self.conv1 = GraphConvLayer(hidden_units, dropout_rate, normalize, save_weight_dir, name="graph_conv1",)
         self.conv2 = GraphConvLayer(hidden_units, dropout_rate, normalize, save_weight_dir, name="graph_conv2",)
         self.node_embedding_processing_ffn = create_ffn(hidden_units, dropout_rate, name="postprocess")
-        if is_actor:
-            self.compute_output = layers.Dense(units=1, activation="relu", name="logits")    # logits layer for actor
-        else:
-            self.compute_output = layers.Dense(units=1, activation="linear", name="logits")    # output value layer for critic
+        self.compute_output = layers.Dense(units=1, activation="relu", name="logits")    # logits layer for actor
+        if self.is_critic:
             self.compute_critic_value = layers.Dense(units=1, activation="linear", name="logits")    # output value layer for critic
 
     def call(self, graph_info):
@@ -432,7 +430,7 @@ class GNN(tf.keras.Model):
         output = self.compute_output(x)                       # Compute logits-actor, value-critic
         # print("Ouput_shape:", output.shape)
 
-        if not self.is_actor:
+        if self.is_critic:
             output = tf.squeeze(output, axis=-1)
             output = self.compute_critic_value(output)
             # print("critic_output_shape:", output.shape)

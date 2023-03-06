@@ -213,8 +213,10 @@ if __name__ == "__main__":
             state["step"] = step
             # state["servable_load_demand"] = target_myopic_next_state["generator_injection"]
             # connected_components.update_connected_components(state)
-            nn_noise_action, env_action, action_processing_penalty = data_processor.process_nn_action_gnn(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
+            nn_noise_action, env_action, custom_penalty = data_processor.process_nn_action_gnn(state, nn_action, explore_network=explore_network_flag, noise_range=parameters.noise_rate)
             next_state, rl_reward, done, cells_info = env.step(env_action)       # RL environment RL action
+            # print("ramp:", env_action["generator_injection"])
+            # print("generator_injection:", state["generator_injection"])
             # rl_computation_time = (datetime.now() - start_time).total_seconds()
 
             # image = visualizer.draw_map(episode, step, cells_info, next_state)
@@ -234,7 +236,7 @@ if __name__ == "__main__":
             # custom_reward = (reward, reward)
             # print("episode:", episode, ",step:",step, ",total_reward:", reward, ", action_processing_penalty:", action_processing_penalty * generator_shut_off_penalty_multiplier,
             #       ", load_loss(custom_reward):", reward1, "\n")
-            print("episode:", episode, ", step:", step, ", reward:", rl_reward[0])
+            print("episode:", episode, ", step:", step, ", reward:", rl_reward[0], ", custom_penalty:", custom_penalty)
 
             # total_load_out_by_fire = load_out_by_fire.get_total_load_out_by_fire(state["bus_status"])
             # myopic_reward = myopic_reward[0] + total_load_out_by_fire
@@ -243,6 +245,7 @@ if __name__ == "__main__":
 
             # total_myopic_reward += myopic_reward
             # total_myopic_reward_rl_transition += myopic_reward_rl_transition
+            rl_reward = (rl_reward[0] + custom_penalty, rl_reward[1] + custom_penalty)
             total_rl_reward += rl_reward[0]
             # total_custom_reward += custom_reward[0]
 

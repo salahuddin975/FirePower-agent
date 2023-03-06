@@ -381,7 +381,7 @@ class DataProcessor:
             "generator_injection": np.zeros(10),
         }
 
-    def process_nn_action_gnn(self, state, nn_action, explore_network, noise_range=0.1):
+    def process_nn_action_gnn(self, state, nn_action, explore_network, noise_range=0.25):
         self.episode = state["episode"]
         self.step = state["step"]
         bus_status = copy.deepcopy(state["bus_status"])
@@ -399,6 +399,17 @@ class DataProcessor:
         # print("current_output:", generators_current_output)
 
         net_output = numpy.array(tf.squeeze(nn_action))
+
+        if explore_network:
+            for i in range(len(net_output)):
+                net_output[i] += random.uniform(0, noise_range)
+
+        custom_penalty = 0
+        for i, gen in enumerate(selected_generators):
+            if net_output[gen] > generators_max_output[i]:
+                custom_penalty = custom_penalty + (generators_max_output[i] - net_output[gen])
+        custom_penalty = custom_penalty/10
+
         ramp_diff = net_output - generators_current_output
         ramp = ramp_diff[selected_generators]
         generators_current_output = copy.deepcopy(generators_current_output[selected_generators])
@@ -429,7 +440,7 @@ class DataProcessor:
             "generator_injection": ramp * self._power_generation_preprocess_scale,
         }
 
-        return nn_noise_action, env_action, 0
+        return nn_noise_action, env_action, custom_penalty
 
     def get_target_myopic_action(self, episode, step):
         return {

@@ -241,9 +241,9 @@ class DataProcessor:
         #       "; upper_total: ", np.sum(upper), "; total_servable_load_demand:", total_servable_load_demand)
 
         actor_output = nn_output * total_servable_load_demand * (1 - epsilon_total)
-        lower_bound_limit_penalty = 0
+        # lower_bound_limit_penalty = 0
         if (sum(actor_output) * (1 - epsilon_total)) < sum(lower):
-            lower_bound_limit_penalty = sum(actor_output) - sum(lower)
+            # lower_bound_limit_penalty = sum(actor_output) - sum(lower)
             # print("Resetting servable load demand from:", total_servable_load_demand, ", to:", sum(lower))
             total_servable_load_demand = sum(lower)
             total_load_demand_lower = np.array(total_servable_load_demand * (1 + epsilon_total))
@@ -274,7 +274,7 @@ class DataProcessor:
         ramp = feasible_output.x - generators_current_output
         # print("generators set ramp: ", ramp)
 
-        return ramp, lower_bound_limit_penalty
+        return ramp, 0 # lower_bound_limit_penalty
 
     def process_nn_action(self, state, nn_action, explore_network, noise_range=0.1):
         self.episode = state["episode"]
@@ -294,18 +294,18 @@ class DataProcessor:
         #     servable_load_demand[i] = state["servable_load_demand"][self.generators.get_generators()[i]] / self._power_generation_preprocess_scale
 
         nn_output = np.array(tf.squeeze(nn_action))
-        print ("nn_output (before exploration): ", nn_output)
+        # print ("nn_output (before exploration): ", nn_output)
         if explore_network:
             # for i in range(len(nn_output)):
             #     nn_output[i] = nn_output[i] + random.uniform(0, noise_range)
             nn_output *= np.exp(self._ou_noise())
-        print ("nn_output (after exploration): ", nn_output)
+        # print ("nn_output (after exploration): ", nn_output)
         excess_output_penalty = 1 - sum(nn_output) if sum(nn_output) > 1 else 0
 
         if sum(nn_output) > 1.0:
             nn_output = nn_output / np.sum(nn_output)
         # print("step: ", self.step, ", exploration: ", ((np.array(tf.squeeze(nn_action)) - nn_output)/nn_output) * 100)
-        print ("nn_output (after normalization): ", nn_output)
+        # print ("nn_output (after normalization): ", nn_output)
 
         nn_noise_action = {
             "generator_injection": copy.deepcopy(nn_output),
@@ -313,12 +313,12 @@ class DataProcessor:
 
         connected_components = self._connected_components.get_connected_components()
         # print("connected_components: ", connected_components)
-        flag = True if len(connected_components) > self._num_of_connected_component else False
+        # flag = True if len(connected_components) > self._num_of_connected_component else False
         self._num_of_connected_component = len(connected_components)
 
         ramp = np.zeros(nn_output.size)
-        total_generator_shut_off_penalty = 0
-        total_lower_bound_limit_penalty = 0
+        # total_generator_shut_off_penalty = 0
+        # total_lower_bound_limit_penalty = 0
         selected_generators = copy.deepcopy(self.generators.get_generators())
         for connected_component in connected_components:
             # print("connected_component: ", connected_component)
@@ -335,15 +335,15 @@ class DataProcessor:
                         generators_current_output[j] = current_output[i]
                         total_ramp += self.generators.get_max_ramps()[j]
 
-            total_generators_current_output = sum(generators_current_output)
-            generator_shut_off_penalty = total_load_demand + total_ramp - total_generators_current_output
-            generator_shut_off_penalty = generator_shut_off_penalty if (generator_shut_off_penalty < 0) and flag else 0
-            total_generator_shut_off_penalty += generator_shut_off_penalty
-            if generator_shut_off_penalty:
-                print("total_load_demand: ", total_load_demand, ", total_ramp:", total_ramp, ", total_output: ", total_generators_current_output, ", generator_shut_off_penalty: ", generator_shut_off_penalty)
+            # total_generators_current_output = sum(generators_current_output)
+            # generator_shut_off_penalty = total_load_demand + total_ramp - total_generators_current_output
+            # generator_shut_off_penalty = generator_shut_off_penalty if (generator_shut_off_penalty < 0) and flag else 0
+            # total_generator_shut_off_penalty += generator_shut_off_penalty
+            # if generator_shut_off_penalty:
+            #     print("total_load_demand: ", total_load_demand, ", total_ramp:", total_ramp, ", total_output: ", total_generators_current_output, ", generator_shut_off_penalty: ", generator_shut_off_penalty)
 
             ramp_value, lower_bound_limit_penalty = self._clip_ramp_values(servable_load_demand, generators_current_output, nn_output, selected_generators)
-            total_lower_bound_limit_penalty += lower_bound_limit_penalty
+            # total_lower_bound_limit_penalty += lower_bound_limit_penalty
             for i, val in enumerate(servable_load_demand):
                 if val == 0:
                     ramp_value[i] = 0
@@ -362,11 +362,11 @@ class DataProcessor:
             "generator_selector": selected_generators,
             "generator_injection": ramp * self._power_generation_preprocess_scale,
         }
-        total_lower_bound_limit_penalty = total_lower_bound_limit_penalty * 2.5
-        total_action_processing_penalty = total_generator_shut_off_penalty + excess_output_penalty + total_lower_bound_limit_penalty
-        print(f"total_action_processing_penalty:{total_action_processing_penalty}, shut_off_penalty:{total_generator_shut_off_penalty}, "
-              f"excess_output_penalty:{excess_output_penalty}, lower_bound_limit_penalty:{total_lower_bound_limit_penalty}")
-        return nn_noise_action, env_action, total_action_processing_penalty
+        # total_lower_bound_limit_penalty = total_lower_bound_limit_penalty * 2.5
+        # total_action_processing_penalty = total_generator_shut_off_penalty + excess_output_penalty + total_lower_bound_limit_penalty
+        # print(f"total_action_processing_penalty:{total_action_processing_penalty}, shut_off_penalty:{total_generator_shut_off_penalty}, "
+        #       f"excess_output_penalty:{excess_output_penalty}, lower_bound_limit_penalty:{total_lower_bound_limit_penalty}")
+        return nn_noise_action, env_action, 0 #total_action_processing_penalty
 
     def get_myopic_action(self, episode, step):
         return {

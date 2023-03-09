@@ -301,13 +301,17 @@ class DataProcessor:
         #     servable_load_demand[i] = state["servable_load_demand"][self.generators.get_generators()[i]] / self._power_generation_preprocess_scale
 
         nn_output = np.array(tf.squeeze(nn_action))
+        nn_output = copy.deepcopy(nn_output[self.generators.get_generators()])
         if explore_network:
             nn_output *= np.exp(self._ou_noise())
             nn_output = nn_output / np.sum(nn_output)
         # print("step: ", self.step, ", exploration: ", ((np.array(tf.squeeze(nn_action)) - nn_output)/nn_output) * 100)
 
+        nn_noise_output = np.zeros(24)
+        for i, gen in enumerate(self.generators.get_generators()):
+            nn_noise_output[gen] = nn_output[i]
         nn_noise_action = {
-            "generator_injection": copy.deepcopy(nn_output),
+            "generator_injection": nn_noise_output,
         }
 
         connected_components = self._connected_components.get_connected_components()
@@ -418,16 +422,25 @@ class DataProcessor:
 
 
     def get_tf_state(self, state):
-        tf_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
-        tf_branch_status = tf.expand_dims(tf.convert_to_tensor(state["branch_status"]), 0)
-        # tf_fire_state = tf.expand_dims(tf.convert_to_tensor(state["fire_state"]), 0)
-        tf_fire_distance = tf.expand_dims(tf.convert_to_tensor(state["fire_distance"]), 0)
-        tf_generator_injection = tf.expand_dims(tf.convert_to_tensor(state["generator_injection"]), 0)
-        tf_load_demand = tf.expand_dims(tf.convert_to_tensor(state["load_demand"]), 0)
-        tf_theta = tf.expand_dims(tf.convert_to_tensor(state["theta"]), 0)
-        tf_line_flow = tf.expand_dims(tf.convert_to_tensor(state["line_flow"]), 0)
+        # tf_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)
+        # tf_branch_status = tf.expand_dims(tf.convert_to_tensor(state["branch_status"]), 0)
+        # # tf_fire_state = tf.expand_dims(tf.convert_to_tensor(state["fire_state"]), 0)
+        # tf_fire_distance = tf.expand_dims(tf.convert_to_tensor(state["fire_distance"]), 0)
+        # tf_generator_injection = tf.expand_dims(tf.convert_to_tensor(state["generator_injection"]), 0)
+        # tf_load_demand = tf.expand_dims(tf.convert_to_tensor(state["load_demand"]), 0)
+        # tf_theta = tf.expand_dims(tf.convert_to_tensor(state["theta"]), 0)
+        # tf_line_flow = tf.expand_dims(tf.convert_to_tensor(state["line_flow"]), 0)
 
-        return [tf_bus_status, tf_branch_status, tf_fire_distance, tf_generator_injection, tf_load_demand, tf_theta, tf_line_flow]
+        node_features = []
+        for i in range(24):
+            node_features.append([state["fire_distance"][i], state["generator_injection"][i], state["load_demand"][i]])
+        branch_features = []
+        for i in range(34):
+            branch_features.append([state["fire_distance"][i+24]])
+
+        tf_node_features = tf.expand_dims(tf.convert_to_tensor(node_features, dtype=float), 0)
+        tf_branch_features = tf.expand_dims(tf.convert_to_tensor(branch_features, dtype=float), 0)
+        return tf_node_features, tf_branch_features
 
     def get_tf_critic_input(self, state, action):
         st_bus_status = tf.expand_dims(tf.convert_to_tensor(state["bus_status"]), 0)

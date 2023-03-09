@@ -1,6 +1,7 @@
 import os
 import copy
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from tensorflow.keras import layers
 from collections import namedtuple
@@ -54,13 +55,26 @@ class DDPG:
         self._generators = generators
         self._num_of_active_generators = self._action_spaces[3]
 
-        self.actor = self._actor_model()
-        self._target_actor = self._actor_model()
-        self._target_actor.set_weights(self.actor.get_weights())
+        # self.actor = self._actor_model()
+        # self._target_actor = self._actor_model()
+        # self._target_actor.set_weights(self.actor.get_weights())
+        #
+        # self._critic = self._critic_model()
+        # self._target_critic = self._critic_model()
+        # self._target_critic.set_weights(self._critic.get_weights())
 
-        self._critic = self._critic_model()
-        self._target_critic = self._critic_model()
+        self.actor = GNN(False, self._save_weight_directory)
+        self._target_actor = GNN(False, self._save_weight_directory)
+
+        self._critic = GNN(True, self._save_weight_directory)
+        self._target_critic = GNN(True, self._save_weight_directory)
+        self.is_set_weight = 0
+
+    def set_weights(self):
+        self._target_actor.set_weights(self.actor.get_weights())
         self._target_critic.set_weights(self._critic.get_weights())
+        # print("set weights successfully!")
+        return True
 
     def get_critic_value(self, state, action):
         value = self._critic([state, action])
@@ -78,29 +92,31 @@ class DDPG:
             print(error)
 
     def save_weight(self, version, episode_num):
-        self.actor.save_weights(f"{self._save_weight_directory}/agent_actor{version}_{episode_num}.h5")
-        self._critic.save_weights(f"{self._save_weight_directory}/agent_critic{version}_{episode_num}.h5")
-        self._target_actor.save_weights(f"{self._save_weight_directory}/agent_target_actor{version}_{episode_num}.h5")
-        self._target_critic.save_weights(f"{self._save_weight_directory}/agent_target_critic{version}_{episode_num}.h5")
+        print(self.actor.summary())
+        self.actor.save_weights(f"{self._save_weight_directory}/agent_actor{version}_{episode_num}", save_format='tf')
+        self._critic.save_weights(f"{self._save_weight_directory}/agent_critic{version}_{episode_num}", save_format='tf')
+        self._target_actor.save_weights(f"{self._save_weight_directory}/agent_target_actor{version}_{episode_num}", save_format="tf")
+        self._target_critic.save_weights(f"{self._save_weight_directory}/agent_target_critic{version}_{episode_num}", save_format="tf")
 
     def load_weight(self, version, episode_num):
-        self.actor.load_weights(f"{self._load_weight_directory}/agent_actor{version}_{episode_num}.h5")
-        self._target_actor.load_weights(f"{self._load_weight_directory}/agent_target_actor{version}_{episode_num}.h5")
-        self._critic.load_weights(f"{self._load_weight_directory}/agent_critic{version}_{episode_num}.h5")
-        self._target_critic.load_weights(f"{self._load_weight_directory}/agent_target_critic{version}_{episode_num}.h5")
+        self.actor.load_weights(f"{self._load_weight_directory}/agent_actor{version}_{episode_num}")
+        self._target_actor.load_weights(f"{self._load_weight_directory}/agent_target_actor{version}_{episode_num}")
+        self._critic.load_weights(f"{self._load_weight_directory}/agent_critic{version}_{episode_num}")
+        self._target_critic.load_weights(f"{self._load_weight_directory}/agent_target_critic{version}_{episode_num}")
         print("weights are loaded successfully!")
 
     # @tf.function
     def train(self, state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch):
-        # update critic network
+        self.is_set_weight += self.set_weights() if self.is_set_weight == 1 else 1
+
         with tf.GradientTape() as tape:
             target_actor_actions = self._target_actor(next_state_batch)
-            target_critic_values = self._target_critic([next_state_batch, target_actor_actions]) * (1 - episode_end_flag_batch)
+            target_critic_state = tf.concat([next_state_batch[0], target_actor_actions], axis=-1)
+            target_critic_values = self._target_critic((target_critic_state, next_state_batch[1])) #* (1 - episode_end_flag_batch)
             return_y = reward_batch + self._gamma * target_critic_values
-            # y = reward_batch[0] + self._gamma * self._target_critic([next_state_batch, target_actor_actions]) * (1 - episode_end_flag_batch)
-            # y = reward_batch[0] + reward_batch[1] +  reward_batch[2] +  reward_batch[3] +  reward_batch[4]
 
-            critic_value_with_original_actions = self._critic([state_batch, action_batch])
+            critic_state = tf.concat([state_batch[0], action_batch], axis=-1)
+            critic_value_with_original_actions = self._critic((critic_state, state_batch[1]))
             critic_loss = tf.math.reduce_mean(tf.math.square(return_y - critic_value_with_original_actions))
 
         critic_grad = tape.gradient(critic_loss, self._critic.trainable_variables)
@@ -109,7 +125,8 @@ class DDPG:
         # update actor network
         with tf.GradientTape() as tape:
             actor_actions = self.actor(state_batch)
-            critic_value_with_actor_actions = self._critic([state_batch, actor_actions])
+            critic_state = tf.concat([state_batch[0], actor_actions], axis=-1)
+            critic_value_with_actor_actions = self._critic((critic_state, state_batch[1]))
             actor_loss = -1 * tf.math.reduce_mean(critic_value_with_actor_actions)
 
         actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
@@ -284,3 +301,130 @@ class DDPG:
                                 act_gen_injection], reward)
 
         return model
+
+
+def create_ffn(hidden_units, dropout_rate, name=None):
+    fnn_layers = []
+    for units in hidden_units:
+        fnn_layers.append(layers.BatchNormalization())
+        fnn_layers.append(layers.Dropout(dropout_rate))
+        fnn_layers.append(layers.Dense(units, activation=tf.nn.gelu))
+    return tf.keras.Sequential(fnn_layers, name=name)
+
+class GraphConvLayer(layers.Layer):
+    def __init__(self, hidden_units, dropout_rate, normalize, save_weight_dir, *args, **kwargs,):
+
+        super().__init__(*args, **kwargs)
+        self.aggregation_type = "sum"
+        self.combination_type = "concat"
+        self.normalize = normalize
+        self._save_weight_directory = save_weight_dir
+
+        self.prepare_neighbor_messages_ffn = create_ffn(hidden_units, dropout_rate)
+        # if self.combination_type == "gated":
+        #     self.node_embedding_fn = layers.GRU(units=hidden_units, activation="tanh", recurrent_activation="sigmoid",
+        #                                         dropout=dropout_rate, return_state=True, recurrent_dropout=dropout_rate, )
+        # else:
+        self.node_embedding_fn = create_ffn(hidden_units, dropout_rate)
+
+    def prepare_neighbor_messages(self, neighbour_repesentations, branch_weights):
+        messages = self.prepare_neighbor_messages_ffn(neighbour_repesentations)        # node_repesentations shape is [batch_size, num_edges, embedding_dim].
+        messages = messages * branch_weights
+        return messages
+
+    def aggregate_neighbor_messages(self, node_indices, neighbour_messages, num_nodes):
+        # node_indices shape is [num_edges], neighbour_messages shape: [num_edges, representation_dim].
+        # if self.aggregation_type == "sum":
+        agg = []
+        for neigh in neighbour_messages:      # iterate over batch
+            agg.append(tf.math.unsorted_segment_sum(neigh, node_indices, num_segments=num_nodes))
+        aggregated_message = tf.stack(agg)
+        # aggregated_message = tf.stack(tf.math.unsorted_segment_sum(neigh_message, node_indices, num_segments=num_nodes) for neigh_message in tf.unstack(neighbour_messages))
+        # elif self.aggregation_type == "mean":
+        #     aggregated_message = tf.math.unsorted_segment_mean(neighbour_messages, node_indices, num_segments=num_nodes)
+        # elif self.aggregation_type == "max":
+        #     aggregated_message = tf.math.unsorted_segment_max(neighbour_messages, node_indices, num_segments=num_nodes)
+        # else:
+        #     raise ValueError(f"Invalid aggregation type: {self.aggregation_type}.")
+        return aggregated_message
+
+    def create_node_embedding(self, node_repesentations, aggregated_messages):
+        # node_repesentations shape is [num_nodes, representation_dim], aggregated_messages shape is [num_nodes, representation_dim].
+        # if self.combination_type == "gru":
+        #     h = tf.stack([node_repesentations, aggregated_messages], axis=1)
+        # elif self.combination_type == "concat":
+        h = tf.concat([node_repesentations, aggregated_messages], axis=2)
+        # elif self.combination_type == "add":
+        #     h = node_repesentations + aggregated_messages
+        # else:
+        #     raise ValueError(f"Invalid combination type: {self.combination_type}.")
+
+        node_embeddings = self.node_embedding_fn(h)
+        # if self.combination_type == "gru":
+        #     node_embeddings = tf.unstack(node_embeddings, axis=1)[-1]
+        if self.normalize:
+            node_embeddings = tf.nn.l2_normalize(node_embeddings, axis=-1)
+        return node_embeddings
+
+    def call(self, inputs):
+        node_repesentations, branches, branch_weights = inputs
+        node_indices, neighbour_indices = branches[0], branches[1]
+        num_nodes = node_repesentations.shape[1]                # node_repesentations shape is [batch_size, num_nodes, representation_dim]
+
+        # print("node_indices:", node_indices.shape)
+        # print("neighbour_indices:", neighbour_indices.shape)
+        # print("node_representation:", node_repesentations.shape)
+        neighbour_repesentations = tf.gather(node_repesentations, neighbour_indices, axis=1, batch_dims=-1)     # neighbour_repesentations shape is [batch_size, num_edges, representation_dim].
+        # print("neighbour_representations:", neighbour_repesentations.shape)
+        neighbour_messages = self.prepare_neighbor_messages(neighbour_repesentations, branch_weights)
+        # print("neighbour_messages:", neighbour_messages.shape)
+        aggregated_messages = self.aggregate_neighbor_messages(node_indices, neighbour_messages, num_nodes)
+        # print("aggregated_messages:", aggregated_messages.shape)
+        return self.create_node_embedding(node_repesentations, aggregated_messages)        # Update the node embedding with the neighbour messages; # Returns: node_embeddings of shape [num_nodes, representation_dim].
+
+class GNN(tf.keras.Model):
+    def __init__(self, is_critic, save_weight_dir, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.is_critic = is_critic
+        hidden_units = [8, 8]
+        dropout_rate = 0.2
+        normalize = True
+        num_classes = 10
+        self._save_weight_directory = save_weight_dir
+
+        branch_path = "configurations/branches.csv"
+        branches = pd.read_csv(branch_path, header=None, names=["node_a", "node_b"])
+        self.branches = branches[["node_a", "node_b"]].to_numpy().T
+        # print(self.branches)
+
+        self.node_feature_processing_ffn = create_ffn(hidden_units, dropout_rate, name="preprocess")
+        self.conv1 = GraphConvLayer(hidden_units, dropout_rate, normalize, save_weight_dir, name="graph_conv1",)
+        self.conv2 = GraphConvLayer(hidden_units, dropout_rate, normalize, save_weight_dir, name="graph_conv2",)
+        self.node_embedding_processing_ffn = create_ffn(hidden_units, dropout_rate, name="postprocess")
+        self.compute_output = layers.Dense(units=1, activation="relu", name="logits")    # logits layer for actor
+        if self.is_critic:
+            self.compute_critic_value = layers.Dense(units=1, activation="linear", name="logits")    # output value layer for critic
+
+    def call(self, graph_info):
+        node_info, branch_info = graph_info
+        # print("node_info_shape:", node_info.shape, ", branch_info_shape:", branch_info.shape)
+        x = self.node_feature_processing_ffn(node_info)      # process the node_features to produce node representations.
+        # print("x_shape:", x.shape)
+        x1 = self.conv1((x, self.branches, branch_info))
+        # print("x1_shape:", x1.shape)
+        x = x1 + x                                                    # Skip connection.
+        x2 = self.conv2((x, self.branches, branch_info))
+        # print("x2_shape:", x2.shape)
+        x = x2 + x                                                    # Skip connection.
+        x = self.node_embedding_processing_ffn(x)
+        # print("x_shape1:", x.shape)
+        output = self.compute_output(x)                       # Compute logits-actor, value-critic
+        # print("Ouput_shape:", output.shape)
+
+        if self.is_critic:
+            output = tf.squeeze(output, axis=-1)
+            # print("squeezed_output_shape:", output.shape)
+            output = self.compute_critic_value(output)
+            # print("critic_output_shape:", output.shape)
+        return output

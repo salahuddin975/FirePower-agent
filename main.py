@@ -202,13 +202,13 @@ if __name__ == "__main__":
             # image = visualizer.draw_map(episode, step, cells_info, next_state)
             # image.save(f"fire_propagation_{episode}_{step}.png")
 
-            main_loop_info = MainLoopInfo(tf.math.reduce_mean(nn_action), ddpg.get_critic_value(tf_state, nn_action),
-                                          tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
-                                          ddpg.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
-                                          tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)),
-                                          ddpg.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)))
-            reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), rl_reward[0], done)
-            tensorboard.step_info(main_loop_info, reward_info)
+            # main_loop_info = MainLoopInfo(tf.math.reduce_mean(nn_action), ddpg.get_critic_value(tf_state, nn_action),
+            #                               tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
+            #                               ddpg.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(nn_noise_action["generator_injection"]), 0)),
+            #                               tf.math.reduce_mean(tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)),
+            #                               ddpg.get_critic_value(tf_state, tf.expand_dims(tf.convert_to_tensor(env_action["generator_injection"]), 0)))
+            # reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), rl_reward[0], done)
+            # tensorboard.step_info(main_loop_info, reward_info)
 
             reward = np.sum(next_state["generator_injection"]) - np.sum(myopic_next_state["generator_injection"])
             custom_reward = (reward, reward)
@@ -218,7 +218,7 @@ if __name__ == "__main__":
             total_rl_reward += rl_reward[0]
             total_custom_reward += custom_reward[0]
 
-            if explore_network_flag == False:
+            if True or explore_network_flag == False:
                 print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward[0]}, target_myopic_reward: "
                       f"{myopic_reward_rl_transition[0]}, rl_reward: {rl_reward[0]}, custom_reward: {reward}")
             step_by_step_reward.add_info(episode, step, round(myopic_reward[0], 2), round(myopic_reward_rl_transition[0], 2), round(rl_reward[0], 2))

@@ -378,33 +378,28 @@ class DataProcessor:
         state["generator_injection"] = np.array([output / self._power_generation_preprocess_scale for output in state["generator_injection"]])
         state["load_demand"] = np.array([load_output / self._power_generation_preprocess_scale for load_output in state["load_demand"]])
 
-        # state["fire_distance"] = [1 - dist/self._considerable_fire_distance if dist < self._considerable_fire_distance else 0 for dist in state["fire_distance"]]
-
         fire_distance = []
         vulnerable_equipment = {}
         for i, dist in enumerate(state["fire_distance"]):
             if dist < self._considerable_fire_distance:
-                val = round(1 - dist/self._considerable_fire_distance, 3)
-                # if dist < 2.0:
-                # if dist == 0.0:
-                #     val = 1
+                val = round(dist/self._considerable_fire_distance, 3)
                 fire_distance.append(val)
                 vulnerable_equipment[i] = val
             else:
-                fire_distance.append(0)
+                fire_distance.append(1)
 
         state["fire_distance"] = fire_distance
 
         num_bus = len(state["bus_status"])
         for i in range(num_bus):
             if state["bus_status"][i] == 0:
-                fire_distance[i] = 1
-                vulnerable_equipment[i] = 1
+                fire_distance[i] = 0
+                vulnerable_equipment[i] = 0
 
         for i in range(len(state["branch_status"])):
             if state["branch_status"][i] == 0:
-                fire_distance[num_bus + i] = 1
-                vulnerable_equipment[num_bus + i] = 1
+                fire_distance[num_bus + i] = 0
+                vulnerable_equipment[num_bus + i] = 0
 
         # print("bus_status:", state["bus_status"])
         # print("branch_status:", state["branch_status"])

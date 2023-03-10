@@ -63,11 +63,11 @@ class DDPG:
         # self._target_critic = self._critic_model()
         # self._target_critic.set_weights(self._critic.get_weights())
 
-        self.actor = GNN(False, self._save_weight_directory)
-        self._target_actor = GNN(False, self._save_weight_directory)
+        self.actor = GNN(False)
+        self._target_actor = GNN(False)
 
-        self._critic = GNN(True, self._save_weight_directory)
-        self._target_critic = GNN(True, self._save_weight_directory)
+        self._critic = GNN(True)
+        self._target_critic = GNN(True)
         self.is_set_weight = 0
 
     def set_weights(self):
@@ -312,13 +312,12 @@ def create_ffn(hidden_units, dropout_rate, name=None):
     return tf.keras.Sequential(fnn_layers, name=name)
 
 class GraphConvLayer(layers.Layer):
-    def __init__(self, hidden_units, dropout_rate, normalize, save_weight_dir, *args, **kwargs,):
+    def __init__(self, hidden_units, dropout_rate, normalize, *args, **kwargs,):
 
         super().__init__(*args, **kwargs)
         self.aggregation_type = "sum"
         self.combination_type = "concat"
         self.normalize = normalize
-        self._save_weight_directory = save_weight_dir
 
         self.prepare_neighbor_messages_ffn = create_ffn(hidden_units, dropout_rate)
         # if self.combination_type == "gated":
@@ -383,7 +382,7 @@ class GraphConvLayer(layers.Layer):
         return self.create_node_embedding(node_repesentations, aggregated_messages)        # Update the node embedding with the neighbour messages; # Returns: node_embeddings of shape [num_nodes, representation_dim].
 
 class GNN(tf.keras.Model):
-    def __init__(self, is_critic, save_weight_dir, *args, **kwargs):
+    def __init__(self, is_critic, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.is_critic = is_critic
@@ -391,7 +390,6 @@ class GNN(tf.keras.Model):
         dropout_rate = 0.2
         normalize = True
         num_classes = 10
-        self._save_weight_directory = save_weight_dir
 
         branch_path = "configurations/branches.csv"
         branches = pd.read_csv(branch_path, header=None, names=["node_a", "node_b"])
@@ -399,8 +397,8 @@ class GNN(tf.keras.Model):
         # print(self.branches)
 
         self.node_feature_processing_ffn = create_ffn(hidden_units, dropout_rate, name="preprocess")
-        self.conv1 = GraphConvLayer(hidden_units, dropout_rate, normalize, save_weight_dir, name="graph_conv1",)
-        self.conv2 = GraphConvLayer(hidden_units, dropout_rate, normalize, save_weight_dir, name="graph_conv2",)
+        self.conv1 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv1",)
+        self.conv2 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv2",)
         self.node_embedding_processing_ffn = create_ffn(hidden_units, dropout_rate, name="postprocess")
         self.compute_output = layers.Dense(units=1, activation="relu", name="logits")    # logits layer for actor
         if self.is_critic:

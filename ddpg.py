@@ -3,6 +3,7 @@ import copy
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tensorflow.keras import activations
 from tensorflow.keras import layers
 from collections import namedtuple
 
@@ -400,7 +401,7 @@ class GNN(tf.keras.Model):
         self.conv1 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv1",)
         self.conv2 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv2",)
         self.node_embedding_processing_ffn = create_ffn(hidden_units, dropout_rate, name="postprocess")
-        self.compute_output = layers.Dense(units=1, activation="relu", name="logits")    # logits layer for actor
+        self.compute_output = layers.Dense(units=1, name="logits")    # logits layer for actor
         if self.is_critic:
             self.compute_critic_value = layers.Dense(units=1, activation="linear", name="logits")    # output value layer for critic
 
@@ -424,6 +425,7 @@ class GNN(tf.keras.Model):
         # print("Ouput_shape:", output.shape)
         # print("output weights:", self.compute_output.get_weights())
         # print("output:", output)
+        output = activations.softmax(output, axis=-2)
         if self.is_critic:
             output = tf.squeeze(output, axis=-1)
             # print("squeezed_output_shape:", output.shape)

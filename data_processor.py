@@ -300,16 +300,17 @@ class DataProcessor:
         #     generators_current_output[i] = current_output[self.generators.get_generators()[i]]
         #     servable_load_demand[i] = state["servable_load_demand"][self.generators.get_generators()[i]] / self._power_generation_preprocess_scale
         nn_output = np.array(tf.squeeze(nn_action))
-        # print("nn_output1:", nn_output)
         nn_output = copy.deepcopy(nn_output[self.generators.get_generators()])
+        print("nn_output:", nn_output)
 
         if sum(nn_output) == 0:
             nn_output += np.random.uniform(0.0, 0.1)
+            print("nn_output: 0")
         # print("nn_output1:", nn_output)
 
         if explore_network:
             nn_output *= np.exp(self._ou_noise())
-            nn_output = nn_output / np.sum(nn_output)
+        nn_output = nn_output / np.sum(nn_output)
         # print("step: ", self.step, ", exploration: ", ((np.array(tf.squeeze(nn_action)) - nn_output)/nn_output) * 100)
         # print("nn_output2:", nn_output)
 

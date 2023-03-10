@@ -386,7 +386,7 @@ class GNN(tf.keras.Model):
         super().__init__(*args, **kwargs)
 
         self.is_critic = is_critic
-        hidden_units = [8, 8]
+        hidden_units = [16, 16]
         dropout_rate = 0.2
         normalize = True
         num_classes = 10
@@ -409,6 +409,7 @@ class GNN(tf.keras.Model):
         # print("node_info_shape:", node_info.shape, ", branch_info_shape:", branch_info.shape)
         x = self.node_feature_processing_ffn(node_info)      # process the node_features to produce node representations.
         # print("x_shape:", x.shape)
+        # print("node_feature_processing_fnn_weights:", self.node_feature_processing_ffn.get_weights())
         x1 = self.conv1((x, self.branches, branch_info))
         # print("x1_shape:", x1.shape)
         x = x1 + x                                                    # Skip connection.
@@ -416,13 +417,17 @@ class GNN(tf.keras.Model):
         # print("x2_shape:", x2.shape)
         x = x2 + x                                                    # Skip connection.
         x = self.node_embedding_processing_ffn(x)
+        # print("node_embedding_processing weights:", self.node_embedding_processing_ffn.get_weights())
         # print("x_shape1:", x.shape)
+        # print("x:", x)
         output = self.compute_output(x)                       # Compute logits-actor, value-critic
         # print("Ouput_shape:", output.shape)
-
+        # print("output weights:", self.compute_output.get_weights())
+        # print("output:", output)
         if self.is_critic:
             output = tf.squeeze(output, axis=-1)
             # print("squeezed_output_shape:", output.shape)
             output = self.compute_critic_value(output)
             # print("critic_output_shape:", output.shape)
+            # print("critic output:", output)
         return output

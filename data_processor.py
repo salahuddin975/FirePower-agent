@@ -309,8 +309,6 @@ class DataProcessor:
         # print("step: ", self.step, ", exploration: ", ((np.array(tf.squeeze(nn_action)) - nn_output)/nn_output) * 100)
         # print("nn_output2:", nn_output)
 
-        # for i, gen in enumerate(self.generators.get_generators()):
-        #     nn_output_original[gen] = nn_output[i]
         nn_noise_action = {
             "generator_injection": nn_output_original,
         }

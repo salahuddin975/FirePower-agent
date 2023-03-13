@@ -213,6 +213,7 @@ class DataProcessor:
         # print("nn_output_sum: ", np.sum(nn_output))
         epsilon_nn = 0.0001
         epsilon_total = 0.0001
+        print("nn_output sum:", sum(nn_output))
         assert 1 + epsilon_nn > np.sum(nn_output) > 1-epsilon_nn, f"Not total value is 1: {1 + epsilon_nn} > {np.sum(nn_output)} > {1-epsilon_nn}"
         assert np.min(nn_output) >= 0, "value is negative"
 
@@ -314,7 +315,7 @@ class DataProcessor:
         }
 
         nn_output = copy.deepcopy(nn_output_original[self.generators.get_generators()])
-        # print("nn_output total:", sum(nn_output))
+        print("nn_output:", nn_output)
         nn_output = nn_output/np.sum(nn_output)
 
         connected_components = self._connected_components.get_connected_components()

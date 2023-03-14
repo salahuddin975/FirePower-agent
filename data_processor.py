@@ -213,7 +213,7 @@ class DataProcessor:
         # print("nn_output_sum: ", np.sum(nn_output))
         epsilon_nn = 0.0001
         epsilon_total = 0.0001
-        print("nn_output sum:", sum(nn_output))
+        # print("nn_output sum:", sum(nn_output))
         assert 1 + epsilon_nn > np.sum(nn_output) > 1-epsilon_nn, f"Not total value is 1: {1 + epsilon_nn} > {np.sum(nn_output)} > {1-epsilon_nn}"
         assert np.min(nn_output) >= 0, "value is negative"
 
@@ -284,7 +284,7 @@ class DataProcessor:
 
         return ramp
 
-    def process_nn_action(self, state, nn_action, explore_network, noise_range=0.5):
+    def process_nn_action(self, state, nn_action, explore_network, noise_range=0.1):
         self.episode = state["episode"]
         self.step = state["step"]
         bus_status = copy.deepcopy(state["bus_status"])
@@ -305,7 +305,10 @@ class DataProcessor:
         # print("nn_output_original total:", sum(nn_output_original))
 
         if explore_network:
-            nn_output_original *= np.exp(self._ou_noise())
+            # nn_output_original *= np.exp(self._ou_noise())
+            for i in range(len(nn_output_original)):
+                nn_output_original[i] += random.uniform(-noise_range,noise_range)
+            nn_output_original = np.clip(nn_output_original, 0, 1)
             nn_output_original = nn_output_original / np.sum(nn_output_original)
         # print("step: ", self.step, ", exploration: ", ((np.array(tf.squeeze(nn_action)) - nn_output)/nn_output) * 100)
         # print("nn_output2:", nn_output)
@@ -315,8 +318,8 @@ class DataProcessor:
         }
 
         nn_output = copy.deepcopy(nn_output_original[self.generators.get_generators()])
-        print("nn_output:", nn_output)
         nn_output = nn_output/np.sum(nn_output)
+        # print("nn_output:", nn_output)
 
         connected_components = self._connected_components.get_connected_components()
         # print("connected_components: ", connected_components)

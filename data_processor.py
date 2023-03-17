@@ -301,31 +301,26 @@ class DataProcessor:
         #     generators_current_output[i] = current_output[self.generators.get_generators()[i]]
         #     servable_load_demand[i] = state["servable_load_demand"][self.generators.get_generators()[i]] / self._power_generation_preprocess_scale
 
-        nn_output_original = np.array(tf.squeeze(nn_action))
+        nn_output = np.array(tf.squeeze(nn_action))
         # print("nn_output_original total:", sum(nn_output_original))
 
         if explore_network:
-            # nn_output_original *= np.exp(self._ou_noise())
-            for i in range(len(nn_output_original)):
-                nn_output_original[i] += random.uniform(-noise_range,noise_range)
-            nn_output_original = np.clip(nn_output_original, 0, 1)
-            nn_output_original = nn_output_original / np.sum(nn_output_original)
+            nn_output *= np.exp(self._ou_noise())
+            nn_output = nn_output / np.sum(nn_output)
         # print("step: ", self.step, ", exploration: ", ((np.array(tf.squeeze(nn_action)) - nn_output)/nn_output) * 100)
         # print("nn_output2:", nn_output)
 
         nn_noise_action = {
-            "generator_injection": nn_output_original,
+            "generator_injection": nn_output,
         }
 
-        nn_output = copy.deepcopy(nn_output_original[self.generators.get_generators()])
-        nn_output = nn_output/np.sum(nn_output)
-        # print("nn_output:", nn_output)
+        selected_generators = copy.deepcopy(self.generators.get_generators())
+        nn_output = copy.deepcopy(nn_output[selected_generators])
+        ramp = np.zeros(nn_output.size)
 
         connected_components = self._connected_components.get_connected_components()
         # print("connected_components: ", connected_components)
 
-        ramp = np.zeros(nn_output.size)
-        selected_generators = copy.deepcopy(self.generators.get_generators())
         for connected_component in connected_components:
             # print("connected_component: ", connected_component)
             servable_load_demand = np.zeros(self.generators.get_num_generators())

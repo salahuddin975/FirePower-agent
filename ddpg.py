@@ -31,6 +31,17 @@ class SliceLayer(layers.Layer):
             all_sliced_inputs.append(inputs[:, self.num_features * i : self.num_features * (i+1)])
         return all_sliced_inputs
 
+class PaddedOutput(layers.Layer):
+    def __init__(self):
+        super(PaddedOutput, self).__init__()
+
+    def call(self, inputs):
+        zeros = tf.zeros(shape=(inputs.shape[0], 1), dtype=tf.float32)
+        inputs = tf.concat([inputs, zeros], axis=-1)
+        inputs_padded = tf.gather(inputs, [0, 1, 10, 10, 10, 10, 2, 10, 10, 10, 10, 10, 3, 10, 4, 5, 10, 6, 10, 10, 7, 8, 9, 10], axis=-1)
+        return tf.reshape(inputs_padded, shape=(inputs.shape[0], 24, 1))
+
+
 TensorboardInfo = namedtuple("TensorboardInfo",
                              ["reward_value", "target_actor_actions", "target_critic_value_with_target_actor_actions",
                               "return_y", "original_actions", "critic_value_with_original_actions", "critic_loss",
@@ -64,11 +75,11 @@ class DDPG:
         # self._target_critic = self._critic_model()
         # self._target_critic.set_weights(self._critic.get_weights())
 
-        self.actor = GNN(False)
-        self._target_actor = GNN(False)
+        self.actor = GNN(generators, False)
+        self._target_actor = GNN(generators, False)
 
-        self._critic = GNN(True)
-        self._target_critic = GNN(True)
+        self._critic = GNN(generators, True)
+        self._target_critic = GNN(generators, True)
         self.is_set_weight = 0
 
     def set_weights(self):
@@ -383,14 +394,13 @@ class GraphConvLayer(layers.Layer):
         return self.create_node_embedding(node_repesentations, aggregated_messages)        # Update the node embedding with the neighbour messages; # Returns: node_embeddings of shape [num_nodes, representation_dim].
 
 class GNN(tf.keras.Model):
-    def __init__(self, is_critic, *args, **kwargs):
+    def __init__(self, generators, is_critic, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.is_critic = is_critic
         hidden_units = [16, 16]
         dropout_rate = 0.2
         normalize = True
-        num_classes = 10
 
         branch_path = "configurations/branches.csv"
         branches = pd.read_csv(branch_path, header=None, names=["node_a", "node_b"])
@@ -401,9 +411,12 @@ class GNN(tf.keras.Model):
         self.conv1 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv1",)
         self.conv2 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv2",)
         self.node_embedding_processing_ffn = create_ffn(hidden_units, dropout_rate, name="postprocess")
-        self.compute_output = layers.Dense(units=1, name="logits")    # logits layer for actor
+        self.compute_logits = layers.Dense(units=1, name="logits")    # logits layer for actor
         if self.is_critic:
-            self.compute_critic_value = layers.Dense(units=1, activation="linear", name="logits")    # output value layer for critic
+            self.compute_critic_value = layers.Dense(units=1, activation="linear", name="critic_output")    # output value layer for critic
+        else:
+            self.compute_actor_values = layers.Dense(units=generators.get_num_generators(), activation="softmax", name="actor_output")
+            self.padded_output = PaddedOutput()
 
     def call(self, graph_info):
         node_info, branch_info = graph_info
@@ -421,15 +434,20 @@ class GNN(tf.keras.Model):
         # print("node_embedding_processing weights:", self.node_embedding_processing_ffn.get_weights())
         # print("x_shape1:", x.shape)
         # print("x:", x)
-        output = self.compute_output(x)                       # Compute logits-actor, value-critic
+        logits = self.compute_logits(x)                       # Compute logits-actor, value-critic
         # print("Ouput_shape:", output.shape)
         # print("output weights:", self.compute_output.get_weights())
         # print("output:", output)
-        output = activations.softmax(output, axis=-2)
+        logits = tf.squeeze(logits, axis=-1)
+        # print("squeezed_output_shape:", output.shape)
         if self.is_critic:
-            output = tf.squeeze(output, axis=-1)
-            # print("squeezed_output_shape:", output.shape)
-            output = self.compute_critic_value(output)
+            output = self.compute_critic_value(logits)
             # print("critic_output_shape:", output.shape)
             # print("critic output:", output)
+        else:
+            output = self.compute_actor_values(logits)
+            # print("output:", output)
+            output = self.padded_output(output)
+            # print("output1:", output)
+
         return output

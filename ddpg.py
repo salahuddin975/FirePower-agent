@@ -401,6 +401,7 @@ class GNN(tf.keras.Model):
         hidden_units = [16, 16]
         dropout_rate = 0.2
         normalize = True
+        self.num_conv_layer = 2
 
         branch_path = "configurations/branches.csv"
         branches = pd.read_csv(branch_path, header=None, names=["node_a", "node_b"])
@@ -408,8 +409,16 @@ class GNN(tf.keras.Model):
         # print(self.branches)
 
         self.node_feature_processing_ffn = create_ffn(hidden_units, dropout_rate, name="preprocess")
-        self.conv1 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv1",)
-        self.conv2 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv2",)
+
+        if self.num_conv_layer >= 1:
+            self.conv1 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv1",)
+        if self.num_conv_layer >= 2:
+            self.conv2 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv2",)
+        if self.num_conv_layer >= 3:
+            self.conv3 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv3",)
+        if self.num_conv_layer >= 4:
+            self.conv4 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv4",)
+
         self.node_embedding_processing_ffn = create_ffn(hidden_units, dropout_rate, name="postprocess")
         self.compute_logits = layers.Dense(units=1, name="logits")    # logits layer for actor
         if self.is_critic:
@@ -424,20 +433,27 @@ class GNN(tf.keras.Model):
         x = self.node_feature_processing_ffn(node_info)      # process the node_features to produce node representations.
         # print("x_shape:", x.shape)
         # print("node_feature_processing_fnn_weights:", self.node_feature_processing_ffn.get_weights())
-        x1 = self.conv1((x, self.branches, branch_info))
-        # print("x1_shape:", x1.shape)
-        x = x1 + x                                                    # Skip connection.
-        x2 = self.conv2((x, self.branches, branch_info))
-        # print("x2_shape:", x2.shape)
-        x = x2 + x                                                    # Skip connection.
+
+        if self.num_conv_layer >= 1:
+            x1 = self.conv1((x, self.branches, branch_info))
+            # print("x1_shape:", x1.shape)
+            x = x1 + x                                                    # Skip connection.
+        if self.num_conv_layer >= 2:
+            x2 = self.conv2((x, self.branches, branch_info))
+            x = x2 + x                                                    # Skip connection.
+        if self.num_conv_layer >= 3:
+            x3 = self.conv3((x, self.branches, branch_info))
+            x = x3 + x                                                    # Skip connection.
+        if self.num_conv_layer >= 4:
+            x4 = self.conv4((x, self.branches, branch_info))
+            x = x4 + x                                                    # Skip connection.
+
         x = self.node_embedding_processing_ffn(x)
         # print("node_embedding_processing weights:", self.node_embedding_processing_ffn.get_weights())
         # print("x_shape1:", x.shape)
         # print("x:", x)
         logits = self.compute_logits(x)                       # Compute logits-actor, value-critic
         # print("Ouput_shape:", output.shape)
-        # print("output weights:", self.compute_output.get_weights())
-        # print("output:", output)
         logits = tf.squeeze(logits, axis=-1)
         # print("squeezed_output_shape:", output.shape)
         if self.is_critic:

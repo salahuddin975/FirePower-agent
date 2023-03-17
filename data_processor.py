@@ -317,6 +317,7 @@ class DataProcessor:
         selected_generators = copy.deepcopy(self.generators.get_generators())
         nn_output = copy.deepcopy(nn_output[selected_generators])
         ramp = np.zeros(nn_output.size)
+        # print("nn_output2:", nn_output)
 
         connected_components = self._connected_components.get_connected_components()
         # print("connected_components: ", connected_components)

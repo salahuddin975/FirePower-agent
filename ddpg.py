@@ -401,7 +401,7 @@ class GNN(tf.keras.Model):
         hidden_units = [16, 16]
         dropout_rate = 0.2
         normalize = True
-        self.num_conv_layer = 2
+        self.num_conv_layer = 4
 
         branch_path = "configurations/branches.csv"
         branches = pd.read_csv(branch_path, header=None, names=["node_a", "node_b"])
@@ -418,6 +418,10 @@ class GNN(tf.keras.Model):
             self.conv3 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv3",)
         if self.num_conv_layer >= 4:
             self.conv4 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv4",)
+        if self.num_conv_layer >= 5:
+            self.conv5 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv5",)
+        if self.num_conv_layer >= 6:
+            self.conv6 = GraphConvLayer(hidden_units, dropout_rate, normalize, name="graph_conv6",)
 
         self.node_embedding_processing_ffn = create_ffn(hidden_units, dropout_rate, name="postprocess")
         self.compute_logits = layers.Dense(units=1, name="logits")    # logits layer for actor
@@ -447,6 +451,12 @@ class GNN(tf.keras.Model):
         if self.num_conv_layer >= 4:
             x4 = self.conv4((x, self.branches, branch_info))
             x = x4 + x                                                    # Skip connection.
+        if self.num_conv_layer >= 5:
+            x5 = self.conv5((x, self.branches, branch_info))
+            x = x5 + x                                                    # Skip connection.
+        if self.num_conv_layer >= 6:
+            x6 = self.conv6((x, self.branches, branch_info))
+            x = x6 + x                                                    # Skip connection.
 
         x = self.node_embedding_processing_ffn(x)
         # print("node_embedding_processing weights:", self.node_embedding_processing_ffn.get_weights())

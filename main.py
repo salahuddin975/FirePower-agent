@@ -31,7 +31,7 @@ def set_seed(seed_value):
 def set_gpu_memory_limit():
     try:
         physical_devices = tf.config.list_physical_devices('GPU')
-        tf.config.set_logical_device_configuration(physical_devices[0],[tf.config.LogicalDeviceConfiguration(memory_limit=1024)])
+        tf.config.set_logical_device_configuration(physical_devices[0],[tf.config.LogicalDeviceConfiguration(memory_limit=2048)])
     except:
         print("Couldn't set GPU memory limit!")
 

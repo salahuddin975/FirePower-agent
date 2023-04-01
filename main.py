@@ -31,7 +31,7 @@ def set_seed(seed_value):
 def set_gpu_memory_limit():
     try:
         physical_devices = tf.config.list_physical_devices('GPU')
-        tf.config.set_logical_device_configuration(physical_devices[0],[tf.config.LogicalDeviceConfiguration(memory_limit=2048)])
+        tf.config.set_logical_device_configuration(physical_devices[0],[tf.config.LogicalDeviceConfiguration(memory_limit=1048*4)])
     except:
         print("Couldn't set GPU memory limit!")
 
@@ -257,7 +257,7 @@ if __name__ == "__main__":
                 max_reached_step = step
                 break
 
-            if train_network and episode >= 3:
+            if train_network and episode >= 1:
                 state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch = buffer.get_batch()
                 tensorboard_info = ddpg.train(state_batch, action_batch, reward_batch, next_state_batch, episode_end_flag_batch)
                 tensorboard.train_info(tensorboard_info)

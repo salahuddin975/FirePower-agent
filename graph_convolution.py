@@ -92,7 +92,7 @@ class GraphConvLayer(layers.Layer):
         # print("aggregated_messages:", aggregated_messages.shape)
         return self.create_node_embedding(node_repesentations, aggregated_messages)        # Update the node embedding with the neighbour messages; # Returns: node_embeddings of shape [num_nodes, representation_dim].
 
-class GNN(tf.keras.Model):
+class GNN_conv(tf.keras.Model):
     def __init__(self, generators, is_critic, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

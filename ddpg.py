@@ -7,8 +7,8 @@ from tensorflow.keras import activations
 from tensorflow.keras import layers
 from collections import namedtuple
 from tensorflow import keras
-from graph_attention_network import GraphAttentionNetwork
-from graph_convolution import GNN
+from graph_convolution import GNN_conv
+from graph_attention_network import GNN_gat
 
 class MixFeaturesLayer(layers.Layer):
     def __init__(self, num_features, feature_len):
@@ -68,18 +68,17 @@ class DDPG:
         # self._target_critic = self._critic_model()
         # self._target_critic.set_weights(self._critic.get_weights())
 
-        self.actor = GNN(generators, False)
-        self._target_actor = GNN(generators, False)
+        self.actor = GNN_conv(generators, False)
+        self._target_actor = GNN_conv(generators, False)
 
-        self._critic = GNN(generators, True)
-        self._target_critic = GNN(generators, True)
+        self._critic = GNN_conv(generators, True)
+        self._target_critic = GNN_conv(generators, True)
 
-        # self.actor = GraphAttentionNetwork(generators, False)
-        # self._target_actor = GraphAttentionNetwork(generators, True)
+        # self.actor = GNN_gat(generators, False)
+        # self._target_actor = GNN_gat(generators, True)
         #
-        # self._critic = GraphAttentionNetwork(generators, True)
-        # self._target_critic = GraphAttentionNetwork(generators, True)
-
+        # self._critic = GNN_gat(generators, True)
+        # self._target_critic = GNN_gat(generators, True)
 
         self.is_set_weight = 0
 

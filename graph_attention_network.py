@@ -61,7 +61,7 @@ class MultiHeadGraphAttention(layers.Layer):
         return tf.nn.relu(outputs)        # Activate and return node states
 
 
-class GraphAttentionNetwork(keras.Model):
+class GNN_gat(keras.Model):
     def __init__(self, generators, is_critic, **kwargs,):
         super().__init__(**kwargs)
         hidden_units = 100

@@ -68,17 +68,17 @@ class DDPG:
         # self._target_critic = self._critic_model()
         # self._target_critic.set_weights(self._critic.get_weights())
 
-        self.actor = GNN_conv(generators, False)
-        self._target_actor = GNN_conv(generators, False)
-
-        self._critic = GNN_conv(generators, True)
-        self._target_critic = GNN_conv(generators, True)
-
-        # self.actor = GNN_gat(generators, False)
-        # self._target_actor = GNN_gat(generators, True)
+        # self.actor = GNN_conv(generators, False)
+        # self._target_actor = GNN_conv(generators, False)
         #
-        # self._critic = GNN_gat(generators, True)
-        # self._target_critic = GNN_gat(generators, True)
+        # self._critic = GNN_conv(generators, True)
+        # self._target_critic = GNN_conv(generators, True)
+
+        self.actor = GNN_gat(generators, False)
+        self._target_actor = GNN_gat(generators, True)
+
+        self._critic = GNN_gat(generators, True)
+        self._target_critic = GNN_gat(generators, True)
 
         self.is_set_weight = 0
 

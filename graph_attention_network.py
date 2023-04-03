@@ -37,9 +37,9 @@ class GraphAttention(layers.Layer):
         print("ga:node_states_transformed_shape:", node_states_transformed.shape)
 
         # (1) Compute pair-wise attention scores
-        node_states_expanded = tf.gather(node_states_transformed, edges)  # node_states_expanded: (5429, 2, 100)
+        node_states_expanded = tf.gather(node_states_transformed, edges, axis=1)  # node_states_expanded: (5429, 2, 100)   # add axis
         print("ga:node_states_expanded_shape1:", node_states_expanded.shape)
-        node_states_expanded = tf.reshape(node_states_expanded, (tf.shape(edges)[0], -1))  # node_states_expanded: (5429, 200)
+        node_states_expanded = tf.reshape(node_states_expanded, (node_states_expanded.shape[0], node_states_expanded.shape[1], -1))  # node_states_expanded: (5429, 200)  # add change dimension
         print("ga:node_states_expanded_shape12:", node_states_expanded.shape)
         attention_scores = tf.nn.leaky_relu(tf.matmul(node_states_expanded, self.kernel_attention))   # attention_scores: (5429, 1); kernel_attention: (200, 1)
         print("ga:attention_scores_shape1:", attention_scores.shape)
@@ -49,19 +49,32 @@ class GraphAttention(layers.Layer):
         # (2) Normalize attention scores
         attention_scores = tf.math.exp(tf.clip_by_value(attention_scores, -2, 2))  # attention_scores: (5429,)
         print("ga:attention_scores_shape3:", attention_scores.shape)
-        attention_scores_sum = tf.math.unsorted_segment_sum(data=attention_scores, segment_ids=edges[:, 0],
-            num_segments=tf.reduce_max(edges[:, 0]) + 1,)   # edges[:,0].shape: (5429,)
+        # attention_scores_sum = tf.math.unsorted_segment_sum(data=attention_scores, segment_ids=edges[:, 0],
+        #     num_segments=tf.reduce_max(edges[:, 0]) + 1,)   # edges[:,0].shape: (5429,)
+        agg = []
+        for scores in attention_scores:      # add loop
+            agg.append(tf.math.unsorted_segment_sum(scores,  segment_ids=edges[:, 0], num_segments=tf.reduce_max(edges[:, 0]) + 1,) )
+        attention_scores_sum = tf.stack(agg)
         print("ga:attention_scores_sum_shape1:", attention_scores_sum.shape)
-        attention_scores_sum = tf.repeat(attention_scores_sum, tf.math.bincount(tf.cast(edges[:, 0], "int32")))
+        attention_scores_sum = tf.repeat(attention_scores_sum, tf.math.bincount(tf.cast(edges[:, 0], "int32")), axis=-1)     # add axis
         print("ga:attention_scores_sum_shape2:", attention_scores_sum.shape)
         attention_scores_norm = attention_scores / attention_scores_sum    # attention_scores_norm: (5429,)
         print("ga:attention_scores_norm_shape:", attention_scores_norm.shape)
 
         # (3) Gather node states of neighbors, apply attention scores and aggregate
-        node_states_neighbors = tf.gather(node_states_transformed, edges[:, 1])   # node_states_neighbors: (5429, 100)
+        node_states_neighbors = tf.gather(node_states_transformed, edges[:, 1], axis=1)   # node_states_neighbors: (5429, 100)    # add axis
         print("ga:node_states_neighbors_shape:", node_states_neighbors.shape)
-        out = tf.math.unsorted_segment_sum(data=node_states_neighbors * attention_scores_norm[:, tf.newaxis],
-            segment_ids=edges[:, 0], num_segments=tf.shape(node_states)[0],)     # out: (2708, 100)
+        # out = tf.math.unsorted_segment_sum(data=node_states_neighbors * attention_scores_norm[:, tf.newaxis],
+        #     segment_ids=edges[:, 0], num_segments=tf.shape(node_states)[0],)     # out: (2708, 100)
+        agg = []
+        for attn_scores in attention_scores:        # add loop
+            agg1 = []
+            for node_stats in node_states_neighbors:      # iterate over batch
+                agg1.append(tf.math.unsorted_segment_sum(data=node_stats * attn_scores[:, tf.newaxis],
+                segment_ids=edges[:, 0], num_segments=tf.shape(node_states)[0],))
+            agg.append(agg1)
+        out = tf.stack(agg)
+        out = tf.reshape(out, shape=(out.shape[0], -1))
         print("ga:out_shape:", out.shape)
         return out
 
@@ -90,7 +103,7 @@ class MultiHeadGraphAttention(layers.Layer):
 class GNN_gat(keras.Model):
     def __init__(self, generators, is_critic, **kwargs,):
         super().__init__(**kwargs)
-        hidden_units = 100
+        hidden_units = 10
         num_heads = 8
         num_layers = 3
         # output_dim = generators.get_num_generators() # len(class_values)

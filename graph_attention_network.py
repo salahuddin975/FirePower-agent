@@ -30,6 +30,7 @@ class GraphAttention(layers.Layer):
         self.built = True
 
     def call(self, inputs):
+        print("------------- calling GraphAttention -----------")
         node_states, edges = inputs     # node_states: (2708, 800); edges: (5429, 2)
         print("ga:node_states_shape:", node_states.shape, ", edges_shape:", edges.shape)
         # Linearly transform node states
@@ -87,6 +88,7 @@ class MultiHeadGraphAttention(layers.Layer):
         self.attention_layers = [GraphAttention(units) for _ in range(num_heads)]
 
     def call(self, inputs):
+        print("=============== Calling MultiHeadGraphAttention ============")
         atom_features, pair_indices = inputs
         print("mh:atom_features_shape:", atom_features.shape, ", pair_indices_shape:", pair_indices.shape)
         outputs = [attention_layer([atom_features, pair_indices]) for attention_layer in self.attention_layers]          # Obtain outputs from each attention head
@@ -104,8 +106,8 @@ class GNN_gat(keras.Model):
     def __init__(self, generators, is_critic, **kwargs,):
         super().__init__(**kwargs)
         hidden_units = 10
-        num_heads = 8
-        num_layers = 3
+        num_heads = 3
+        num_layers = 2
         # output_dim = generators.get_num_generators() # len(class_values)
         self.is_critic = is_critic
 
@@ -132,9 +134,8 @@ class GNN_gat(keras.Model):
             self.compute_actor_values = layers.Dense(units=generators.get_num_generators(), activation="softmax", name="actor_output")
             self.padded_output = PaddedOutput()
 
-
-
     def call(self, inputs):
+        print("~~~~~~~~~~~~~~~~~~~ calling GNN_gat ~~~~~~~~~~~~~~~~~")
         node_states, edges = inputs[0], self.branches
         # node_states = tf.reshape(node_states, shape=(node_states.shape[1], node_states.shape[2]))
         print("gat:node_state_shape:", node_states.shape, ", edges_shape:", edges.shape)

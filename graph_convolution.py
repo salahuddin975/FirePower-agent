@@ -162,18 +162,18 @@ class GNN_conv(tf.keras.Model):
         # print("x_shape1:", x.shape)
         # print("x:", x)
         logits = self.compute_logits(x)                       # Compute logits-actor, value-critic
-        # print("Ouput_shape:", output.shape)
+        # print("Ouput_shape:", logits.shape)
         logits = tf.squeeze(logits, axis=-1)
-        # print("squeezed_output_shape:", output.shape)
+        # print("squeezed_output_shape:", logits.shape)
         if self.is_critic:
             output = self.compute_critic_value(logits)
             # print("critic_output_shape:", output.shape)
             # print("critic output:", output)
         else:
             output = self.compute_actor_values(logits)
-            # print("output:", output)
+            # print("output:", output.shape)
             output = self.padded_output(output)
-            # print("output1:", output)
+            # print("output1:", output.shape)
 
         return output
 

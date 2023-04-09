@@ -41,7 +41,7 @@ TensorboardInfo = namedtuple("TensorboardInfo",
                               "actor_actions", "critic_value_with_actor_actions", "actor_loss"])
 
 class DDPG:
-    def __init__(self, base_path, state_spaces, action_spaces, generators):
+    def __init__(self, base_path, state_spaces, action_spaces, generators, gnn_layer_type):
         self._gamma = 0.9      # discount factor
         self._tau = 0.005       # used to update target network
         actor_lr = 0.001
@@ -68,18 +68,16 @@ class DDPG:
         # self._target_critic = self._critic_model()
         # self._target_critic.set_weights(self._critic.get_weights())
 
-        # self.actor = GNN_conv(generators, False)
-        # self._target_actor = GNN_conv(generators, False)
-        #
-        # self._critic = GNN_conv(generators, True)
-        # self._target_critic = GNN_conv(generators, True)
-
-        self.actor = GNN_gat(generators, False)
-        self._target_actor = GNN_gat(generators, False)
-
-        self._critic = GNN_gat(generators, True)
-        self._target_critic = GNN_gat(generators, True)
-
+        if gnn_layer_type == 1:
+            self.actor = GNN_conv(generators, False)
+            self._target_actor = GNN_conv(generators, False)
+            self._critic = GNN_conv(generators, True)
+            self._target_critic = GNN_conv(generators, True)
+        elif gnn_layer_type == 2:
+            self.actor = GNN_gat(generators, False)
+            self._target_actor = GNN_gat(generators, False)
+            self._critic = GNN_gat(generators, True)
+            self._target_critic = GNN_gat(generators, True)
         self.is_set_weight = 0
 
     def set_weights(self):

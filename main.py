@@ -111,6 +111,7 @@ if __name__ == "__main__":
     print(args)
 
     train_network = True      # change during testing
+    gnn_layer_type = 1      # 1: convolution; 2: GAT
 
     set_seed(seed_value if train_network else 50)
     set_gpu_memory_limit()
@@ -140,7 +141,7 @@ if __name__ == "__main__":
     parameters.save_parameters()
     parameters.print_parameters()
 
-    ddpg = DDPG(base_path, state_spaces, action_spaces, generators)
+    ddpg = DDPG(base_path, state_spaces, action_spaces, generators, gnn_layer_type)
     if load_model:
         ddpg.load_weight(version=load_model_version, episode_num=load_episode_num)
 

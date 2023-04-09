@@ -18,7 +18,7 @@ def create_ffn(hidden_units, dropout_rate, name=None):
     fnn_layers = []
     for units in hidden_units:
         fnn_layers.append(layers.BatchNormalization())
-        fnn_layers.append(layers.Dropout(dropout_rate))
+        # fnn_layers.append(layers.Dropout(dropout_rate))
         fnn_layers.append(layers.Dense(units, activation=tf.nn.gelu))
     return tf.keras.Sequential(fnn_layers, name=name)
 

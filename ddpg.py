@@ -51,8 +51,8 @@ class DDPG:
         # self._load_weight_directory = os.path.join("../../FirePower-agent-private", base_path, "trained_model")
         self._create_dir()
 
-        self._actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
-        self._critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
+        self._actor_optimizer = tf.keras.optimizers.Adam(learning_rate=actor_lr)
+        self._critic_optimizer = tf.keras.optimizers.Adam(learning_rate=critic_lr)
 
         self._state_spaces = copy.deepcopy(state_spaces)
         self._action_spaces = copy.deepcopy(action_spaces)
@@ -125,12 +125,21 @@ class DDPG:
             target_critic_values = self._target_critic((target_critic_state, next_state_batch[1])) #* (1 - episode_end_flag_batch)
             return_y = reward_batch + self._gamma * target_critic_values
 
+            # print("target_critic_values:", target_critic_values)
+            # print("return_y:", return_y)
+
             critic_state = tf.concat([state_batch[0], action_batch], axis=-1)
             critic_value_with_original_actions = self._critic((critic_state, state_batch[1]))
             critic_loss = tf.math.reduce_mean(tf.math.square(return_y - critic_value_with_original_actions))
 
+            # print("critic_value_with_original_actions:", critic_value_with_original_actions)
+            # print("critic loss:", critic_loss)
+
+        # print("before: self._critic.trainable_variables:", self._critic.trainable_variables)
         critic_grad = tape.gradient(critic_loss, self._critic.trainable_variables)
+        # print("critic_grad:", critic_grad)
         self._critic_optimizer.apply_gradients(zip(critic_grad, self._critic.trainable_variables))
+        # print("after: self._critic.trainable_variables:", self._critic.trainable_variables)
 
         # update actor network
         with tf.GradientTape() as tape:
@@ -138,13 +147,21 @@ class DDPG:
             critic_state = tf.concat([state_batch[0], actor_actions], axis=-1)
             critic_value_with_actor_actions = self._critic((critic_state, state_batch[1]))
             actor_loss = -1 * tf.math.reduce_mean(critic_value_with_actor_actions)
+            # print("actor_loss:", actor_loss)
 
+        # print("before_optimizer: self.actor.trainable_variables:", self.actor.trainable_variables)
         actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
+        # print("actor_grad: ", actor_grad)
         self._actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
+        # print("after_optimizer: self.actor.trainable_variables:", self.actor.trainable_variables)
 
         # self._update_target()
+        # print("before_target_actor:", self._target_actor.variables)
+        # print("before_target_critic:", self._target_critic.variables)
         self.update_target(self._target_actor.variables, self.actor.variables)
         self.update_target(self._target_critic.variables, self._critic.variables)
+        # print("after_target_actor:", self._target_actor.variables)
+        # print("after_target_critic:", self._target_critic.variables)
 
         return TensorboardInfo(tf.math.reduce_mean(reward_batch), tf.math.reduce_mean(target_actor_actions),
                 tf.math.reduce_mean(target_critic_values), tf.math.reduce_mean(return_y),

@@ -113,7 +113,7 @@ class GNN_conv(tf.keras.Model):
         hidden_units = [8, 8]
         dropout_rate = 0.2
         normalize = True
-        self.num_conv_layer = 4
+        self.num_conv_layer = 3
 
         branch_path = "configurations/branches.csv"
         branches = pd.read_csv(branch_path, header=None, names=["node_a", "node_b"])

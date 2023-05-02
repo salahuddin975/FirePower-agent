@@ -33,6 +33,7 @@ class ReplayBuffer:
         self.st_bus = np.zeros((self._capacity, state_spaces[0]))
         self.st_branch = np.zeros((self._capacity, state_spaces[1]))
         self.st_fire_distance = np.zeros((self._capacity, state_spaces[2]))
+        self.st_fire_progress_rate = np.zeros((self._capacity, state_spaces[2]))
         self.st_gen_output = np.zeros((self._capacity, state_spaces[3]))
         self.st_load_demand = np.zeros((self._capacity, state_spaces[4]))
         self.st_theta = np.zeros((self._capacity, state_spaces[5]))
@@ -48,6 +49,7 @@ class ReplayBuffer:
         self.next_st_bus = np.zeros((self._capacity, state_spaces[0]))
         self.next_st_branch = np.zeros((self._capacity, state_spaces[1]))
         self.next_st_fire_distance = np.zeros((self._capacity, state_spaces[2]))
+        self.next_st_fire_progress_rate = np.zeros((self._capacity, state_spaces[2]))
         self.next_st_gen_output = np.zeros((self._capacity, state_spaces[3]))
         self.next_st_load_demand = np.zeros((self._capacity, state_spaces[4]))
         self.next_st_theta = np.zeros((self._capacity, state_spaces[5]))
@@ -59,6 +61,7 @@ class ReplayBuffer:
         np.save(f'{self._save_replay_buffer_dir}/st_bus_v{version}.npy', self.st_bus)
         np.save(f'{self._save_replay_buffer_dir}/st_branch_v{version}.npy', self.st_branch)
         np.save(f'{self._save_replay_buffer_dir}/st_fire_distance_v{version}.npy', self.st_fire_distance)
+        np.save(f'{self._save_replay_buffer_dir}/st_fire_progress_rate_v{version}.npy', self.st_fire_progress_rate)
         np.save(f'{self._save_replay_buffer_dir}/st_gen_output_v{version}.npy', self.st_gen_output)
         np.save(f'{self._save_replay_buffer_dir}/st_load_demand_v{version}.npy', self.st_load_demand)
         np.save(f'{self._save_replay_buffer_dir}/st_theta_v{version}.npy', self.st_theta)
@@ -74,6 +77,7 @@ class ReplayBuffer:
         np.save(f'{self._save_replay_buffer_dir}/next_st_bus_v{version}.npy', self.next_st_bus)
         np.save(f'{self._save_replay_buffer_dir}/next_st_branch_v{version}.npy', self.next_st_branch)
         np.save(f'{self._save_replay_buffer_dir}/next_st_fire_distance_v{version}.npy', self.next_st_fire_distance)
+        np.save(f'{self._save_replay_buffer_dir}/next_st_fire_progress_rate_v{version}.npy', self.next_st_fire_progress_rate)
         np.save(f'{self._save_replay_buffer_dir}/next_st_gen_output_v{version}.npy', self.next_st_gen_output)
         np.save(f'{self._save_replay_buffer_dir}/next_st_load_demand_v{version}.npy', self.next_st_load_demand)
         np.save(f'{self._save_replay_buffer_dir}/next_st_theta_v{version}.npy', self.next_st_theta)
@@ -87,6 +91,7 @@ class ReplayBuffer:
         self.st_bus = np.load(f'{self._load_replay_buffer_dir}/st_bus_v{version}.npy')
         self.st_branch = np.load(f'{self._load_replay_buffer_dir}/st_branch_v{version}.npy')
         self.st_fire_distance = np.load(f'{self._load_replay_buffer_dir}/st_fire_distance_v{version}.npy')
+        self.st_fire_progress_rate = np.load(f'{self._load_replay_buffer_dir}/st_fire_progress_rate_v{version}.npy')
         self.st_gen_output = np.load(f'{self._load_replay_buffer_dir}/st_gen_output_v{version}.npy')
         self.st_load_demand = np.load(f'{self._load_replay_buffer_dir}/st_load_demand_v{version}.npy')
         self.st_theta = np.load(f'{self._load_replay_buffer_dir}/st_theta_v{version}.npy')
@@ -102,6 +107,7 @@ class ReplayBuffer:
         self.next_st_bus = np.load(f'{self._load_replay_buffer_dir}/next_st_bus_v{version}.npy')
         self.next_st_branch = np.load(f'{self._load_replay_buffer_dir}/next_st_branch_v{version}.npy')
         self.next_st_fire_distance = np.load(f'{self._load_replay_buffer_dir}/next_st_fire_distance_v{version}.npy')
+        self.next_st_fire_progress_rate = np.load(f'{self._load_replay_buffer_dir}/next_st_fire_progress_rate_v{version}.npy')
         self.next_st_gen_output = np.load(f'{self._load_replay_buffer_dir}/next_st_gen_output_v{version}.npy')
         self.next_st_load_demand = np.load(f'{self._load_replay_buffer_dir}/next_st_load_demand_v{version}.npy')
         self.next_st_theta = np.load(f'{self._load_replay_buffer_dir}/next_st_theta_v{version}.npy')
@@ -122,6 +128,7 @@ class ReplayBuffer:
         self.st_bus[index] = np.copy(record[0]["bus_status"])
         self.st_branch[index] = np.copy(record[0]["branch_status"])
         self.st_fire_distance[index] = np.copy(record[0]["fire_distance"])
+        self.st_fire_progress_rate[index] = np.copy(record[0]["fire_progress_rate"])
         self.st_gen_output[index] = np.copy(record[0]["generator_injection"])
         self.st_load_demand[index] = np.copy(record[0]["load_demand"])
         self.st_theta[index] = np.copy(record[0]["theta"])
@@ -139,6 +146,7 @@ class ReplayBuffer:
         self.next_st_bus[index] = np.copy(record[3]["bus_status"])
         self.next_st_branch[index] = np.copy(record[3]["branch_status"])
         self.next_st_fire_distance[index] = np.copy(record[3]["fire_distance"])
+        self.next_st_fire_progress_rate[index] = np.copy(record[3]["fire_progress_rate"])
         self.next_st_gen_output[index] = np.copy(record[3]["generator_injection"])
         self.next_st_load_demand[index] = np.copy(record[3]["load_demand"])
         self.next_st_theta[index] = np.copy(record[3]["theta"])
@@ -185,9 +193,10 @@ class ReplayBuffer:
             node_feature = []
             branch_feature = []
             for i in range(24):
-                node_feature.append([self.st_fire_distance[index][i], self.st_gen_output[index][i], self.st_load_demand[index][i]])
+                node_feature.append([self.st_fire_distance[index][i], self.st_fire_progress_rate[index][i], self.st_gen_output[index][i], self.st_load_demand[index][i]])
             for i in range(34):
                 branch_feature.append([self.st_fire_distance[index][i+24]])
+                # branch_feature.append([self.st_fire_distance[index][i + 24], self.st_fire_progress_rate[index][i + 24]])
             node_features.append(node_feature)
             branch_features.append(branch_feature)
         tf_node_features = tf.convert_to_tensor(node_features, dtype=float)
@@ -203,9 +212,10 @@ class ReplayBuffer:
             next_node_feature = []
             next_branch_feature = []
             for i in range(24):
-                next_node_feature.append([self.next_st_fire_distance[index][i], self.next_st_gen_output[index][i], self.next_st_load_demand[index][i]])
+                next_node_feature.append([self.next_st_fire_distance[index][i], self.next_st_fire_progress_rate[index][i], self.next_st_gen_output[index][i], self.next_st_load_demand[index][i]])
             for i in range(34):
                 next_branch_feature.append([self.next_st_fire_distance[index][i+24]])
+                # next_branch_feature.append([self.next_st_fire_distance[index][i+24], self.next_st_fire_progress_rate[index][i+24]])
             next_node_features.append(next_node_feature)
             next_branch_features.append(next_branch_feature)
         tf_next_node_features = tf.convert_to_tensor(next_node_features, dtype=float)

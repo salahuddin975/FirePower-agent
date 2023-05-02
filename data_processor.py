@@ -391,7 +391,7 @@ class DataProcessor:
             else:
                 fire_distance.append(1)
 
-        state["fire_distance"] = fire_distance
+        state["fire_distance"] = np.array(fire_distance)
 
         num_bus = len(state["bus_status"])
         for i in range(num_bus):
@@ -431,7 +431,7 @@ class DataProcessor:
 
         node_features = []
         for i in range(24):
-            node_features.append([state["fire_distance"][i], state["generator_injection"][i], state["load_demand"][i]])
+            node_features.append([state["fire_distance"][i], state["fire_progress_rate"][i], state["generator_injection"][i], state["load_demand"][i]])
         branch_features = []
         for i in range(34):
             branch_features.append([state["fire_distance"][i+24]])

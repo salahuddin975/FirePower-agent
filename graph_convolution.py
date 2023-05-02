@@ -142,7 +142,7 @@ class GNN_conv(tf.keras.Model):
         # print("begin: branch_info:", branch_info)
         x = self.node_feature_processing_ffn(node_info)      # process the node_features to produce node representations.
         # print("begin: node_feature_processing_fnn weights:", self.node_feature_processing_ffn.get_weights())
-        # print("begin: preprocessed: ", x)
+        # print("begin: preprocessed: ", x.shape)
 
         for i in range(self.num_conv_layer):
             x_out = self.conv_layers[i]((x, self.branches, branch_info))

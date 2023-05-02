@@ -112,6 +112,7 @@ if __name__ == "__main__":
 
     train_network = True      # change during testing
     gnn_layer_type = 1      # 1: convolution; 2: GAT
+    num_steps_for_fire_progress = 3
 
     set_seed(seed_value if train_network else 50)
     set_gpu_memory_limit()
@@ -181,8 +182,13 @@ if __name__ == "__main__":
         total_myopic_reward_rl_transition = 0
         total_rl_reward = 0
         total_custom_reward = 0
+        fire_distances = []
 
         state = data_processor.preprocess(state, explore_network_flag)
+        fire_distances.append(state["fire_distance"])
+        state["fire_progress_rate"] = np.zeros(state["fire_distance"].shape)
+        # print("state_fire_progress:", state["fire_progress_rate"])
+
         if not train_network:
             generators_output_myopic.add_info(episode, 0, state["generator_injection"] * power_generation_preprocess_scale)
             generators_output_rl.add_info(episode, 0, state["generator_injection"] * power_generation_preprocess_scale)
@@ -249,6 +255,11 @@ if __name__ == "__main__":
             step_by_step_reward.add_info(episode, step, round(myopic_reward, 2), round(myopic_reward_rl_transition, 2), round(rl_reward, 2))
 
             next_state = data_processor.preprocess(next_state, explore_network_flag)
+            fire_distances.append(state["fire_distance"])
+            comp_index = 0 if step + 1 - num_steps_for_fire_progress < 0 else step + 1 - num_steps_for_fire_progress
+            next_state["fire_progress_rate"] = fire_distances[step + 1 - num_steps_for_fire_progress] - fire_distances[-1]
+            # print("fire_progress_rate:", next_state["fire_progress_rate"])
+
             buffer.add_record((state, nn_noise_action, custom_reward, next_state, env_action, done))
             state = next_state
 

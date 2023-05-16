@@ -221,8 +221,8 @@ if __name__ == "__main__":
             total_rl_reward += rl_reward[0]
             # total_custom_reward += custom_reward[0]
 
-            # if explore_network_flag == False:
-            print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward[0]}, target_myopic_reward: "
+            if explore_network_flag == False:
+                print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward[0]}, target_myopic_reward: "
                       f"{myopic_reward_rl_transition[0]}, rl_reward: {rl_reward[0]}, improvement: {myopic_reward_rl_transition[0] - myopic_reward[0]}")
             step_by_step_reward.add_info(episode, step, round(0, 2), round(myopic_reward_rl_transition[0], 2), round(rl_reward[0], 2))
 

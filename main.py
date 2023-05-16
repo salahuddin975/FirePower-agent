@@ -171,7 +171,7 @@ if __name__ == "__main__":
     step_by_step_reward = StepByStepReward(base_path, 0 if train_network else load_episode_num)
     if not train_network:
         generators_output_rl = GeneratorsOutput(base_path, "rl", 0 if train_network else load_episode_num)
-        # generators_output_myopic = GeneratorsOutput(base_path, "myopic", 0 if train_network else load_episode_num)
+        generators_output_myopic = GeneratorsOutput(base_path, "myopic", 0 if train_network else load_episode_num)
 
     for episode in range(total_episode):
         connected_components.reset()
@@ -193,7 +193,7 @@ if __name__ == "__main__":
         # print("state_fire_progress:", state["fire_progress_rate"])
 
         if not train_network:
-            # generators_output_myopic.add_info(episode, 0, state["generator_injection"] * power_generation_preprocess_scale)
+            generators_output_myopic.add_info(episode, 0, state["generator_injection"] * power_generation_preprocess_scale)
             generators_output_rl.add_info(episode, 0, state["generator_injection"] * power_generation_preprocess_scale)
 
         for step in range(max_steps_per_episode):
@@ -202,8 +202,8 @@ if __name__ == "__main__":
                 tensorboard.load_demand_info(state["load_demand"])
                 tensorboard.line_flow_info(state["line_flow"])
 
-            # myopic_action = data_processor.get_myopic_action(episode, step)
-            # myopic_next_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
+            myopic_action = data_processor.get_myopic_action(episode, step)
+            myopic_next_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
 
             myopic_action_rl_transition = data_processor.get_target_myopic_action(episode, step)
             target_myopic_next_state, myopic_reward_rl_transition, target_myopic_done, _ = env.step(myopic_action_rl_transition)
@@ -247,13 +247,13 @@ if __name__ == "__main__":
             # myopic_reward_rl_transition = myopic_reward_rl_transition[0] + total_load_out_by_fire
             # rl_reward = rl_reward[0] + total_load_out_by_fire
 
-            # total_myopic_reward += myopic_reward[0]
+            total_myopic_reward += myopic_reward[0]
             total_myopic_reward_rl_transition += myopic_reward_rl_transition[0]
             total_rl_reward += rl_reward[0]
             # total_custom_reward += custom_reward[0]
 
-            # if explore_network_flag == False:
-            print(f"Episode: {episode}, at step: {step}, target_myopic_reward: "
+            if explore_network_flag == False:
+                print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward[0]}, target_myopic_reward: "
                       f"{myopic_reward_rl_transition[0]}, rl_reward: {rl_reward[0]}")
             step_by_step_reward.add_info(episode, step, round(0, 2), round(myopic_reward_rl_transition[0], 2), round(rl_reward[0], 2))
 
@@ -279,7 +279,8 @@ if __name__ == "__main__":
 
             if done or (step == max_steps_per_episode - 1):
                 print(f"Episode: V{save_model_version}_{episode}, done at step: {step}, total myopic_reward: {total_myopic_reward},"
-                      f" total_target_myopic_reward: {total_myopic_reward_rl_transition}, total_rl_reward: {total_rl_reward}, total_custom_reward: {total_custom_reward}")
+                      f" total_target_myopic_reward: {total_myopic_reward_rl_transition}, total_rl_reward: {total_rl_reward}, "
+                      f"total_improvement: {total_myopic_reward_rl_transition-total_myopic_reward}")
                 max_reached_step = step
                 break
 

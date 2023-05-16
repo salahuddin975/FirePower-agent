@@ -270,7 +270,7 @@ if __name__ == "__main__":
             if num_steps_for_penalty <= step:
                 record = experiences.pop(0)
                 buffer.add_record((record[0], record[1], record[2], record[3], record[4], record[5]))
-                print("add replay buffer penalty: ", record[2])
+                # print("add replay buffer penalty: ", record[2])
 
             fire_distances.append(state["fire_distance"])
             comp_index = 0 if step + 1 - num_steps_for_fire_progress < 0 else step + 1 - num_steps_for_fire_progress

@@ -118,6 +118,7 @@ if __name__ == "__main__":
     set_gpu_memory_limit()
     base_path = "database_seed_" + str(seed_value)
 
+    num_steps_for_penalty = 6
     ramp_frequency_in_hour = 12
     power_generation_preprocess_scale = 10
     simulator_resources = SimulatorResources(power_file_path=args.path_power, power_generation_preprocess_scale=power_generation_preprocess_scale)
@@ -170,7 +171,7 @@ if __name__ == "__main__":
     step_by_step_reward = StepByStepReward(base_path, 0 if train_network else load_episode_num)
     if not train_network:
         generators_output_rl = GeneratorsOutput(base_path, "rl", 0 if train_network else load_episode_num)
-        generators_output_myopic = GeneratorsOutput(base_path, "myopic", 0 if train_network else load_episode_num)
+        # generators_output_myopic = GeneratorsOutput(base_path, "myopic", 0 if train_network else load_episode_num)
 
     for episode in range(total_episode):
         connected_components.reset()
@@ -183,6 +184,8 @@ if __name__ == "__main__":
         total_rl_reward = 0
         total_custom_reward = 0
         fire_distances = []
+        experiences = []
+        prev_rl_penalty = 0
 
         state = data_processor.preprocess(state, explore_network_flag)
         fire_distances.append(state["fire_distance"])
@@ -190,7 +193,7 @@ if __name__ == "__main__":
         # print("state_fire_progress:", state["fire_progress_rate"])
 
         if not train_network:
-            generators_output_myopic.add_info(episode, 0, state["generator_injection"] * power_generation_preprocess_scale)
+            # generators_output_myopic.add_info(episode, 0, state["generator_injection"] * power_generation_preprocess_scale)
             generators_output_rl.add_info(episode, 0, state["generator_injection"] * power_generation_preprocess_scale)
 
         for step in range(max_steps_per_episode):
@@ -199,14 +202,14 @@ if __name__ == "__main__":
                 tensorboard.load_demand_info(state["load_demand"])
                 tensorboard.line_flow_info(state["line_flow"])
 
-            myopic_action = data_processor.get_myopic_action(episode, step)
-            myopic_next_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
+            # myopic_action = data_processor.get_myopic_action(episode, step)
+            # myopic_next_state, myopic_reward, myopic_done, _ = env.step(myopic_action)
 
             myopic_action_rl_transition = data_processor.get_target_myopic_action(episode, step)
             target_myopic_next_state, myopic_reward_rl_transition, target_myopic_done, _ = env.step(myopic_action_rl_transition)
 
             if not train_network:
-                generators_output_myopic.add_info(episode, step+1, myopic_next_state["generator_injection"])
+                # generators_output_myopic.add_info(episode, step+1, myopic_next_state["generator_injection"])
                 generators_output_rl.add_info(episode, step+1, target_myopic_next_state["generator_injection"])
 
             # servable_load_demand = np.sum(target_myopic_state["generator_injection"])/power_generation_preprocess_scale
@@ -236,31 +239,42 @@ if __name__ == "__main__":
             # reward_info = (np.sum(state["load_demand"]), np.sum(state["generator_injection"]), rl_reward[0], done)
             # tensorboard.step_info(main_loop_info, reward_info)
 
-            reward = np.sum(next_state["generator_injection"]) - np.sum(myopic_next_state["generator_injection"])
-            custom_reward = (reward, reward)
+            # reward = np.sum(next_state["generator_injection"]) - np.sum(myopic_next_state["generator_injection"])
+            # custom_reward = (reward, reward)
 
-            total_load_out_by_fire = load_out_by_fire.get_total_load_out_by_fire(state["bus_status"])
-            myopic_reward = myopic_reward[0] + total_load_out_by_fire
-            myopic_reward_rl_transition = myopic_reward_rl_transition[0] + total_load_out_by_fire
-            rl_reward = rl_reward[0] + total_load_out_by_fire
+            # total_load_out_by_fire = load_out_by_fire.get_total_load_out_by_fire(state["bus_status"])
+            # myopic_reward = myopic_reward[0] + total_load_out_by_fire
+            # myopic_reward_rl_transition = myopic_reward_rl_transition[0] + total_load_out_by_fire
+            # rl_reward = rl_reward[0] + total_load_out_by_fire
 
-            total_myopic_reward += myopic_reward
-            total_myopic_reward_rl_transition += myopic_reward_rl_transition
-            total_rl_reward += rl_reward
-            total_custom_reward += custom_reward[0]
+            # total_myopic_reward += myopic_reward[0]
+            total_myopic_reward_rl_transition += myopic_reward_rl_transition[0]
+            total_rl_reward += rl_reward[0]
+            # total_custom_reward += custom_reward[0]
 
-            if True or explore_network_flag == False:
-                print(f"Episode: {episode}, at step: {step}, myopic_reward: {myopic_reward}, target_myopic_reward: "
-                      f"{myopic_reward_rl_transition}, rl_reward: {rl_reward}, custom_reward: {reward}, load_out_by_fire: {total_load_out_by_fire}")
-            step_by_step_reward.add_info(episode, step, round(myopic_reward, 2), round(myopic_reward_rl_transition, 2), round(rl_reward, 2))
+            # if explore_network_flag == False:
+            print(f"Episode: {episode}, at step: {step}, target_myopic_reward: "
+                      f"{myopic_reward_rl_transition[0]}, rl_reward: {rl_reward[0]}")
+            step_by_step_reward.add_info(episode, step, round(0, 2), round(myopic_reward_rl_transition[0], 2), round(rl_reward[0], 2))
 
             next_state = data_processor.preprocess(next_state, explore_network_flag)
+            experiences.append([state, nn_noise_action, 0.0, next_state, env_action, done])
+
+            if prev_rl_penalty - rl_reward[0] > 0.003:
+                custom_reward = round(rl_reward[0] - prev_rl_penalty, 3) + experiences[0][2]
+                print(f"Episode: {episode}, at step: {step}, apply custom_reward: {custom_reward}")
+                for i in range(len(experiences)):
+                    experiences[i][2] = custom_reward
+            prev_rl_penalty = rl_reward[0]
+
+            if num_steps_for_penalty <= step:
+                record = experiences.pop(0)
+                buffer.add_record((record[0], record[1], record[2], record[3], record[4], record[5]))
+                print("add replay buffer penalty: ", record[2])
+
             fire_distances.append(state["fire_distance"])
             comp_index = 0 if step + 1 - num_steps_for_fire_progress < 0 else step + 1 - num_steps_for_fire_progress
             next_state["fire_progress_rate"] = fire_distances[step + 1 - num_steps_for_fire_progress] - fire_distances[-1]
-            # print("fire_progress_rate:", next_state["fire_progress_rate"])
-
-            buffer.add_record((state, nn_noise_action, custom_reward, next_state, env_action, done))
             state = next_state
 
             if done or (step == max_steps_per_episode - 1):

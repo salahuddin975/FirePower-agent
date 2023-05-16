@@ -132,7 +132,7 @@ class ReplayBuffer:
         # use data from NN actor
         self.act_gen_injection[index] = np.copy(record[1]["generator_injection"])
 
-        self.rewards[index] = record[2][0]
+        self.rewards[index] = record[2]
         self.episode_end_flag[index] = record[5]
 
         self.next_st_bus[index] = np.copy(record[3]["bus_status"])

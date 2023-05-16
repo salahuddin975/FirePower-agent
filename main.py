@@ -230,7 +230,7 @@ if __name__ == "__main__":
             experiences.append([state, nn_noise_action, 0.0, next_state, env_action, done])
 
             if prev_rl_penalty - rl_reward[0] > 0.003:
-                custom_reward = rl_reward[0]
+                custom_reward = round(rl_reward[0] - prev_rl_penalty, 3) + experiences[0][2]
                 print(f"Episode: {episode}, at step: {step}, apply custom_reward: {custom_reward}")
                 for i in range(len(experiences)):
                     experiences[i][2] = custom_reward
